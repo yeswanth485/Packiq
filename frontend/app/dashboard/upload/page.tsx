@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { UploadCloud, FileText, FileSpreadsheet, AlertCircle, CheckCircle2, Play, RefreshCw, XCircle } from 'lucide-react'
+import { UploadCloud, FileText, FileSpreadsheet, AlertCircle, CheckCircle2, Play, RefreshCw, XCircle, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'

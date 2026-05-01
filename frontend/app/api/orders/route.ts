@@ -38,7 +38,7 @@ export async function POST(req: Request) {
         quantity: quantity || 1,
         total_cost_usd,
         status: 'pending'
-      })
+      } as any)
       .select()
       .single()
 
