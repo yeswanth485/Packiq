@@ -17,7 +17,7 @@ export default function DomainSetup() {
     
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      await supabase.from('profiles').update({ company_domain: domain }).eq('id', user.id)
+      await (supabase as any).from('profiles').update({ company_domain: domain }).eq('id', user.id)
       router.push('/onboarding/employees')
     }
     setLoading(false)

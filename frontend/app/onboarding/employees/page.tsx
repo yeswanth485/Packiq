@@ -22,7 +22,7 @@ export default function EmployeeSetup() {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       // Mark onboarding as complete and save count
-      await supabase.from('profiles').update({ 
+      await (supabase as any).from('profiles').update({ 
         onboarding_completed: true,
         employee_count: employees.length
       }).eq('id', user.id)
