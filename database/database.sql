@@ -22,6 +22,8 @@ create table if not exists public.profiles (
   stripe_subscription_id  text unique,
   optimizations_used      int not null default 0,
   optimizations_limit     int not null default 10,
+  api_key       text unique default encode(gen_random_bytes(16), 'hex'),
+  notification_prefs jsonb default '{"email_optimization": true, "weekly_report": false, "system_alerts": true}'::jsonb,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
@@ -38,6 +40,8 @@ create table if not exists public.products (
   length_cm       numeric(10, 2),
   width_cm        numeric(10, 2),
   height_cm       numeric(10, 2),
+  current_box_size text,
+  current_cost_usd numeric(10, 4),
   fragile         boolean not null default false,
   category        text,
   notes           text,
@@ -132,15 +136,18 @@ begin
 end;
 $$;
 
-create or replace trigger trg_profiles_updated_at
+drop trigger if exists trg_profiles_updated_at on public.profiles;
+create trigger trg_profiles_updated_at
   before update on public.profiles
   for each row execute procedure public.handle_updated_at();
 
-create or replace trigger trg_products_updated_at
+drop trigger if exists trg_products_updated_at on public.products;
+create trigger trg_products_updated_at
   before update on public.products
   for each row execute procedure public.handle_updated_at();
 
-create or replace trigger trg_orders_updated_at
+drop trigger if exists trg_orders_updated_at on public.orders;
+create trigger trg_orders_updated_at
   before update on public.orders
   for each row execute procedure public.handle_updated_at();
 
@@ -150,19 +157,22 @@ create or replace trigger trg_orders_updated_at
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, email, full_name, avatar_url)
+  insert into public.profiles (id, email, full_name, avatar_url, company, plan)
   values (
     new.id,
     new.email,
     new.raw_user_meta_data ->> 'full_name',
-    new.raw_user_meta_data ->> 'avatar_url'
+    new.raw_user_meta_data ->> 'avatar_url',
+    new.raw_user_meta_data ->> 'company_name',
+    'free'
   )
   on conflict (id) do nothing;
   return new;
 end;
 $$;
 
-create or replace trigger trg_on_auth_user_created
+drop trigger if exists trg_on_auth_user_created on auth.users;
+create trigger trg_on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
@@ -176,43 +186,55 @@ alter table public.orders         enable row level security;
 alter table public.box_catalog    enable row level security;
 
 -- PROFILES
+drop policy if exists "Users can view own profile" on public.profiles;
 create policy "Users can view own profile"
   on public.profiles for select using (auth.uid() = id);
 
+drop policy if exists "Users can update own profile" on public.profiles;
 create policy "Users can update own profile"
   on public.profiles for update using (auth.uid() = id);
 
 -- PRODUCTS
+drop policy if exists "Users can view own products" on public.products;
 create policy "Users can view own products"
   on public.products for select using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own products" on public.products;
 create policy "Users can insert own products"
   on public.products for insert with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update own products" on public.products;
 create policy "Users can update own products"
   on public.products for update using (auth.uid() = user_id);
 
+drop policy if exists "Users can delete own products" on public.products;
 create policy "Users can delete own products"
   on public.products for delete using (auth.uid() = user_id);
 
 -- OPTIMIZATIONS
+drop policy if exists "Users can view own optimizations" on public.optimizations;
 create policy "Users can view own optimizations"
   on public.optimizations for select using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own optimizations" on public.optimizations;
 create policy "Users can insert own optimizations"
   on public.optimizations for insert with check (auth.uid() = user_id);
 
 -- ORDERS
+drop policy if exists "Users can view own orders" on public.orders;
 create policy "Users can view own orders"
   on public.orders for select using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own orders" on public.orders;
 create policy "Users can insert own orders"
   on public.orders for insert with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update own orders" on public.orders;
 create policy "Users can update own orders"
   on public.orders for update using (auth.uid() = user_id);
 
 -- BOX CATALOG (public read, admin write)
+drop policy if exists "Anyone can view box catalog" on public.box_catalog;
 create policy "Anyone can view box catalog"
   on public.box_catalog for select using (true);
 
