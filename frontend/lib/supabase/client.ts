@@ -9,12 +9,5 @@ export function createClient() {
     console.warn('Supabase environment variables are missing!')
   }
 
-  return createBrowserClient<Database>(url, anonKey, {
-    global: {
-      headers: {
-        'apikey': anonKey,
-        'Authorization': `Bearer ${anonKey}`
-      }
-    }
-  })
+  return createBrowserClient<Database>(url, anonKey)
 }

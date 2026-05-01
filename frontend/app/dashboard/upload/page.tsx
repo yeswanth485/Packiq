@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 
 const REQUIRED_COLUMNS = [
   'product_id', 'name', 'width_cm', 'height_cm', 'breadth_cm', 
@@ -310,7 +311,7 @@ export default function UploadPage() {
             </div>
           )}
 
-          <div className="flex justify-center pt-4">
+          <div className="flex justify-center gap-4 pt-4">
             <button
               onClick={() => {
                 setResults(null)
@@ -318,10 +319,17 @@ export default function UploadPage() {
                 setParsedData([])
                 setIsValidated(false)
               }}
-              className="bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-xl text-sm font-medium transition-colors"
+              className="bg-white/5 hover:bg-white/10 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors border border-white/10"
             >
               Upload Another File
             </button>
+            <Link
+              href="/dashboard/results"
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-lg shadow-indigo-600/20 flex items-center gap-2"
+            >
+              <Zap className="w-4 h-4" />
+              View Detailed Results
+            </Link>
           </div>
         </motion.div>
       )}

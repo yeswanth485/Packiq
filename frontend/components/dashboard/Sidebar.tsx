@@ -11,16 +11,17 @@ import {
   Settings,
   LogOut,
   Box,
+  TrendingUp,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 
-const navItems = [
   { href: '/dashboard',          label: 'Dashboard',         icon: LayoutDashboard },
   { href: '/dashboard/upload',   label: 'Upload & Optimize', icon: Package },
+  { href: '/dashboard/results',  label: 'Optimizations',     icon: Zap },
   { href: '/dashboard/orders',   label: 'Orders',            icon: ShoppingCart },
-  { href: '/dashboard/analytics',label: 'Analytics',         icon: Zap },
+  { href: '/dashboard/analytics',label: 'Analytics',         icon: TrendingUp },
   { href: '/dashboard/tracking', label: 'Shipment Tracking', icon: Archive },
   { href: '/dashboard/catalog',  label: 'Box Catalog',       icon: Box },
   { href: '/dashboard/settings', label: 'Settings',          icon: Settings },

@@ -14,12 +14,6 @@ export async function createClient() {
 
   const cookieStore = await cookies()
   return createServerClient<Database>(url, anonKey, {
-    global: {
-      headers: {
-        'apikey': anonKey,
-        'Authorization': `Bearer ${anonKey}`
-      }
-    },
     cookies: {
       getAll() {
         return cookieStore.getAll()
