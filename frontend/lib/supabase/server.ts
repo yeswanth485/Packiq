@@ -7,8 +7,11 @@ export async function createClient() {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!url || !anonKey) {
+    console.error('SERVER ERROR: Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
     throw new Error('Missing Supabase environment variables')
   }
+
+  console.log('Supabase client initialized with URL:', url.substring(0, 10) + '...')
 
   const cookieStore = await cookies()
   return createServerClient<Database>(url, anonKey, {
