@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
             availableBoxes: boxes ?? []
           })
 
-          const { data: optData } = await supabase.from('optimizations').insert({
+          const { data: optData } = await (supabase as any).from('optimizations').insert({
             user_id: user.id,
             product_id: p.id,
             status: 'completed',
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
 
           // Automatically create an order for the optimization
           if (optData) {
-            await supabase.from('orders').insert({
+            await (supabase as any).from('orders').insert({
               user_id: user.id,
               product_id: p.id,
               optimization_id: optData.id,
