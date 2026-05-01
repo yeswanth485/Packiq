@@ -9,5 +9,12 @@ export function createClient() {
     console.error('Supabase environment variables are missing! Check your Vercel settings.')
   }
 
-  return createBrowserClient<Database>(url!, anonKey!)
+  return createBrowserClient<Database>(url!, anonKey!, {
+    global: {
+      headers: {
+        'apikey': anonKey!,
+        'Authorization': `Bearer ${anonKey!}`
+      }
+    }
+  })
 }
