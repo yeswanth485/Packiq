@@ -2,16 +2,26 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/Sidebar'
 import TopBar from '@/components/dashboard/TopBar'
+import type { Profile } from '@/types'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  if (!user) {
+    redirect('/auth/login')
+  }
 
-  // Redirect to onboarding if not completed or profile is missing
-  if (!profile || !(profile as any).onboarding_completed) {
+  // Wait a moment for the DB trigger to create the profile row
+  // then fetch the profile
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  // If no profile row or onboarding not done → go to onboarding
+  if (!profile || !(profile as Profile).onboarding_completed) {
     redirect('/onboarding/company')
   }
 

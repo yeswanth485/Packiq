@@ -3,10 +3,13 @@
 import Link from 'next/link'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import dynamic from 'next/dynamic'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { 
   Zap, Package, UploadCloud, BarChart3, 
   MapPin, Cpu, CheckCircle2, ArrowRight, Play, Box
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 // Dynamic import for 3D component to prevent SSR issues
 const Hero3DBox = dynamic(() => import('@/components/landing/Hero3DBox'), { ssr: false })
@@ -14,6 +17,30 @@ const Hero3DBox = dynamic(() => import('@/components/landing/Hero3DBox'), { ssr:
 export default function LandingPage() {
   const { scrollYProgress } = useScroll()
   const yPos = useTransform(scrollYProgress, [0, 1], [0, 200])
+  const router = useRouter()
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+
+  // Client-side auth redirect fallback (in case middleware misses it)
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (user) {
+          console.log('[LandingPage] User is authenticated, redirecting to dashboard')
+          router.push('/dashboard')
+        } else {
+          setIsCheckingAuth(false)
+        }
+      } catch (error) {
+        console.error('[LandingPage] Error checking auth:', error)
+        setIsCheckingAuth(false)
+      }
+    }
+
+    checkAuth()
+  }, [router])
 
   // Variants for scroll animations
   const fadeInUp = {

@@ -23,6 +23,8 @@ function ErrorToast() {
 export default function LoginPage() {
   const supabase = createClient()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextParam = searchParams?.get('next') || '/dashboard'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -35,10 +37,8 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
       
-      // We don't push explicitly here because the AuthProvider state change or the 
-      // page load will cause the proxy.ts middleware to check AAL levels
-      // and redirect to either /dashboard or /auth/mfa automatically.
-      window.location.href = '/dashboard'
+      console.log('[LoginPage] Email login successful, redirecting to:', nextParam)
+      window.location.href = nextParam
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Authentication failed')
     } finally {
@@ -48,13 +48,10 @@ export default function LoginPage() {
 
   async function handleGoogle() {
     try {
-      // In Supabase dashboard: Authentication > Providers > Google
-      // Add Google Client ID and Secret from Google Cloud Console
-      // Set redirect URL to: https://yourdomain.com/auth/callback
-      // Create /app/auth/callback/route.ts to handle the code exchange
+      console.log('[LoginPage] Starting Google OAuth with callback to:', `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(nextParam)}`)
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+        options: { redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(nextParam)}` },
       })
       if (error) throw error
     } catch (err: unknown) {

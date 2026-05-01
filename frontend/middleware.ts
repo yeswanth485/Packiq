@@ -15,7 +15,9 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
           supabaseResponse = NextResponse.next({
             request,
           })
@@ -27,54 +29,76 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-
+  // Do NOT add any logic between createServerClient and getUser()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
-  const isDashboard = request.nextUrl.pathname.startsWith('/dashboard')
-  const isOnboarding = request.nextUrl.pathname.startsWith('/onboarding')
-  const isRoot = request.nextUrl.pathname === '/'
+  const { pathname } = request.nextUrl
 
-  if (!user && (isDashboard || isOnboarding)) {
-    // no user, potentially respond by redirecting the user to the login page
+  // Protected routes - redirect to login if not authenticated
+  if (!user && (pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding'))) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
+    url.search = ''
     return NextResponse.redirect(url)
   }
 
-  // If user is logged in and tries to access auth routes, redirect to dashboard
-  if (user && (isAuthRoute || isRoot) && !request.nextUrl.pathname.includes('callback')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
-  }
+  // Authenticated users - check onboarding status
+  if (user) {
+    // Skip redirect logic for API routes and static assets
+    if (pathname.startsWith('/api/') || pathname.startsWith('/_next/')) {
+      return supabaseResponse
+    }
 
-  // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
-  // creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object to fit your needs, then return it.
-  // OR you can update the supabaseResponse object directly.
+    // Get profile to check onboarding status
+    let needsOnboarding = false
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('onboarding_completed')
+        .eq('id', user.id)
+        .single()
+      
+      needsOnboarding = !profile || !(profile as any).onboarding_completed
+      console.log(`[Middleware] User ${user.id}: needsOnboarding=${needsOnboarding}`)
+    } catch (error) {
+      console.error('[Middleware] Error fetching profile:', error)
+      // If we can't get profile, assume onboarding is needed
+      needsOnboarding = true
+    }
+
+    // If on auth/landing pages and onboarding is needed → go to onboarding
+    if (needsOnboarding && (pathname.startsWith('/auth') || pathname === '/')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/onboarding/company'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+
+    // If on auth/landing pages and onboarding is complete → go to dashboard
+    if (!needsOnboarding && (pathname.startsWith('/auth') || pathname === '/')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+
+    // If trying to access onboarding but already completed → redirect to dashboard
+    if (!needsOnboarding && pathname.startsWith('/onboarding')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+  }
 
   return supabaseResponse
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Match all pages EXCEPT static files and API routes
+    '/((?!_next/static|_next/image|favicon.ico|api/).*)',
   ],
 }
