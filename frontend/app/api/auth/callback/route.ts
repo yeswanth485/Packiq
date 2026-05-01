@@ -5,43 +5,33 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  // Default redirect is to onboarding to ensure profile exists
-  const next = searchParams.get('next') ?? '/onboarding/company'
+  // We strictly redirect to /dashboard.
+  // app/dashboard/layout.tsx will catch new users and send them to /onboarding/company.
+  const next = searchParams.get('next') ?? '/dashboard'
 
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser()
+      const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
+      const isLocalEnv = process.env.NODE_ENV === 'development'
       
-      if (user) {
-        // Check if profile exists and onboarding is completed
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('onboarding_completed')
-          .eq('id', user.id)
-          .single()
-
-        // If onboarding is completed, go to dashboard. Otherwise, go to onboarding.
-        const redirectUrl = (profile as any)?.onboarding_completed ? '/dashboard' : '/onboarding/company'
-        
-        const forwardedHost = request.headers.get('x-forwarded-host')
-        const isLocalEnv = process.env.NODE_ENV === 'development'
-        
-        if (isLocalEnv) {
-          return NextResponse.redirect(`${origin}${redirectUrl}`)
-        } else if (forwardedHost) {
-          return NextResponse.redirect(`https://${forwardedHost}${redirectUrl}`)
-        } else {
-          return NextResponse.redirect(`${origin}${redirectUrl}`)
-        }
+      if (isLocalEnv) {
+        // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
+        return NextResponse.redirect(`${origin}${next}`)
+      } else if (forwardedHost) {
+        return NextResponse.redirect(`https://${forwardedHost}${next}`)
+      } else {
+        return NextResponse.redirect(`${origin}${next}`)
       }
     } else {
-      console.error('Auth callback error:', error.message)
+      console.error('Auth callback error during exchangeCodeForSession:', error.message)
     }
+  } else {
+    console.warn('Auth callback invoked without a code parameter.')
   }
 
-  const errorBaseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || origin
-  return NextResponse.redirect(new URL('/auth/login?error=auth_callback_failed', errorBaseUrl).toString())
+  // return the user to an error page with instructions
+  return NextResponse.redirect(`${origin}/auth/login?error=auth_callback_failed`)
 }
