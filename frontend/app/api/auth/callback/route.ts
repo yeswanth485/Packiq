@@ -29,13 +29,13 @@ export async function GET(request: NextRequest) {
         const forwardedHost = request.headers.get('x-forwarded-host')
         const isLocalEnv = process.env.NODE_ENV === 'development'
         
-        // Use NEXT_PUBLIC_APP_URL as the primary base URL if available, otherwise fallback
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || (isLocalEnv ? origin : (forwardedHost ? `https://${forwardedHost}` : origin))
-        
-        // Ensure there are no double slashes in the path
-        const finalUrl = new URL(redirectUrl, baseUrl).toString()
-        
-        return NextResponse.redirect(finalUrl)
+        if (isLocalEnv) {
+          return NextResponse.redirect(`${origin}${redirectUrl}`)
+        } else if (forwardedHost) {
+          return NextResponse.redirect(`https://${forwardedHost}${redirectUrl}`)
+        } else {
+          return NextResponse.redirect(`${origin}${redirectUrl}`)
+        }
       }
     } else {
       console.error('Auth callback error:', error.message)
