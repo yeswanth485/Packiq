@@ -16,7 +16,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-
+const navItems = [
   { href: '/dashboard',          label: 'Dashboard',         icon: LayoutDashboard },
   { href: '/dashboard/upload',   label: 'Upload & Optimize', icon: Package },
   { href: '/dashboard/results',  label: 'Optimizations',     icon: Zap },
