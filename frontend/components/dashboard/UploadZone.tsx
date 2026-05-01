@@ -1,15 +1,6 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Upload, FileText, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
-
-interface UploadZoneProps {
-  onSuccess?: (count: number) => void
-}
-
-'use client'
-
-import { useRef, useState } from 'react'
 import { Upload, FileText, Loader2, CheckCircle2, AlertCircle, FileCode } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
