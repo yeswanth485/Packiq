@@ -1,13 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Package, Loader2, Mail, Lock } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
 
 function ErrorToast() {
   const searchParams = useSearchParams()
@@ -20,7 +19,7 @@ function ErrorToast() {
   return null
 }
 
-export default function LoginPage() {
+function LoginFormComponent() {
   const supabase = createClient()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -76,10 +75,9 @@ export default function LoginPage() {
   }
 
   return (
-    <Suspense fallback={null}>
-      <div className="animated-bg min-h-screen flex items-center justify-center p-4">
-        <ErrorToast />
-        <div className="w-full max-w-md">
+    <div className="animated-bg min-h-screen flex items-center justify-center p-4">
+      <ErrorToast />
+      <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00E5CC] to-[#3B82F6] flex items-center justify-center p-[1px]">
@@ -158,6 +156,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  </Suspense>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginFormComponent />
+    </Suspense>
   )
 }
