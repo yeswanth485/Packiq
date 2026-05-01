@@ -10,13 +10,24 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
 
+  // Redirect to onboarding if not completed
+  if (profile && !profile.onboarding_completed) {
+    redirect('/onboarding/company')
+  }
+
   return (
-    <div className="min-h-screen animated-bg">
+    <div className="min-h-screen bg-[#050505] text-white">
       <Sidebar />
-      <main className="ml-60 p-8 min-h-screen flex flex-col">
-        <TopBar profile={profile} />
-        <div className="flex-1">
-          {children}
+      <main className="ml-64 min-h-screen relative">
+        {/* Background Decorative Elements */}
+        <div className="fixed top-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
+        
+        <div className="relative z-10 p-8 pt-6">
+          <TopBar profile={profile} />
+          <div className="mt-8 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4">
+            {children}
+          </div>
         </div>
       </main>
     </div>

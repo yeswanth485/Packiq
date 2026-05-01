@@ -7,13 +7,25 @@ interface UploadZoneProps {
   onSuccess?: (count: number) => void
 }
 
+'use client'
+
+import { useRef, useState } from 'react'
+import { Upload, FileText, Loader2, CheckCircle2, AlertCircle, FileCode } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+
+interface UploadZoneProps {
+  onSuccess?: (count: number) => void
+}
+
 export default function UploadZone({ onSuccess }: UploadZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [status, setStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const [dragging, setDragging] = useState(false)
+  const [fileName, setFileName] = useState('')
 
   async function handleFile(file: File) {
+    setFileName(file.name)
     setStatus('uploading')
     setMessage('')
     const formData = new FormData()
@@ -24,7 +36,7 @@ export default function UploadZone({ onSuccess }: UploadZoneProps) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Upload failed')
       setStatus('success')
-      setMessage(`${data.inserted} products imported successfully`)
+      setMessage(`${data.inserted} products imported & optimizing...`)
       onSuccess?.(data.inserted)
     } catch (err) {
       setStatus('error')
@@ -34,8 +46,8 @@ export default function UploadZone({ onSuccess }: UploadZoneProps) {
 
   return (
     <div
-      className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-200 cursor-pointer
-        ${dragging ? 'border-indigo-500 bg-indigo-500/10' : 'border-white/10 hover:border-indigo-500/50 hover:bg-white/[0.02]'}`}
+      className={`relative group overflow-hidden border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-500 cursor-pointer
+        ${dragging ? 'border-blue-500 bg-blue-500/5' : 'border-white/10 hover:border-blue-500/30 hover:bg-white/[0.01]'}`}
       onClick={() => inputRef.current?.click()}
       onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
       onDragLeave={() => setDragging(false)}
@@ -45,45 +57,93 @@ export default function UploadZone({ onSuccess }: UploadZoneProps) {
         if (file) handleFile(file)
       }}
     >
-      <input ref={inputRef} type="file" accept=".csv" className="hidden" onChange={(e) => {
+      <input ref={inputRef} type="file" accept=".csv,.xlsx" className="hidden" onChange={(e) => {
         const file = e.target.files?.[0]
         if (file) handleFile(file)
       }} />
 
-      {status === 'idle' && (
-        <>
-          <Upload className="w-10 h-10 text-indigo-400 mx-auto mb-3" />
-          <p className="text-white font-medium">Drop a CSV file here or click to browse</p>
-          <p className="text-gray-500 text-sm mt-1">Columns: name, sku, weight_kg, length_cm, width_cm, height_cm, fragile, category</p>
-        </>
-      )}
-      {status === 'uploading' && (
-        <>
-          <Loader2 className="w-10 h-10 text-indigo-400 mx-auto mb-3 animate-spin" />
-          <p className="text-white font-medium">Importing products…</p>
-        </>
-      )}
-      {status === 'success' && (
-        <>
-          <CheckCircle2 className="w-10 h-10 text-green-400 mx-auto mb-3" />
-          <p className="text-green-400 font-medium">{message}</p>
-          <button onClick={(e) => { e.stopPropagation(); setStatus('idle') }} className="text-gray-500 text-sm mt-2 hover:text-white">Upload another</button>
-        </>
-      )}
-      {status === 'error' && (
-        <>
-          <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
-          <p className="text-red-400 font-medium">{message}</p>
-          <button onClick={(e) => { e.stopPropagation(); setStatus('idle') }} className="text-gray-500 text-sm mt-2 hover:text-white">Try again</button>
-        </>
-      )}
+      <AnimatePresence mode="wait">
+        {status === 'idle' && (
+          <motion.div 
+            key="idle"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+          >
+            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500">
+              <Upload className="w-8 h-8 text-blue-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">Upload Inventory</h3>
+            <p className="text-zinc-500 max-w-xs mx-auto text-sm leading-relaxed">
+              Drag and drop your <span className="text-blue-400 font-medium">CSV or Excel</span> file to start the AI optimization engine.
+            </p>
+            <div className="mt-8 flex items-center justify-center gap-4">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] text-zinc-400 uppercase tracking-widest">
+                <FileText size={12} /> CSV
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] text-zinc-400 uppercase tracking-widest">
+                <FileCode size={12} /> XLSX
+              </div>
+            </div>
+          </motion.div>
+        )}
 
-      {status === 'idle' && (
-        <div className="flex items-center justify-center gap-1.5 mt-3">
-          <FileText className="w-3.5 h-3.5 text-gray-500" />
-          <span className="text-xs text-gray-500">CSV format</span>
-        </div>
-      )}
+        {status === 'uploading' && (
+          <motion.div 
+            key="uploading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="py-4"
+          >
+            <div className="relative w-16 h-16 mx-auto mb-6">
+              <Loader2 className="w-16 h-16 text-blue-500 animate-spin absolute inset-0" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-8 h-8 bg-blue-500 rounded-full blur-xl animate-pulse" />
+              </div>
+            </div>
+            <p className="text-white font-medium mb-2">Analyzing {fileName}...</p>
+            <p className="text-zinc-500 text-sm">Claude 3.5 Sonnet is optimizing your packaging.</p>
+          </motion.div>
+        )}
+
+        {status === 'success' && (
+          <motion.div 
+            key="success"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-8 h-8 text-green-400" />
+            </div>
+            <p className="text-white font-bold text-lg mb-2">{message}</p>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setStatus('idle') }} 
+              className="px-6 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-zinc-400 hover:text-white transition-all text-sm mt-4"
+            >
+              Upload another
+            </button>
+          </motion.div>
+        )}
+
+        {status === 'error' && (
+          <motion.div 
+            key="error"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-8 h-8 text-red-400" />
+            </div>
+            <p className="text-red-400 font-medium mb-2">{message}</p>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setStatus('idle') }} 
+              className="px-6 py-2 bg-red-400/10 hover:bg-red-400/20 rounded-xl text-red-400 transition-all text-sm mt-4"
+            >
+              Try again
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
