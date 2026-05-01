@@ -14,6 +14,9 @@ export interface Profile {
   full_name: string | null
   avatar_url: string | null
   company: string | null
+  company_domain: string | null
+  employee_count: number | null
+  onboarding_completed: boolean
   plan: Plan
   stripe_customer_id: string | null
   stripe_subscription_id: string | null

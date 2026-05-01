@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
           .single()
 
         // If onboarding is completed, go to dashboard. Otherwise, go to onboarding.
-        const redirectUrl = profile?.onboarding_completed ? '/dashboard' : '/onboarding/company'
+        const redirectUrl = (profile as any)?.onboarding_completed ? '/dashboard' : '/onboarding/company'
         
         const forwardedHost = request.headers.get('x-forwarded-host')
         const isLocalEnv = process.env.NODE_ENV === 'development'
