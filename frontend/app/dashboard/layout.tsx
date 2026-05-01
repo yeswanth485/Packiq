@@ -10,8 +10,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
 
-  // Redirect to onboarding if not completed
-  if (profile && !(profile as any).onboarding_completed) {
+  // Redirect to onboarding if not completed or profile is missing
+  if (!profile || !(profile as any).onboarding_completed) {
     redirect('/onboarding/company')
   }
 

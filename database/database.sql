@@ -17,6 +17,9 @@ create table if not exists public.profiles (
   full_name     text,
   avatar_url    text,
   company       text,
+  company_domain text,
+  employee_count int,
+  onboarding_completed boolean not null default false,
   plan          text not null default 'free' check (plan in ('free', 'pro', 'enterprise')),
   stripe_customer_id      text unique,
   stripe_subscription_id  text unique,
@@ -27,6 +30,20 @@ create table if not exists public.profiles (
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
+
+-- Safely add columns if table already exists
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='company_domain') THEN
+    ALTER TABLE public.profiles ADD COLUMN company_domain text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='employee_count') THEN
+    ALTER TABLE public.profiles ADD COLUMN employee_count int;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='onboarding_completed') THEN
+    ALTER TABLE public.profiles ADD COLUMN onboarding_completed boolean not null default false;
+  END IF;
+END $$;
 
 -- ─────────────────────────────────────────────
 -- 2. PRODUCTS

@@ -18,7 +18,12 @@ export default function CompanyRegistration() {
     
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      await (supabase as any).from('profiles').update({ company, notification_prefs: { industry } }).eq('id', user.id)
+      await (supabase as any).from('profiles').upsert({ 
+        id: user.id,
+        email: user.email,
+        company, 
+        notification_prefs: { industry } 
+      })
       router.push('/onboarding/domain')
     }
     setLoading(false)
