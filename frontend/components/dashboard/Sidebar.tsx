@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 
 const navItems = [
   { href: '/dashboard',          label: 'Dashboard',         icon: LayoutDashboard },
