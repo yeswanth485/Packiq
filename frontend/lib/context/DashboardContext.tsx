@@ -42,10 +42,10 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error
 
-      const totalSavings = (optimizations || []).reduce((acc, o) => acc + (o.cost_savings_usd || 0), 0)
+      const totalSavings = (optimizations || []).reduce((acc: number, o: any) => acc + (o.cost_savings_usd || 0), 0)
       const count = (optimizations || []).length
       const avgEff = count > 0 
-        ? (optimizations || []).reduce((acc, o) => acc + (o.efficiency_score || 0), 0) / count
+        ? (optimizations || []).reduce((acc: number, o: any) => acc + (o.efficiency_score || 0), 0) / count
         : 0
 
       setStats({

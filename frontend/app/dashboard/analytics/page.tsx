@@ -35,8 +35,8 @@ export default function AnalyticsPage() {
 
       
       if (optimizations) {
-        const totalSavings = optimizations.reduce((acc, o) => acc + (o.cost_savings_usd || 0), 0)
-        const avgEff = optimizations.reduce((acc, o) => acc + (o.efficiency_score || 0), 0) / optimizations.length
+        const totalSavings = (optimizations as any[]).reduce((acc: number, o: any) => acc + (o.cost_savings_usd || 0), 0)
+        const avgEff = (optimizations as any[]).reduce((acc: number, o: any) => acc + (o.efficiency_score || 0), 0) / optimizations.length
 
         setStats({
           totalSavings,
