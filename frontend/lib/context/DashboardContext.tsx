@@ -35,8 +35,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       if (!user) return
 
       // Fetch all optimizations for this user
-      const { data: optimizations, error } = await supabase
-        .from('optimizations')
+      const { data: optimizations, error } = await (supabase.from('optimizations') as any)
         .select('*')
         .eq('user_id', user.id)
         .eq('status', 'completed')
