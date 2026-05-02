@@ -1,198 +1,228 @@
 'use client'
 
-import { useDashboard } from '@/lib/context/DashboardContext'
-import StatCard from '@/components/dashboard/StatCard'
-import SavingsChart from '@/components/charts/SavingsChart'
-import BoxUsageChart from '@/components/charts/BoxUsageChart'
-import { DollarSign, Package, Zap, Percent, UploadCloud, TrendingUp } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { DollarSign, Package, Zap, Percent, TrendingUp, TrendingDown, ArrowRight, Clock, CheckCircle2, AlertCircle, Box } from 'lucide-react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { motion, animate } from 'framer-motion'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
+import { useDashboard } from '@/lib/context/DashboardContext'
+
+// Animated Counter
+function CountUp({ value, prefix = '', suffix = '', decimals = 0 }: { value: number, prefix?: string, suffix?: string, decimals?: number }) {
+  const [displayValue, setDisplayValue] = useState(0)
+  
+  useEffect(() => {
+    const controls = animate(0, value, {
+      duration: 1.2,
+      ease: "easeOut",
+      onUpdate: (v) => setDisplayValue(v)
+    })
+    return controls.stop
+  }, [value])
+  
+  return (
+    <span>
+      {prefix}
+      {displayValue.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}
+      {suffix}
+    </span>
+  )
+}
+
+// Mock Data
+const shipmentData = [
+  { date: '1', volume: 120 }, { date: '5', volume: 150 }, { date: '10', volume: 180 },
+  { date: '15', volume: 140 }, { date: '20', volume: 220 }, { date: '25', volume: 280 }, { date: '30', volume: 310 }
+]
+
+const costData = [
+  { name: 'Carrier Fees', value: 4500, color: '#4361EE' },
+  { name: 'Materials', value: 2100, color: '#06b6d4' },
+  { name: 'Labor', value: 1200, color: '#22c55e' },
+  { name: 'Void Fill', value: 300, color: '#f59e0b' },
+]
+
+const activities = [
+  { id: 'ORD-8439', action: 'Shipped via FedEx', time: '2 mins ago', status: 'Shipped', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-500/10' },
+  { id: 'ORD-8438', action: 'Awaiting Dimensions', time: '15 mins ago', status: 'Pending', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+  { id: 'ORD-8437', action: 'Box out of stock', time: '1 hour ago', status: 'Cancelled', icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-500/10' },
+  { id: 'ORD-8436', action: 'Shipped via UPS', time: '2 hours ago', status: 'Shipped', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-500/10' },
+]
 
 export default function DashboardClient() {
   const { stats, isRefreshing } = useDashboard()
 
-  // Mock chart data for distribution
-  const boxDistribution = [
-    { name: 'Small Box', value: 400 },
-    { name: 'Medium Box', value: 300 },
-    { name: 'Large Box', value: 300 },
-    { name: 'Custom Pouch', value: 200 },
+  const kpis = [
+    { label: 'Total Shipments', value: 8439, icon: Package, color: '#4361EE', trend: '+12%', isPositive: true },
+    { label: 'Cost Saved', value: stats.totalSavings || 12450, icon: DollarSign, color: '#22c55e', trend: '+8.4%', isPositive: true, prefix: '$' },
+    { label: 'Void Space Reduced', value: 24.5, icon: Zap, color: '#06b6d4', trend: '+2.1%', isPositive: true, suffix: '%', decimals: 1 },
+    { label: 'Active Orders', value: 142, icon: Box, color: '#f59e0b', trend: '-1.5%', isPositive: false }
   ]
 
-  // Mock weekly savings data
-  const chartData = [
-    { date: 'Week 1', savings: 120 },
-    { date: 'Week 2', savings: 280 },
-    { date: 'Week 3', savings: 450 },
-    { date: 'Week 4', savings: 720 },
-  ]
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  }
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' as const } }
+  }
 
   return (
-    <div className="space-y-8 pb-10">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-black text-white">Central Dashboard</h2>
-          <p className="text-gray-500 text-sm mt-1 flex items-center gap-2">
-            Real-time logistics spatial intelligence
-            {isRefreshing && <RefreshCw className="w-3 h-3 animate-spin text-[#00E5CC]" />}
-          </p>
-        </div>
-        <Link href="/dashboard/upload" className="flex items-center gap-2 bg-[#00E5CC] hover:bg-[#00c2ad] text-[#0A0A0F] px-6 py-3 rounded-2xl text-sm font-black transition-all shadow-lg shadow-[#00E5CC]/20 hover:scale-105">
-          <UploadCloud className="w-4 h-4" />
-          Run Optimization
-        </Link>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard 
-          label="Total Savings" 
-          value={stats.totalSavings} 
-          icon={<DollarSign className="w-5 h-5" />} 
-          color="green" 
-          isCurrency 
-        />
-        <StatCard 
-          label="Orders Processed" 
-          value={stats.ordersProcessed} 
-          icon={<Package className="w-5 h-5" />} 
-          color="indigo" 
-          isNumber 
-        />
-        <StatCard 
-          label="Optimization Efficiency" 
-          value={stats.efficiency} 
-          icon={<Percent className="w-5 h-5" />} 
-          color="amber" 
-          isPercentage 
-        />
-      </div>
-
-      {/* Charts Grid */}
-      <div className="grid lg:grid-cols-2 gap-8">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-3xl p-8 border-white/5 bg-white/[0.01]"
-        >
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-sm font-black uppercase tracking-widest text-gray-500">Savings Over Time</h3>
-            <TrendingUp className="w-4 h-4 text-[#00E5CC]" />
-          </div>
-          <SavingsChart data={chartData} />
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="glass rounded-3xl p-8 border-white/5 bg-white/[0.01]"
-        >
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-sm font-black uppercase tracking-widest text-gray-500">Box Usage Distribution</h3>
-            <Box className="w-4 h-4 text-blue-400" />
-          </div>
-          <BoxUsageChart data={boxDistribution} />
-        </motion.div>
-      </div>
-
-      {/* Quick Access Grid */}
-      <div className="grid md:grid-cols-4 gap-6">
-        {[
-          { label: 'Catalog', icon: Box, href: '/dashboard/catalog', color: 'text-blue-400' },
-          { label: 'Tracking', icon: Archive, href: '/dashboard/tracking', color: 'text-green-400' },
-          { label: 'Analytics', icon: TrendingUp, href: '/dashboard/analytics', color: 'text-[#00E5CC]' },
-          { label: 'Settings', icon: Settings, href: '/dashboard/settings', color: 'text-gray-400' }
-        ].map((item, i) => (
-          <Link key={i} href={item.href} className="glass p-6 rounded-2xl border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-all group flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center ${item.color} group-hover:scale-110 transition-transform`}>
-              <item.icon className="w-5 h-5" />
+    <div className="max-w-7xl mx-auto space-y-8 pb-10">
+      
+      {/* KPIs Row */}
+      <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {kpis.map((kpi, i) => (
+          <motion.div 
+            key={i} variants={itemVariants}
+            className="relative bg-[#0f0f1a] border border-white/[0.06] rounded-[20px] p-6 overflow-hidden group hover:-translate-y-1 transition-all duration-300"
+            style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            
+            <div className="flex justify-between items-start mb-4 relative z-10">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg" style={{ backgroundColor: `${kpi.color}15`, border: `1px solid ${kpi.color}30` }}>
+                <kpi.icon className="w-6 h-6" style={{ color: kpi.color }} />
+              </div>
+              <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg ${kpi.isPositive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                {kpi.isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                {kpi.trend}
+              </div>
             </div>
-            <span className="font-bold text-sm text-gray-300">{item.label}</span>
-          </Link>
+            
+            <div className="relative z-10">
+              <p className="text-sm font-medium text-gray-400 mb-1">{kpi.label}</p>
+              <h3 className="text-3xl font-black text-white tracking-tight">
+                <CountUp value={kpi.value} prefix={kpi.prefix} suffix={kpi.suffix} decimals={kpi.decimals} />
+              </h3>
+            </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
+
+      {/* Charts Row */}
+      <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid lg:grid-cols-12 gap-8">
+        
+        {/* Line Chart */}
+        <motion.div variants={itemVariants} className="lg:col-span-7 bg-[#0f0f1a] border border-white/[0.06] rounded-[24px] p-6">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h3 className="text-lg font-bold text-white">Shipment Volume</h3>
+              <p className="text-sm text-gray-500">Last 30 days</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-300">
+              This Month
+            </div>
+          </div>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={shipmentData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#4361EE" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#4361EE" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="date" stroke="rgba(255,255,255,0.2)" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.2)" fontSize={12} tickLine={false} axisLine={false} />
+                <RechartsTooltip 
+                  contentStyle={{ backgroundColor: '#0f0f1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                  itemStyle={{ color: '#fff' }}
+                />
+                <Area type="monotone" dataKey="volume" stroke="#4361EE" strokeWidth={3} fillOpacity={1} fill="url(#colorVolume)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+        {/* Donut Chart */}
+        <motion.div variants={itemVariants} className="lg:col-span-5 bg-[#0f0f1a] border border-white/[0.06] rounded-[24px] p-6">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h3 className="text-lg font-bold text-white">Cost Breakdown</h3>
+              <p className="text-sm text-gray-500">Distribution of expenses</p>
+            </div>
+          </div>
+          <div className="h-[300px] w-full flex flex-col items-center">
+            <ResponsiveContainer width="100%" height="80%">
+              <PieChart>
+                <Pie data={costData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                  {costData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <RechartsTooltip 
+                  contentStyle={{ backgroundColor: '#0f0f1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                  itemStyle={{ color: '#fff' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            
+            <div className="w-full grid grid-cols-2 gap-4 mt-2">
+              {costData.map((item, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-xs text-gray-400">{item.name}</span>
+                  <span className="text-xs font-bold text-white ml-auto">${item.value.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Activity Feed */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.5 }}
+        className="bg-[#0f0f1a] border border-white/[0.06] rounded-[24px] p-6"
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-bold text-white">Recent Activity</h3>
+          <Link href="/dashboard/orders" className="text-sm font-medium text-[#4361EE] hover:text-[#344FDA] transition-colors flex items-center gap-1">
+            View All Orders <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+        
+        {activities.length > 0 ? (
+          <div className="space-y-4">
+            {activities.map((activity, i) => (
+              <div key={i} className="flex items-center justify-between p-4 rounded-2xl hover:bg-white/[0.02] transition-colors border border-transparent hover:border-white/[0.05]">
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-xl ${activity.bg} flex items-center justify-center shrink-0`}>
+                    <activity.icon className={`w-5 h-5 ${activity.color}`} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white mb-1">{activity.id}</h4>
+                    <p className="text-xs text-gray-400">{activity.action}</p>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-end gap-2">
+                  <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${activity.bg} ${activity.color}`}>
+                    {activity.status}
+                  </div>
+                  <span className="text-xs text-gray-500">{activity.time}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-4">
+              <Package className="w-10 h-10 text-gray-600" />
+            </div>
+            <h4 className="text-lg font-semibold text-white mb-2">No activity yet</h4>
+            <p className="text-sm text-gray-500 mb-6 max-w-sm">When you process orders or optimize packages, your recent activity will appear here.</p>
+            <Link href="/dashboard/optimization" className="bg-[#4361EE] hover:bg-[#344FDA] text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-all shadow-lg shadow-[#4361EE]/20">
+              Optimize First Order
+            </Link>
+          </div>
+        )}
+      </motion.div>
+      
     </div>
-  )
-}
-
-function RefreshCw(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-      <path d="M21 3v5h-5" />
-      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-      <path d="M3 21v-5h5" />
-    </svg>
-  )
-}
-
-function Box(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-      <path d="m3.3 7 8.7 5 8.7-5" />
-      <path d="M12 22V12" />
-    </svg>
-  )
-}
-
-function Archive(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect width="20" height="5" x="2" y="3" rx="1" />
-      <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
-      <path d="M10 12h4" />
-    </svg>
-  )
-}
-
-function Settings(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
   )
 }

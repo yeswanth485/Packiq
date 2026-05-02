@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import Sidebar from '@/components/dashboard/Sidebar'
-import TopBar from '@/components/dashboard/TopBar'
 import { DashboardProvider } from '@/lib/context/DashboardContext'
+import DashboardLayoutClient from '@/components/dashboard/DashboardLayoutClient'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -18,25 +17,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .single()
 
   if (!profile || !profile.onboarding_completed) {
-    redirect('/onboarding/company')
+    redirect('/onboarding')
   }
 
   return (
     <DashboardProvider>
-      <div className="min-h-screen bg-[#050505] text-white">
-        <Sidebar />
-        <main className="ml-64 min-h-screen relative">
-          <div className="fixed top-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#00E5CC]/5 blur-[120px] rounded-full pointer-events-none" />
-          <div className="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
-          
-          <div className="relative z-10 p-8 pt-6">
-            <TopBar profile={profile} />
-            <div className="mt-8 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4">
-              {children}
-            </div>
-          </div>
-        </main>
-      </div>
+      <DashboardLayoutClient profile={profile}>
+        {children}
+      </DashboardLayoutClient>
     </DashboardProvider>
   )
 }

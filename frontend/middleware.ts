@@ -64,7 +64,7 @@ export async function middleware(request: NextRequest) {
     // Redirect to Onboarding if not done
     if (!onboardingCompleted && !pathname.startsWith('/onboarding') && !pathname.startsWith('/auth')) {
       const url = request.nextUrl.clone()
-      url.pathname = '/onboarding/company'
+      url.pathname = '/onboarding'
       return NextResponse.redirect(url)
     }
 

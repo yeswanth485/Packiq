@@ -30,13 +30,19 @@ async def run_test():
         page = await context.new_page()
 
         # Interact with the page elements to simulate user flow
-        # -> Navigate to http://localhost:3001/
-        await page.goto("http://localhost:3001/")
+        # -> Navigate to http://127.0.0.1:3000/
+        await page.goto("http://127.0.0.1:3000/")
         
-        # --> Test passed — verified by AI agent
+        # -> Click the 'Sign In' link to open the login page.
+        frame = context.pages[-1]
+        # Click element
+        elem = frame.locator('xpath=/html/body/div[2]/nav/div/div[2]/a').nth(0)
+        await asyncio.sleep(3); await elem.click()
+        
+        # --> Assertions to verify final state
         frame = context.pages[-1]
         current_url = await frame.evaluate("() => window.location.href")
-        assert current_url is not None, "Test completed successfully"
+        assert '/dashboard' in current_url, 'The page should have navigated to the dashboard after completing onboarding.'
         await asyncio.sleep(5)
 
     finally:

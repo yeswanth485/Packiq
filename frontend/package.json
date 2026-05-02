@@ -16,7 +16,9 @@
     "@stripe/stripe-js": "^9.3.1",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.1",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/qrcode.react": "^1.0.5",
+    "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.14.0",
@@ -37,8 +39,8 @@
     "zod": "^4.4.1"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
     "@eslint/eslintrc": "^3.3.1",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19",

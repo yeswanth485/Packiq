@@ -19,7 +19,7 @@ export default async function OnboardingLayout({ children }: { children: React.R
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-[#05050a]">
       {children}
     </div>
   )

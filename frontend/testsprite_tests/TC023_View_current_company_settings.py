@@ -30,8 +30,8 @@ async def run_test():
         page = await context.new_page()
 
         # Interact with the page elements to simulate user flow
-        # -> Navigate to http://localhost:3001/
-        await page.goto("http://localhost:3001/")
+        # -> Navigate to http://127.0.0.1:3001/
+        await page.goto("http://127.0.0.1:3001/")
         
         # -> Click the 'Sign In' link to open the login page (element index 54).
         frame = context.pages[-1]
