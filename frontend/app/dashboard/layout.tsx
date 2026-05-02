@@ -12,8 +12,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/auth/login')
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
+  const { data: profile } = await (supabase.from('profiles') as any)
     .select('*')
     .eq('id', user.id)
     .single()

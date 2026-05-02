@@ -9,8 +9,7 @@ export default async function OnboardingLayout({ children }: { children: React.R
     redirect('/auth/login')
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
+  const { data: profile } = await (supabase.from('profiles') as any)
     .select('onboarding_completed')
     .eq('id', user.id)
     .single()

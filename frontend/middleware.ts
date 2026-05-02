@@ -51,8 +51,7 @@ export async function middleware(request: NextRequest) {
     // Check Onboarding
     let onboardingCompleted = false
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
+      const { data: profile } = await (supabase.from('profiles') as any)
         .select('onboarding_completed')
         .eq('id', user.id)
         .single()
