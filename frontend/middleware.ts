@@ -29,9 +29,9 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Do NOT add any logic between createServerClient and getUser()
   const {
     data: { user },
+    error: userError
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
@@ -46,12 +46,10 @@ export async function middleware(request: NextRequest) {
 
   // Authenticated users - check onboarding status
   if (user) {
-    // Skip redirect logic for API routes and static assets
     if (pathname.startsWith('/api/') || pathname.startsWith('/_next/')) {
       return supabaseResponse
     }
 
-    // Get profile to check onboarding status
     let needsOnboarding = false
     try {
       const { data: profile } = await supabase
@@ -61,10 +59,7 @@ export async function middleware(request: NextRequest) {
         .single()
       
       needsOnboarding = !profile || !(profile as any).onboarding_completed
-      console.log(`[Middleware] User ${user.id}: needsOnboarding=${needsOnboarding}`)
     } catch (error) {
-      console.error('[Middleware] Error fetching profile:', error)
-      // If we can't get profile, assume onboarding is needed
       needsOnboarding = true
     }
 
@@ -84,7 +79,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    // If trying to access onboarding but already completed → redirect to dashboard
+    // If already on onboarding but finished → go to dashboard
     if (!needsOnboarding && pathname.startsWith('/onboarding')) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
@@ -98,7 +93,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all pages EXCEPT static files and API routes
     '/((?!_next/static|_next/image|favicon.ico|api/).*)',
   ],
 }

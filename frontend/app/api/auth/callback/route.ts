@@ -62,8 +62,8 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('[Auth Callback] Session verified. Redirecting to:', next)
-
-    // Session established — redirect to next (middleware will handle onboarding check)
+    
+    // Explicitly create the redirect response to ensure cookie headers are included
     const redirectUrl = new URL(next, request.url)
     return NextResponse.redirect(redirectUrl)
   }
