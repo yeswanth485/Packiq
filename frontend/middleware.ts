@@ -29,55 +29,50 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-    error: userError
-  } = await supabase.auth.getUser()
+  // 1. Get the authenticated user
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const { pathname } = request.nextUrl
+  const pathname = request.nextUrl.pathname
 
-  // Protected routes - redirect to login if not authenticated
+  // 2. Protect Dashboard & Onboarding routes
   if (!user && (pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding'))) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
-    url.search = ''
     return NextResponse.redirect(url)
   }
 
-  // Authenticated users - check onboarding status
+  // 3. Handle Authenticated User Routing
   if (user) {
+    // Skip for API/Static
     if (pathname.startsWith('/api/') || pathname.startsWith('/_next/')) {
       return supabaseResponse
     }
 
-    let needsOnboarding = false
+    // Check Onboarding
+    let onboardingCompleted = false
     try {
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('onboarding_completed')
         .eq('id', user.id)
         .single()
       
-      // PGRST116 means no rows found, which is expected for new users
-      needsOnboarding = !profile || !profile.onboarding_completed
-    } catch (error) {
-      needsOnboarding = true
+      onboardingCompleted = !!profile?.onboarding_completed
+    } catch (e) {
+      onboardingCompleted = false
     }
 
-    // AUTH/LANDING REDIRECTS
-    if (pathname === '/' || pathname.startsWith('/auth')) {
-      const target = needsOnboarding ? '/onboarding/company' : '/dashboard'
+    // Redirect to Onboarding if not done
+    if (!onboardingCompleted && !pathname.startsWith('/onboarding') && !pathname.startsWith('/auth')) {
       const url = request.nextUrl.clone()
-      url.pathname = target
-      url.search = ''
+      url.pathname = '/onboarding/company'
       return NextResponse.redirect(url)
     }
 
-    // ONBOARDING REDIRECTS
-    if (!needsOnboarding && pathname.startsWith('/onboarding')) {
+    // Redirect to Dashboard if done and on Landing/Auth
+    if (onboardingCompleted && (pathname === '/' || pathname.startsWith('/auth'))) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
-      url.search = ''
       return NextResponse.redirect(url)
     }
   }

@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/Sidebar'
 import TopBar from '@/components/dashboard/TopBar'
-import type { Profile } from '@/types'
 import { DashboardProvider } from '@/lib/context/DashboardContext'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -19,7 +18,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq('id', user.id)
     .single()
 
-  if (!profile || !(profile as Profile).onboarding_completed) {
+  if (!profile || !profile.onboarding_completed) {
     redirect('/onboarding/company')
   }
 
