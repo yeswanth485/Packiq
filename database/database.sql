@@ -264,9 +264,11 @@ insert into public.box_catalog (name, supplier, sku, length_cm, width_cm, height
   ('Medium Box M1',   'EcoPack',  'EP-M1',  30, 20, 15, 10,    0.85, 'recycled',   true),
   ('Medium Box M2',   'EcoPack',  'EP-M2',  35, 25, 20, 15,    1.10, 'recycled',   true),
   ('Large Box L1',    'ShipSafe', 'SS-L1',  45, 35, 25, 20,    1.45, 'corrugated', false),
-  ('Large Box L2',    'ShipSafe', 'SS-L2',  50, 40, 30, 25,    1.80, 'corrugated', false),
-  ('XL Box XL1',      'ShipSafe', 'SS-XL1', 60, 50, 40, 30,    2.50, 'heavy-duty', false),
-  ('Eco Slim ES1',    'EcoPack',  'EP-ES1', 25, 20,  5,  3,    0.65, 'recycled',   true),
-  ('Cube Box C1',     'BoxCo',    'BC-C1',  25, 25, 25, 12,    0.95, 'corrugated', false),
+  ('Amazon A1',       'Amazon',   'AMZ-A1', 15.2, 10.2, 10.2, 3,  0.45, 'premium-corrugated', false),
+  ('Amazon A2',       'Amazon',   'AMZ-A2', 20.3, 15.2, 10.2, 5,  0.65, 'premium-corrugated', false),
+  ('Amazon B1',       'Amazon',   'AMZ-B1', 30.5, 25.4, 20.3, 10, 0.95, 'premium-corrugated', false),
+  ('Flipkart F1',     'Flipkart', 'FK-F1',  17, 13, 5,  2,    0.30, 'recycled-kraft', true),
+  ('Flipkart F2',     'Flipkart', 'FK-F2',  24, 16, 7,  4,    0.50, 'recycled-kraft', true),
+  ('Flipkart F3',     'Flipkart', 'FK-F3',  30, 22, 10, 8,    0.75, 'recycled-kraft', true),
   ('Mailer M1',       'MailPro',  'MP-M1',  30, 22,  5,  2,    0.40, 'poly-mailer',false)
 on conflict (sku) do nothing;

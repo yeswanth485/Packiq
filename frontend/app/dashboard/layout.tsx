@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/Sidebar'
 import TopBar from '@/components/dashboard/TopBar'
 import type { Profile } from '@/types'
+import { DashboardProvider } from '@/lib/context/DashboardContext'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -12,34 +13,32 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/auth/login')
   }
 
-  // Wait a moment for the DB trigger to create the profile row
-  // then fetch the profile
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  // If no profile row or onboarding not done → go to onboarding
   if (!profile || !(profile as Profile).onboarding_completed) {
     redirect('/onboarding/company')
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
-      <Sidebar />
-      <main className="ml-64 min-h-screen relative">
-        {/* Background Decorative Elements */}
-        <div className="fixed top-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
-        <div className="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
-        
-        <div className="relative z-10 p-8 pt-6">
-          <TopBar profile={profile} />
-          <div className="mt-8 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4">
-            {children}
+    <DashboardProvider>
+      <div className="min-h-screen bg-[#050505] text-white">
+        <Sidebar />
+        <main className="ml-64 min-h-screen relative">
+          <div className="fixed top-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#00E5CC]/5 blur-[120px] rounded-full pointer-events-none" />
+          <div className="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
+          
+          <div className="relative z-10 p-8 pt-6">
+            <TopBar profile={profile} />
+            <div className="mt-8 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4">
+              {children}
+            </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+    </DashboardProvider>
   )
 }

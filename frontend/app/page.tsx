@@ -1,13 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'react-router-dom'
 import { 
   Zap, Package, UploadCloud, BarChart3, 
-  MapPin, Cpu, CheckCircle2, ArrowRight, Play, Box
+  MapPin, Cpu, CheckCircle2, ArrowRight, Play, Box,
+  ChevronRight, Star, Shield, Smartphone
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -15,86 +16,75 @@ import { createClient } from '@/lib/supabase/client'
 const Hero3DBox = dynamic(() => import('@/components/landing/Hero3DBox'), { ssr: false })
 
 export default function LandingPage() {
-  const { scrollYProgress } = useScroll()
-  const yPos = useTransform(scrollYProgress, [0, 1], [0, 200])
   const router = useRouter()
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
-  // Client-side auth redirect fallback (in case middleware misses it)
   useEffect(() => {
     async function checkAuth() {
       try {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
-        
-        if (user) {
-          console.log('[LandingPage] User is authenticated, redirecting to dashboard')
-          router.push('/dashboard')
-        } else {
-          setIsCheckingAuth(false)
-        }
+        if (user) router.push('/dashboard')
+        else setIsCheckingAuth(false)
       } catch (error) {
-        console.error('[LandingPage] Error checking auth:', error)
         setIsCheckingAuth(false)
       }
     }
-
     checkAuth()
   }, [router])
 
-  // Variants for scroll animations
+  // Animation variants
   const fadeInUp = {
-    hidden: { opacity: 0, y: 40 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } as any }
-  }
-
-  const staggerContainer = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.2 }
+    hidden: { opacity: 0, y: 30, filter: 'blur(10px)' },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      filter: 'blur(0px)',
+      transition: { duration: 0.8, ease: [0.21, 0.47, 0.32, 0.98] } 
     }
   }
 
+  const stagger = {
+    visible: { transition: { staggerChildren: 0.15 } }
+  }
+
   return (
-    <div className="min-h-screen bg-[#0A0A0F] text-white overflow-hidden font-sans selection:bg-[#00E5CC]/30">
+    <div className="min-h-screen bg-[#0A0A0F] text-white font-sans selection:bg-[#00E5CC]/30 overflow-x-hidden">
       
       {/* ─────────────────────────────────────────────────────────
-          HEADER / NAVBAR
+          NAVIGATION
           ───────────────────────────────────────────────────────── */}
       <motion.nav 
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" } as any}
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
         className="fixed top-0 left-0 right-0 z-50 glass-nav"
       >
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00E5CC] to-[#3B82F6] flex items-center justify-center p-[1px]">
-              <div className="w-full h-full bg-[#0A0A0F] rounded-xl flex items-center justify-center transition-colors group-hover:bg-transparent">
-                <Box className="w-5 h-5 text-[#00E5CC] group-hover:text-white transition-all duration-500 group-hover:rotate-180" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00E5CC] to-[#3B82F6] p-[1px]">
+              <div className="w-full h-full bg-[#0A0A0F] rounded-xl flex items-center justify-center">
+                <Box className="w-5 h-5 text-[#00E5CC] group-hover:rotate-12 transition-transform" />
               </div>
             </div>
             <span className="font-bold text-xl tracking-tight">PackIQ</span>
           </Link>
           
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-300">
-            <a href="#how-it-works" className="hover:text-[#00E5CC] transition-colors">How It Works</a>
-            <a href="#features" className="hover:text-[#00E5CC] transition-colors">Features</a>
-            <a href="#pricing" className="hover:text-[#00E5CC] transition-colors">Pricing</a>
-            <a href="#partners" className="hover:text-[#00E5CC] transition-colors">Partners</a>
-            <a href="#contact" className="hover:text-[#00E5CC] transition-colors">Contact</a>
+          <div className="hidden md:flex items-center gap-10 text-sm font-medium text-gray-400">
+            <a href="#features" className="hover:text-white transition-colors">What We Do</a>
+            <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
+            <a href="#partners" className="hover:text-white transition-colors">Partners</a>
+            <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
           </div>
 
-          <div className="flex items-center gap-4">
-            <Link href="/auth/login" className="hidden sm:block text-sm font-medium text-gray-300 hover:text-white transition-colors">
-              Log in
+          <div className="flex items-center gap-6">
+            <Link href="/auth/login" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
+              Sign In
             </Link>
             <Link 
-              href="/auth/login" 
-              className="text-sm bg-[#00E5CC] hover:bg-[#00c2ad] text-[#0A0A0F] px-5 py-2.5 rounded-xl font-bold transition-all glow-teal hover:scale-105"
+              href="/auth/signup" 
+              className="bg-[#00E5CC] hover:bg-[#00c2ad] text-[#0A0A0F] px-6 py-2.5 rounded-xl font-bold transition-all hover:scale-105 shadow-[0_0_20px_rgba(0,229,204,0.3)]"
             >
-              Get Started Free
+              Get Started
             </Link>
           </div>
         </div>
@@ -103,169 +93,115 @@ export default function LandingPage() {
       {/* ─────────────────────────────────────────────────────────
           HERO SECTION
           ───────────────────────────────────────────────────────── */}
-      <section className="relative pt-40 pb-32 px-6 min-h-[90vh] flex items-center">
-        {/* Background 3D Box Container */}
-        <div className="absolute inset-0 z-0 opacity-50 md:opacity-100 right-0 md:left-1/3 overflow-hidden pointer-events-none">
-           <Hero3DBox />
-        </div>
+      <section className="relative pt-32 pb-20 px-6 min-h-screen flex items-center">
+        {/* Abstract Background Shapes */}
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#00E5CC]/5 blur-[150px] -z-10 rounded-full translate-x-1/2 -translate-y-1/4" />
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-blue-500/5 blur-[150px] -z-10 rounded-full -translate-x-1/2 translate-y-1/4" />
 
-        <div className="max-w-7xl mx-auto w-full relative z-10 grid md:grid-cols-2 gap-12 items-center">
+        <div className="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-16 items-center">
           <motion.div 
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 } as any}
+            initial="hidden" animate="visible" variants={stagger}
+            className="relative z-10"
           >
-            <h1 className="text-5xl lg:text-7xl font-extrabold leading-[1.1] tracking-tight mb-6">
-              Pack Smarter.<br />
-              Ship Faster.<br />
-              <span className="gradient-teal">Save More.</span>
-            </h1>
-            <p className="text-xl text-gray-400 leading-relaxed mb-10 max-w-lg">
-              AI-powered packaging decisions for warehouses, e-commerce, and logistics at scale.
-            </p>
+            <motion.div variants={fadeInUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 mb-8">
+              <span className="w-2 h-2 rounded-full bg-[#00E5CC] animate-pulse" />
+              <span className="text-xs font-bold tracking-wider text-gray-300 uppercase">Next-Gen Logistics AI</span>
+            </motion.div>
             
-            <div className="flex flex-wrap items-center gap-4">
+            <motion.h1 variants={fadeInUp} className="text-6xl lg:text-8xl font-black leading-[1.05] tracking-tight mb-8">
+              Optimization <br />
+              <span className="gradient-teal">Redefined.</span>
+            </motion.h1>
+            
+            <motion.p variants={fadeInUp} className="text-xl text-gray-400 leading-relaxed mb-12 max-w-xl">
+              Automate your packaging logic with real-time AI spatial reasoning. Reduce waste, cut costs, and ship faster with PackIQ.
+            </motion.p>
+            
+            <motion.div variants={fadeInUp} className="flex flex-wrap items-center gap-5">
               <Link 
-                href="/auth/login" 
-                className="bg-[#00E5CC] hover:bg-[#00c2ad] text-[#0A0A0F] px-8 py-4 rounded-xl font-bold text-base transition-all glow-teal flex items-center gap-2 hover:scale-105"
+                href="/auth/signup" 
+                className="bg-[#00E5CC] hover:bg-[#00c2ad] text-[#0A0A0F] px-10 py-5 rounded-2xl font-black text-lg transition-all flex items-center gap-3 hover:scale-105 shadow-[0_10px_30px_rgba(0,229,204,0.2)]"
               >
-                Start Free Trial
-                <ArrowRight className="w-5 h-5" />
+                Launch Platform
+                <ChevronRight className="w-5 h-5" />
               </Link>
-              <button className="glass hover:bg-white/5 text-white px-8 py-4 rounded-xl font-bold text-base transition-all flex items-center gap-2 border border-white/10 hover:border-[#00E5CC]/50">
-                <Play className="w-5 h-5 fill-current" />
-                Watch Demo
+              <button className="glass hover:bg-white/5 text-white px-10 py-5 rounded-2xl font-bold text-lg transition-all flex items-center gap-3 border border-white/10">
+                <Play className="w-5 h-5 fill-current text-[#00E5CC]" />
+                Visual Demo
               </button>
-            </div>
+            </motion.div>
           </motion.div>
 
-          {/* Floating Stats Badges */}
-          <div className="relative h-full hidden md:block">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8, filter: 'blur(20px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            transition={{ duration: 1.2, delay: 0.2 }}
+            className="relative h-[600px] lg:h-[700px] flex items-center justify-center"
+          >
+            <Hero3DBox />
+            
+            {/* Floating UI Elements */}
             <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-              className="absolute top-10 right-10 glass p-4 rounded-2xl border border-[#00E5CC]/20 backdrop-blur-md shadow-2xl flex items-center gap-4"
+              animate={{ y: [0, -15, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute top-20 right-0 glass p-5 rounded-2xl border-white/10 shadow-2xl backdrop-blur-xl"
             >
-              <div className="w-12 h-12 rounded-full bg-[#00E5CC]/20 flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-[#00E5CC]" />
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-green-400" />
+                </div>
+                <span className="text-sm font-bold text-gray-200">Efficiency Optimized</span>
               </div>
-              <div>
-                <div className="text-2xl font-bold">32%</div>
-                <div className="text-xs text-gray-400">Avg Cost Reduction</div>
-              </div>
+              <div className="text-3xl font-black text-white">+42%</div>
             </motion.div>
+          </motion.div>
+        </div>
+      </section>
 
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.0 }}
-              className="absolute top-1/2 -left-10 glass p-4 rounded-2xl border border-[#00E5CC]/20 backdrop-blur-md shadow-2xl flex items-center gap-4"
-            >
-              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-blue-400" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">10x</div>
-                <div className="text-xs text-gray-400">Faster Decisions</div>
-              </div>
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.2 }}
-              className="absolute bottom-10 right-20 glass p-4 rounded-2xl border border-[#00E5CC]/20 backdrop-blur-md shadow-2xl flex items-center gap-4"
-            >
-              <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
-                <Package className="w-6 h-6 text-green-400" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">Zero</div>
-                <div className="text-xs text-gray-400">Wasted Space</div>
-              </div>
-            </motion.div>
+      {/* ─────────────────────────────────────────────────────────
+          PARTNERS MARQUEE
+          ───────────────────────────────────────────────────────── */}
+      <section id="partners" className="py-20 border-y border-white/5 bg-white/[0.01]">
+        <div className="max-w-7xl mx-auto px-6">
+          <p className="text-center text-xs font-bold tracking-[0.3em] uppercase text-gray-500 mb-12">Powering Global Supply Chains</p>
+          <div className="flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-30 grayscale hover:grayscale-0 transition-all">
+             <div className="text-2xl font-black italic">FEDEX</div>
+             <div className="text-2xl font-black tracking-tighter">DHL</div>
+             <div className="text-2xl font-black">AMAZON</div>
+             <div className="text-2xl font-black italic">UPS</div>
+             <div className="text-2xl font-black tracking-widest">MAERSK</div>
           </div>
         </div>
       </section>
 
       {/* ─────────────────────────────────────────────────────────
-          HOW IT WORKS SECTION
+          WHAT WE DO (FEATURES)
           ───────────────────────────────────────────────────────── */}
-      <section id="how-it-works" className="py-32 px-6 relative">
-        <div className="max-w-7xl mx-auto">
-          <motion.div 
-            initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }}
-            variants={fadeInUp}
-            className="text-center mb-20"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">How PackIQ Works</h2>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto">From data ingestion to automated packing instructions in 4 simple steps.</p>
-          </motion.div>
-
-          <motion.div 
-            variants={staggerContainer}
-            initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }}
-            className="relative"
-          >
-            {/* Connecting line for desktop */}
-            <div className="hidden md:block absolute top-12 left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-transparent via-[#00E5CC]/50 to-transparent" />
-
-            <div className="grid md:grid-cols-4 gap-12 relative z-10">
-              {[
-                { icon: UploadCloud, title: "1. Upload Data", desc: "Easily import your product catalog via CSV or Excel." },
-                { icon: Cpu, title: "2. AI Analysis", desc: "Claude analyzes dimensions, weight, and fragility rules." },
-                { icon: Box, title: "3. Get Match", desc: "Receive instantly optimized box recommendations." },
-                { icon: BarChart3, title: "4. Track Savings", desc: "Monitor cost reductions and automate future decisions." }
-              ].map((step, i) => (
-                <motion.div key={i} variants={fadeInUp} className="text-center group">
-                  <div className="w-24 h-24 mx-auto glass rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:border-[#00E5CC]/50 transition-all duration-300 relative z-10 bg-[#0A0A0F]">
-                    <step.icon className="w-10 h-10 text-[#00E5CC]" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-3">{step.title}</h3>
-                  <p className="text-gray-400 text-sm leading-relaxed max-w-[200px] mx-auto">{step.desc}</p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ─────────────────────────────────────────────────────────
-          FEATURES SECTION
-          ───────────────────────────────────────────────────────── */}
-      <section id="features" className="py-32 px-6 bg-white/[0.02]">
+      <section id="features" className="py-32 px-6">
         <div className="max-w-7xl mx-auto">
           <motion.div 
             initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp}
-            className="mb-16"
+            className="text-center mb-24"
           >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Enterprise-Grade Features</h2>
-            <p className="text-xl text-gray-400 max-w-2xl">Everything you need to modernize your fulfillment operations.</p>
+            <h2 className="text-4xl md:text-6xl font-black mb-6">What We Do</h2>
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto">We replace guesswork with AI-driven spatial intelligence to transform your fulfillment center.</p>
           </motion.div>
 
           <motion.div 
-            variants={staggerContainer}
-            initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+            variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true }}
+            className="grid md:grid-cols-3 gap-8"
           >
             {[
-              { icon: Cpu, title: "AI Optimization Engine", desc: "Powered by Claude 3.5 Sonnet via OpenRouter for unmatched reasoning capabilities on complex product shapes." },
-              { icon: UploadCloud, title: "Bulk Upload", desc: "Process thousands of SKUs simultaneously via CSV or Excel with instant data validation and error handling." },
-              { icon: Box, title: "3D Box Preview", desc: "Visualize every recommended box interactively before packing to ensure perfect fit and orientation." },
-              { icon: BarChart3, title: "Real-Time Analytics", desc: "Comprehensive charts tracking KPIs, void space reduction, and exact dollar savings per shipment." },
-              { icon: MapPin, title: "Order & Shipment Tracking", desc: "End-to-end visibility from the moment a box is selected to the moment it reaches the customer." },
-              { icon: Zap, title: "Hardware-Ready API", desc: "Headless architecture ready to connect directly to automated packing machines and conveyor systems." }
-            ].map((f, i) => (
-              <motion.div key={i} variants={fadeInUp} className="glass rounded-2xl p-8 card-hover border-white/5 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity transform translate-x-4 -translate-y-4">
-                  <f.icon className="w-32 h-32 text-white" />
+              { icon: Cpu, title: "Spatial AI Engine", desc: "Our proprietary algorithms calculate the absolute minimum volume required for any combination of products." },
+              { icon: Smartphone, title: "Real-Time Verification", desc: "Secure multi-factor authentication with real-time SMS OTP ensures your enterprise data stays protected." },
+              { icon: BarChart3, title: "Savings Analytics", desc: "Visualize every cent saved. Track void-space reduction, weight optimization, and carrier cost drops." }
+            ].map((item, i) => (
+              <motion.div key={i} variants={fadeInUp} className="glass p-10 rounded-3xl border-white/5 hover:border-[#00E5CC]/30 transition-all group">
+                <div className="w-14 h-14 bg-[#00E5CC]/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                  <item.icon className="w-7 h-7 text-[#00E5CC]" />
                 </div>
-                <div className="w-12 h-12 bg-[#00E5CC]/10 rounded-xl flex items-center justify-center mb-6 relative z-10">
-                  <f.icon className="w-6 h-6 text-[#00E5CC]" />
-                </div>
-                <h3 className="text-xl font-bold mb-3 relative z-10">{f.title}</h3>
-                <p className="text-gray-400 leading-relaxed relative z-10">{f.desc}</p>
+                <h3 className="text-2xl font-bold mb-4">{item.title}</h3>
+                <p className="text-gray-400 leading-relaxed">{item.desc}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -273,133 +209,122 @@ export default function LandingPage() {
       </section>
 
       {/* ─────────────────────────────────────────────────────────
-          PRICING SECTION
+          HOW IT WORKS
           ───────────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-32 px-6">
+      <section id="how-it-works" className="py-32 px-6 bg-white/[0.02]">
         <div className="max-w-7xl mx-auto">
-          <motion.div 
-            initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp}
-            className="text-center mb-20"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Transparent Pricing</h2>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto">Start optimizing today. Scale as your volume grows.</p>
-          </motion.div>
-
-          <motion.div 
-            variants={staggerContainer}
-            initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }}
-            className="grid lg:grid-cols-3 gap-8 items-center"
-          >
-            {/* Free Plan */}
-            <motion.div variants={fadeInUp} className="glass rounded-3xl p-8 border border-white/10 relative">
-              <h3 className="text-2xl font-bold mb-2">Free</h3>
-              <div className="flex items-end gap-1 mb-6">
-                <span className="text-5xl font-extrabold">$0</span>
-                <span className="text-gray-400 mb-1">/month</span>
-              </div>
-              <ul className="space-y-4 mb-8">
-                {['100 products/month', 'Basic AI Optimization', 'CSV upload only', 'Standard email support'].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-gray-300">
-                    <CheckCircle2 className="w-5 h-5 text-[#00E5CC] shrink-0" />
-                    <span>{item}</span>
-                  </li>
+          <div className="grid lg:grid-cols-2 gap-20 items-center">
+            <motion.div 
+              initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp}
+            >
+              <h2 className="text-4xl md:text-5xl font-black mb-8">Integrated Flow in <span className="text-[#00E5CC]">Seconds.</span></h2>
+              <div className="space-y-10">
+                {[
+                  { step: "01", title: "Data Sync", desc: "Connect your ERP or upload your product catalog via CSV." },
+                  { step: "02", title: "AI Decisioning", desc: "PackIQ analyzes orders and suggests the perfect box size instantly." },
+                  { step: "03", title: "Mobile Verification", desc: "Secure your high-value operations with real-time OTP confirmation." }
+                ].map((s, i) => (
+                  <div key={i} className="flex gap-6">
+                    <span className="text-4xl font-black text-[#00E5CC]/20">{s.step}</span>
+                    <div>
+                      <h4 className="text-xl font-bold mb-2">{s.title}</h4>
+                      <p className="text-gray-400">{s.desc}</p>
+                    </div>
+                  </div>
                 ))}
-              </ul>
-              <Link href="/auth/login" className="block w-full py-4 text-center rounded-xl glass border border-white/20 hover:bg-white/10 font-bold transition-all">
-                Get Started Free
-              </Link>
-            </motion.div>
-
-            {/* Pro Plan */}
-            <motion.div variants={fadeInUp} className="glass rounded-3xl p-10 border-2 border-[#00E5CC]/50 glow-teal relative transform lg:-translate-y-4 bg-gradient-to-b from-[#00E5CC]/5 to-transparent">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#00E5CC] text-[#0A0A0F] font-bold px-4 py-1 rounded-full text-sm">
-                Most Popular
               </div>
-              <h3 className="text-2xl font-bold mb-2">Pro</h3>
-              <div className="flex items-end gap-1 mb-6">
-                <span className="text-5xl font-extrabold">$49</span>
-                <span className="text-gray-400 mb-1">/month</span>
-              </div>
-              <ul className="space-y-4 mb-8">
-                {['Unlimited products', 'Claude 3.5 Sonnet AI', 'Excel + CSV support', 'Interactive 3D Viewer', 'Advanced Analytics Dashboard'].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-white">
-                    <CheckCircle2 className="w-5 h-5 text-[#00E5CC] shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/auth/login" className="block w-full py-4 text-center rounded-xl bg-[#00E5CC] hover:bg-[#00c2ad] text-[#0A0A0F] font-bold transition-all shadow-lg shadow-[#00E5CC]/20">
-                Start Pro Trial
-              </Link>
             </motion.div>
-
-            {/* Enterprise Plan */}
-            <motion.div variants={fadeInUp} className="glass rounded-3xl p-8 border border-white/10 relative">
-              <h3 className="text-2xl font-bold mb-2">Enterprise</h3>
-              <div className="flex items-end gap-1 mb-6">
-                <span className="text-5xl font-extrabold">Custom</span>
+            
+            <motion.div 
+              initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
+              className="relative rounded-3xl overflow-hidden border border-white/10 aspect-video bg-[#0A0A0F]"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-[#00E5CC]/20 to-blue-500/20" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                 <div className="w-20 h-20 bg-[#00E5CC] rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-transform shadow-2xl">
+                    <Play className="w-8 h-8 text-[#0A0A0F] fill-current ml-1" />
+                 </div>
               </div>
-              <ul className="space-y-4 mb-8">
-                {['Everything in Pro', 'Hardware-Ready API Access', 'Dedicated Account Manager', 'White-labeling options', 'Custom SLA & Onboarding'].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-gray-300">
-                    <CheckCircle2 className="w-5 h-5 text-gray-500 shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <button className="block w-full py-4 text-center rounded-xl glass border border-white/20 hover:bg-white/10 font-bold transition-all">
-                Contact Sales
-              </button>
             </motion.div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* ─────────────────────────────────────────────────────────
-          PARTNERS SECTION
+          CTA SECTION
           ───────────────────────────────────────────────────────── */}
-      <section id="partners" className="py-24 px-6 border-y border-white/5 bg-[#0A0A0F]">
-        <div className="max-w-7xl mx-auto text-center">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp}>
-            <h2 className="text-2xl font-bold mb-12 text-gray-400">Trusted by Teams Across Industries</h2>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 items-center opacity-60">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="h-12 flex items-center justify-center grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-300 cursor-pointer">
-                  <div className="text-xl font-black tracking-widest text-white">LOGO {i}</div>
-                </div>
-              ))}
-            </div>
-            
-            <p className="mt-12 text-xs text-gray-600 italic">
-              * Partner logos shown for illustration; replace with actual brand assets.
-            </p>
-          </motion.div>
-        </div>
+      <section className="py-40 px-6 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[#00E5CC]/10 blur-[150px] -z-10" />
+        
+        <motion.div 
+          initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp}
+          className="max-w-4xl mx-auto text-center"
+        >
+          <h2 className="text-5xl md:text-7xl font-black mb-8 leading-[1.1]">Ready to Optimize Your Logistics?</h2>
+          <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">Join the 500+ warehouses using PackIQ to eliminate waste and maximize throughput.</p>
+          
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+            <Link 
+              href="/auth/signup" 
+              className="w-full sm:w-auto bg-[#00E5CC] hover:bg-[#00c2ad] text-[#0A0A0F] px-12 py-6 rounded-2xl font-black text-xl transition-all shadow-2xl"
+            >
+              Start Free Trial
+            </Link>
+            <button className="w-full sm:w-auto glass hover:bg-white/5 text-white px-12 py-6 rounded-2xl font-bold text-xl transition-all border border-white/10">
+              Contact Sales
+            </button>
+          </div>
+          
+          <div className="mt-16 flex items-center justify-center gap-8 text-gray-500">
+             <div className="flex items-center gap-2"><Star className="w-4 h-4 text-[#00E5CC]" /> 4.9/5 Rating</div>
+             <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-[#00E5CC]" /> Enterprise Secure</div>
+          </div>
+        </motion.div>
       </section>
 
       {/* ─────────────────────────────────────────────────────────
           FOOTER
           ───────────────────────────────────────────────────────── */}
-      <footer className="py-12 px-6 border-t border-white/5 bg-[#0A0A0F]">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#00E5CC] flex items-center justify-center">
-              <Box className="w-4 h-4 text-[#0A0A0F]" />
-            </div>
-            <span className="font-bold text-xl">PackIQ</span>
+      <footer className="py-20 px-6 border-t border-white/5 bg-[#0A0A0F]">
+        <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-12 mb-16">
+          <div className="col-span-1 md:col-span-2">
+            <Link href="/" className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 rounded-lg bg-[#00E5CC] flex items-center justify-center">
+                <Box className="w-4 h-4 text-[#0A0A0F]" />
+              </div>
+              <span className="font-bold text-2xl">PackIQ</span>
+            </Link>
+            <p className="text-gray-400 max-w-xs leading-relaxed">The intelligent packaging platform for the modern supply chain. Powered by AI, secured by real-time verification.</p>
           </div>
           
-          <div className="flex gap-6 text-sm text-gray-400">
-            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
+          <div>
+            <h4 className="font-bold text-white mb-6">Product</h4>
+            <ul className="space-y-4 text-gray-400 text-sm">
+              <li><a href="#" className="hover:text-[#00E5CC] transition-colors">Features</a></li>
+              <li><a href="#" className="hover:text-[#00E5CC] transition-colors">Integrations</a></li>
+              <li><a href="#" className="hover:text-[#00E5CC] transition-colors">API Reference</a></li>
+              <li><a href="#" className="hover:text-[#00E5CC] transition-colors">Pricing</a></li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 className="font-bold text-white mb-6">Company</h4>
+            <ul className="space-y-4 text-gray-400 text-sm">
+              <li><a href="#" className="hover:text-[#00E5CC] transition-colors">About Us</a></li>
+              <li><a href="#" className="hover:text-[#00E5CC] transition-colors">Careers</a></li>
+              <li><a href="#" className="hover:text-[#00E5CC] transition-colors">Blog</a></li>
+              <li><a href="#" className="hover:text-[#00E5CC] transition-colors">Privacy Policy</a></li>
+            </ul>
+          </div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-600">
+          <p>© {new Date().getFullYear()} PackIQ Technologies Inc. All rights reserved.</p>
+          <div className="flex gap-8">
             <a href="#" className="hover:text-white transition-colors">Twitter</a>
             <a href="#" className="hover:text-white transition-colors">LinkedIn</a>
             <a href="#" className="hover:text-white transition-colors">GitHub</a>
           </div>
-        </div>
-        <div className="max-w-7xl mx-auto mt-8 text-center md:text-left text-sm text-gray-600">
-          © {new Date().getFullYear()} PackIQ. All rights reserved.
         </div>
       </footer>
     </div>
