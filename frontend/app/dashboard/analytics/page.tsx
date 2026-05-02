@@ -31,7 +31,8 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     async function loadAnalytics() {
-      const { data: optimizations } = await supabase.from('optimizations').select('*').eq('status', 'completed')
+      const { data: optimizations } = await supabase.from('optimizations').select('*').eq('status', 'completed') as { data: any[] | null }
+
       
       if (optimizations) {
         const totalSavings = optimizations.reduce((acc, o) => acc + (o.cost_savings_usd || 0), 0)
