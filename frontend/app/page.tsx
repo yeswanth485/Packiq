@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'react-router-dom'
+import { useRouter } from 'next/navigation'
 import { 
   Zap, Package, UploadCloud, BarChart3, 
   MapPin, Cpu, CheckCircle2, ArrowRight, Play, Box,
