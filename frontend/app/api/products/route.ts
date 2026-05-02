@@ -19,8 +19,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data, error } = await supabase
-    .from('products')
+  const { data, error } = await (supabase.from('products') as any)
     .select('*')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
@@ -38,8 +37,7 @@ export async function POST(request: NextRequest) {
   const parsed = ProductSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const { data, error } = await supabase
-    .from('products')
+  const { data, error } = await (supabase.from('products') as any)
     .insert({ ...parsed.data, user_id: user.id } as any)
     .select()
     .single()
@@ -57,7 +55,7 @@ export async function DELETE(request: NextRequest) {
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
-  const { error } = await supabase.from('products').delete().eq('id', id).eq('user_id', user.id)
+  const { error } = await (supabase.from('products') as any).delete().eq('id', id).eq('user_id', user.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }

@@ -36,8 +36,7 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaving(true)
-    const { error } = await supabase
-      .from('profiles')
+    const { error } = await (supabase.from('profiles') as any)
       .update({
         full_name: profile.full_name,
         company: profile.company,

@@ -76,7 +76,7 @@ export async function POST(req: Request) {
         }
 
         // Store result in DB
-        const { error: dbErr } = await supabase.from('optimizations').insert({
+        const { error: dbErr } = await (supabase.from('optimizations') as any).insert({
           user_id: user.id,
           status: 'completed',
           product_snapshot: p,
