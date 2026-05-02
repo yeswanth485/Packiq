@@ -52,34 +52,28 @@ export async function middleware(request: NextRequest) {
 
     let needsOnboarding = false
     try {
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('onboarding_completed')
         .eq('id', user.id)
         .single()
       
-      needsOnboarding = !profile || !(profile as any).onboarding_completed
+      // PGRST116 means no rows found, which is expected for new users
+      needsOnboarding = !profile || !profile.onboarding_completed
     } catch (error) {
       needsOnboarding = true
     }
 
-    // If on auth/landing pages and onboarding is needed → go to onboarding
-    if (needsOnboarding && (pathname.startsWith('/auth') || pathname === '/')) {
+    // AUTH/LANDING REDIRECTS
+    if (pathname === '/' || pathname.startsWith('/auth')) {
+      const target = needsOnboarding ? '/onboarding/company' : '/dashboard'
       const url = request.nextUrl.clone()
-      url.pathname = '/onboarding/company'
+      url.pathname = target
       url.search = ''
       return NextResponse.redirect(url)
     }
 
-    // If on auth/landing pages and onboarding is complete → go to dashboard
-    if (!needsOnboarding && (pathname.startsWith('/auth') || pathname === '/')) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/dashboard'
-      url.search = ''
-      return NextResponse.redirect(url)
-    }
-
-    // If already on onboarding but finished → go to dashboard
+    // ONBOARDING REDIRECTS
     if (!needsOnboarding && pathname.startsWith('/onboarding')) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'

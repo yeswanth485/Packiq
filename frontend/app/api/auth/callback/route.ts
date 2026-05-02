@@ -61,11 +61,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
-    console.log('[Auth Callback] Session verified. Redirecting to:', next)
-    
-    // Explicitly create the redirect response to ensure cookie headers are included
+    // Final session establishment
     const redirectUrl = new URL(next, request.url)
-    return NextResponse.redirect(redirectUrl)
+    const response = NextResponse.redirect(redirectUrl)
+    
+    // In Next.js 15, we can also use cookies() to set, but it's already handled by the SSR client
+    // Here we just ensure the redirect is clean
+    console.log('[Auth Callback] Final redirect to:', next)
+    return response
   }
 
   console.warn('[Auth Callback] No code provided in query params')
