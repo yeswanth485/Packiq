@@ -1,0 +1,1964 @@
+[
+  {
+    "id": "TC001",
+    "title": "Sign in with valid credentials and reach authenticated area",
+    "description": "Verifies an existing user can sign in with email/password and is redirected to an authenticated destination based on onboarding state.",
+    "category": "User Login",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the dashboard or the company onboarding step"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Access gating redirects unauthenticated user away from subscription page",
+    "description": "Verifies that an unauthenticated visitor attempting to access subscription management is redirected to the login page.",
+    "category": "Subscription & Billing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard/subscription"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the login page"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Complete onboarding and reach dashboard",
+    "description": "Verifies a new authenticated user can complete the company, domain, and employees onboarding steps and is redirected to the dashboard at the end.",
+    "category": "Onboarding Flow",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /onboarding/company"
+      },
+      {
+        "type": "action",
+        "description": "Fill PackIQ Test Co into the company name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill Test company description for onboarding into the company description field"
+      },
+      {
+        "type": "action",
+        "description": "Advance to the next onboarding step"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid industry or domain option"
+      },
+      {
+        "type": "action",
+        "description": "Advance to the next onboarding step"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid employee count range"
+      },
+      {
+        "type": "action",
+        "description": "Complete the onboarding setup"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the dashboard"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Add a new product and see it in the table",
+    "description": "Verifies a user can create a product with valid details and the new product appears in the products table.",
+    "category": "Products Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to Products"
+      },
+      {
+        "type": "action",
+        "description": "Open the add product form"
+      },
+      {
+        "type": "action",
+        "description": "Fill Product A into the product name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill SKU-A-001 into the SKU field"
+      },
+      {
+        "type": "action",
+        "description": "Fill valid values into the dimensions fields"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid value into the weight field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the add product form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the products table contains a row for SKU-A-001"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Create a new account and start onboarding",
+    "description": "Verifies a new user can register with a valid email and password and is redirected into onboarding.",
+    "category": "User Signup",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/signup"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with test.user+signup@packiq.example"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with a strong password value"
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the company onboarding step"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Upload valid CSV and preview parsed rows",
+    "description": "Verifies an authenticated user can upload a valid CSV file and see the parsed data previewed in a table.",
+    "category": "CSV Upload & AI Optimization",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard/upload"
+      },
+      {
+        "type": "action",
+        "description": "Upload a valid CSV file with required columns"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a preview table of parsed CSV rows is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "Open results table",
+    "description": "Verifies an authenticated user can open Results and see the results table rendered.",
+    "category": "Optimization Results Viewer",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to Results"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an optimization results table is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC008",
+    "title": "View dashboard overview metrics and recent optimizations",
+    "description": "Verifies an authenticated user can load the dashboard overview and see key metric cards and recent optimization history.",
+    "category": "Dashboard Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify dashboard metric cards are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the recent optimization results table is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC009",
+    "title": "View products list",
+    "description": "Verifies an authenticated user can open Products and see a products table rendered.",
+    "category": "Products Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to Products"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a products table is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC010",
+    "title": "Update company profile and notification preferences",
+    "description": "Verifies that a user can edit company name/description, change notification preferences, save, and see a confirmation that changes were saved.",
+    "category": "Settings",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard/settings"
+      },
+      {
+        "type": "action",
+        "description": "Fill PackIQ Test Company into the company name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill Updated company description for UI test into the company description field"
+      },
+      {
+        "type": "action",
+        "description": "Toggle a notification preference"
+      },
+      {
+        "type": "action",
+        "description": "Save changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a success confirmation is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated company name is displayed in the company name field"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC011",
+    "title": "Delete a product and verify it is removed",
+    "description": "Verifies a user can delete an existing product after confirming and it no longer appears in the products table.",
+    "category": "Products Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to Products"
+      },
+      {
+        "type": "action",
+        "description": "Open the add product form"
+      },
+      {
+        "type": "action",
+        "description": "Fill Product To Delete into the product name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill SKU-DEL-001 into the SKU field"
+      },
+      {
+        "type": "action",
+        "description": "Fill valid values into the dimensions fields"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid value into the weight field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the add product form"
+      },
+      {
+        "type": "action",
+        "description": "Initiate delete for the product with SKU-DEL-001"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the deletion"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the products table does not contain a row for SKU-DEL-001"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC012",
+    "title": "Save company profile information in onboarding company step",
+    "description": "Verifies an authenticated user can enter company profile details and proceed to the domain step successfully.",
+    "category": "Onboarding Flow",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /onboarding/company"
+      },
+      {
+        "type": "action",
+        "description": "Fill PackIQ Onboarding Co into the company name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill Company description used for onboarding step validation into the company description field"
+      },
+      {
+        "type": "action",
+        "description": "Advance to the next onboarding step"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the domain onboarding step is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC013",
+    "title": "Create a new order and see it in the list",
+    "description": "User can create a new order by providing required fields and the new order appears in the orders list.",
+    "category": "Orders Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the orders page"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new order"
+      },
+      {
+        "type": "action",
+        "description": "Fill valid values into all required order fields"
+      },
+      {
+        "type": "action",
+        "description": "Submit the new order"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new order appears in the orders list"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC014",
+    "title": "Select domain and proceed to employees step",
+    "description": "Verifies an authenticated user can choose an industry/domain and advance to the employees onboarding step.",
+    "category": "Onboarding Flow",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /onboarding/domain"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid industry or domain option"
+      },
+      {
+        "type": "action",
+        "description": "Advance to the next onboarding step"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the employees onboarding step is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC015",
+    "title": "Filter results and export CSV",
+    "description": "Verifies a user can apply a filter to results and export a CSV for the filtered set.",
+    "category": "Optimization Results Viewer",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to Results"
+      },
+      {
+        "type": "action",
+        "description": "Apply a valid date filter"
+      },
+      {
+        "type": "action",
+        "description": "Trigger the export CSV action"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an export CSV output is presented in the UI"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC016",
+    "title": "View current subscription plan and status",
+    "description": "Verifies that an authenticated user can open subscription management and see the current plan and status.",
+    "category": "Subscription & Billing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard/subscription"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify current subscription plan information is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify subscription status information is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC017",
+    "title": "View analytics charts",
+    "description": "Verifies an authenticated user can open Analytics and see key charts rendered.",
+    "category": "Analytics Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to Analytics"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify analytics charts are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC018",
+    "title": "View orders list with status indicators",
+    "description": "User can open Orders and see a list of orders rendered with status information.",
+    "category": "Orders Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the orders page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a list of orders is displayed with status indicators"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC019",
+    "title": "Navigate from dashboard to products using sidebar",
+    "description": "Verifies an authenticated user can use the dashboard sidebar to navigate to the products section.",
+    "category": "Dashboard Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Click the sidebar navigation item for products"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the products page is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC020",
+    "title": "Show error for invalid login credentials",
+    "description": "Verifies the login form rejects incorrect credentials and shows an inline error to the user without logging them in.",
+    "category": "User Login",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with wrong-password"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an invalid-credentials error is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC021",
+    "title": "Expand AI reasoning for a result",
+    "description": "Verifies a user can expand a result row to view AI reasoning details for the recommendation.",
+    "category": "Optimization Results Viewer",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to Results"
+      },
+      {
+        "type": "action",
+        "description": "Expand AI reasoning for the first result row"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify AI reasoning details are displayed for the expanded result"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC022",
+    "title": "Add a catalog box to a product",
+    "description": "User can add a selected catalog box to a chosen product and see confirmation in the UI.",
+    "category": "Box Catalog",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the box catalog page"
+      },
+      {
+        "type": "action",
+        "description": "Open a box item from the catalog"
+      },
+      {
+        "type": "action",
+        "description": "Start the add-to-product action for this box"
+      },
+      {
+        "type": "action",
+        "description": "Select an existing product from the product selector"
+      },
+      {
+        "type": "action",
+        "description": "Confirm adding the box to the product"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a success confirmation is visible indicating the box was added to the product"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC023",
+    "title": "View current company settings",
+    "description": "Verifies that an authenticated user can open settings and see current company profile fields and notification preferences loaded.",
+    "category": "Settings",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard/settings"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify company profile fields are displayed with existing values"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify notification preference toggles are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC024",
+    "title": "Filter orders by status",
+    "description": "User can filter the orders list by a status and only matching orders remain visible.",
+    "category": "Orders Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the orders page"
+      },
+      {
+        "type": "action",
+        "description": "Select a specific status in the status filter"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the displayed orders are filtered to the selected status"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC025",
+    "title": "Show CSV format validation error for missing required columns",
+    "description": "Verifies the upload preview blocks invalid CSVs missing required columns and shows a CSV format validation error.",
+    "category": "CSV Upload & AI Optimization",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard/upload"
+      },
+      {
+        "type": "action",
+        "description": "Upload a CSV file missing required columns"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a CSV format validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the preview table is not displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC026",
+    "title": "Prevent saving a product with missing required fields",
+    "description": "Verifies the add product form blocks submission when required fields are empty and shows a validation error.",
+    "category": "Products Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to Products"
+      },
+      {
+        "type": "action",
+        "description": "Open the add product form"
+      },
+      {
+        "type": "action",
+        "description": "Fill SKU-MISS-001 into the SKU field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the add product form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a form validation error is visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC027",
+    "title": "Look up a shipment and view status timeline",
+    "description": "User can enter a tracking number, run a lookup, and see the shipment timeline and status steps.",
+    "category": "Shipment Tracking",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the shipment tracking page"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid tracking number into the tracking number field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the tracking lookup"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a shipment status timeline with steps is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC028",
+    "title": "Require company name before proceeding from onboarding company step",
+    "description": "Verifies the onboarding flow blocks advancing when the company name is missing and shows a validation error.",
+    "category": "Onboarding Flow",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /onboarding/company"
+      },
+      {
+        "type": "action",
+        "description": "Fill  into the company name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill Description without a name into the company description field"
+      },
+      {
+        "type": "action",
+        "description": "Advance to the next onboarding step"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a company name validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains on the company onboarding step"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC029",
+    "title": "Update analytics with date range filter",
+    "description": "Verifies selecting a date range updates the analytics visualizations to reflect the selected range.",
+    "category": "Analytics Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to Analytics"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid date range in the date range filter"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the analytics charts update to reflect the selected date range"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC030",
+    "title": "View box catalog grid",
+    "description": "User can open the Box Catalog and see a grid/list of available box sizes.",
+    "category": "Box Catalog",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the box catalog page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a grid or list of catalog boxes is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC031",
+    "title": "Require employee count selection before completing onboarding",
+    "description": "Verifies the onboarding flow blocks completion when employee count is not selected and shows a validation error.",
+    "category": "Onboarding Flow",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /onboarding/employees"
+      },
+      {
+        "type": "action",
+        "description": "Complete the onboarding setup"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an employee count validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains on the employees onboarding step"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC032",
+    "title": "Saved settings persist after page reload",
+    "description": "Verifies that settings changes persist by reloading the settings page and observing previously saved values.",
+    "category": "Settings",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard/settings"
+      },
+      {
+        "type": "action",
+        "description": "Fill PackIQ Persist Test into the company name field"
+      },
+      {
+        "type": "action",
+        "description": "Save changes"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard/settings"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated company name is displayed in the company name field"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC033",
+    "title": "Open an order to view its details",
+    "description": "User can open an order from the list and see a details view for that order.",
+    "category": "Orders Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the orders page"
+      },
+      {
+        "type": "action",
+        "description": "Click an order row in the list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an order details view is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC034",
+    "title": "Require domain selection before proceeding from onboarding domain step",
+    "description": "Verifies the onboarding flow blocks advancing when no domain is selected and shows a validation error.",
+    "category": "Onboarding Flow",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /onboarding/domain"
+      },
+      {
+        "type": "action",
+        "description": "Advance to the next onboarding step"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a domain selection validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains on the domain onboarding step"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC035",
+    "title": "View billing history table",
+    "description": "Verifies that a user can view billing history entries including invoice date and amount in the billing history table.",
+    "category": "Subscription & Billing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard/subscription"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a billing history table is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify at least one billing history row shows an invoice date and amount, or an empty state is displayed when no invoices exist"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC036",
+    "title": "Validate required fields when creating an order",
+    "description": "When required fields are missing, the order cannot be created and validation feedback is shown.",
+    "category": "Orders Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the orders page"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new order"
+      },
+      {
+        "type": "action",
+        "description": "Submit the new order without filling required fields"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify required-field validation errors are visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC037",
+    "title": "Show validation errors for invalid signup inputs",
+    "description": "Verifies signup prevents submission with invalid email and/or weak password and shows validation feedback to the user.",
+    "category": "User Signup",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/signup"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with invalid-email-format"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with a weak password value"
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation errors are displayed for the email and/or password fields"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC038",
+    "title": "Prevent running optimization before a CSV is uploaded",
+    "description": "Verifies the user cannot start optimization without providing input data and is shown an actionable validation prompt.",
+    "category": "CSV Upload & AI Optimization",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard/upload"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to run optimization"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an upload-required validation prompt is visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC039",
+    "title": "Cancel product deletion keeps the product",
+    "description": "Verifies canceling the delete confirmation leaves the product in the table.",
+    "category": "Products Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to Products"
+      },
+      {
+        "type": "action",
+        "description": "Open the add product form"
+      },
+      {
+        "type": "action",
+        "description": "Fill Product Keep into the product name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill SKU-KEEP-001 into the SKU field"
+      },
+      {
+        "type": "action",
+        "description": "Fill valid values into the dimensions fields"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid value into the weight field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the add product form"
+      },
+      {
+        "type": "action",
+        "description": "Initiate delete for the product with SKU-KEEP-001"
+      },
+      {
+        "type": "action",
+        "description": "Cancel the deletion confirmation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the products table contains a row for SKU-KEEP-001"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC040",
+    "title": "Look up a shipment and view estimated delivery date",
+    "description": "User can run a tracking lookup and see an estimated delivery date when available.",
+    "category": "Shipment Tracking",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the shipment tracking page"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid tracking number into the tracking number field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the tracking lookup"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an estimated delivery date is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC041",
+    "title": "Prevent saving when required company fields are empty",
+    "description": "Verifies that clearing required company profile fields blocks saving and shows a validation error.",
+    "category": "Settings",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard/settings"
+      },
+      {
+        "type": "action",
+        "description": "Fill  into the company name field"
+      },
+      {
+        "type": "action",
+        "description": "Save changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a field validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify settings are not saved"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC042",
+    "title": "Filter box catalog by dimension range",
+    "description": "User can apply a dimension range filter in the Box Catalog and the displayed boxes update accordingly.",
+    "category": "Box Catalog",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the box catalog page"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid minimum value into the dimension range filter"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid maximum value into the dimension range filter"
+      },
+      {
+        "type": "action",
+        "description": "Apply the filter"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the catalog box list is filtered by the selected dimension range"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC043",
+    "title": "Navigate from landing to signup",
+    "description": "Verifies a prospective visitor can use the Get Started call-to-action to reach the signup page.",
+    "category": "Landing Page",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click the call-to-action to get started"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the signup page"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC044",
+    "title": "View box details such as price and volume",
+    "description": "User can open a box item in the catalog and see its key details like price and volume.",
+    "category": "Box Catalog",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the box catalog page"
+      },
+      {
+        "type": "action",
+        "description": "Open a box item from the catalog"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify box details including price and volume information are displayed"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC045",
+    "title": "Navigate from login to signup",
+    "description": "Verifies a prospective user can navigate from the login page to the signup page to create an account.",
+    "category": "User Login",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to create an account"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the signup page"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC046",
+    "title": "Prevent tracking lookup when tracking number is empty",
+    "description": "User cannot submit a shipment tracking lookup without a tracking number and sees validation feedback.",
+    "category": "Shipment Tracking",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the shipment tracking page"
+      },
+      {
+        "type": "action",
+        "description": "Submit the tracking lookup with an empty tracking number field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a required-field validation error is visible for the tracking number"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC047",
+    "title": "Navigate from landing to login",
+    "description": "Verifies a prospective visitor can use the login entry point on the landing page to reach the login page.",
+    "category": "Landing Page",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to log in"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the login page"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC048",
+    "title": "Display empty state on dashboard when no recent optimizations exist",
+    "description": "Verifies the dashboard shows an empty state message for recent optimizations when none are available.",
+    "category": "Dashboard Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an empty state message is visible for recent optimizations"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC049",
+    "title": "Orders page empty state",
+    "description": "If there are no orders, the user sees an empty state on the Orders page.",
+    "category": "Orders Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the orders page"
+      },
+      {
+        "type": "action",
+        "description": "If a status filter exists, select a status that yields no results"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an empty state is displayed for no matching orders"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC050",
+    "title": "Clear previous shipment results when performing a new lookup",
+    "description": "After viewing one shipment, entering a different tracking number and searching updates the displayed shipment information.",
+    "category": "Shipment Tracking",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the shipment tracking page"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid tracking number into the tracking number field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the tracking lookup"
+      },
+      {
+        "type": "action",
+        "description": "Fill a different valid tracking number into the tracking number field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the tracking lookup"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the shipment tracking results reflect the most recent lookup"
+      }
+    ],
+    "priority": "Low"
+  }
+]
