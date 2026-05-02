@@ -34,7 +34,7 @@ export default function LandingPage() {
   }, [router])
 
   // Animation variants
-  const fadeInUp = {
+  const fadeInUp: any = {
     hidden: { opacity: 0, y: 30, filter: 'blur(10px)' },
     visible: { 
       opacity: 1, 
@@ -44,7 +44,7 @@ export default function LandingPage() {
     }
   }
 
-  const stagger = {
+  const stagger: any = {
     visible: { transition: { staggerChildren: 0.15 } }
   }
 
