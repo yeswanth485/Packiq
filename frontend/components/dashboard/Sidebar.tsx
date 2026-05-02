@@ -39,7 +39,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: any) {
 
   async function handleLogout() {
     await supabase.auth.signOut()
-    router.push('/auth/login')
+    router.push('/')
   }
 
   return (
