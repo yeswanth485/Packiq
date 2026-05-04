@@ -14,7 +14,24 @@ export async function POST(req: Request) {
 
     // Fetch available boxes once
     const { data: boxes } = await supabase.from('box_catalog').select('*')
-    const boxCatalog = (boxes as any[] || []).map(b => ({
+    
+    const DEFAULT_CATALOG = [
+      { id: 'amz-a1', name: 'Amazon A1', lengthCm: 15.2, widthCm: 10.1, heightCm: 8.5, maxWeightKg: 5, costUsd: 0.45, material: 'Corrugated', ecoCertified: true },
+      { id: 'amz-a3', name: 'Amazon A3', lengthCm: 22.8, widthCm: 15.2, heightCm: 10.1, maxWeightKg: 8, costUsd: 0.65, material: 'Corrugated', ecoCertified: true },
+      { id: 'amz-a4', name: 'Amazon A4', lengthCm: 30.4, widthCm: 22.8, heightCm: 12.7, maxWeightKg: 10, costUsd: 0.85, material: 'Corrugated', ecoCertified: true },
+      { id: 'amz-m1', name: 'Amazon Mailer M1', lengthCm: 25.4, widthCm: 15.2, heightCm: 2.5, maxWeightKg: 2, costUsd: 0.25, material: 'Kraft Bubble', ecoCertified: true },
+      { id: 'flp-f1', name: 'Flipkart F1', lengthCm: 18.0, widthCm: 12.0, heightCm: 12.0, maxWeightKg: 5, costUsd: 0.85, material: 'Double Wall', ecoCertified: true },
+      { id: 'flp-f2', name: 'Flipkart F2', lengthCm: 25.0, widthCm: 20.0, heightCm: 15.0, maxWeightKg: 10, costUsd: 1.20, material: 'Double Wall', ecoCertified: true },
+      { id: 'flp-s1', name: 'Flipkart S1', lengthCm: 10.0, widthCm: 10.0, heightCm: 10.0, maxWeightKg: 3, costUsd: 0.35, material: 'Corrugated', ecoCertified: true },
+      { id: 'zep-b1', name: 'Zepto Grocery Bag', lengthCm: 35.0, widthCm: 20.0, heightCm: 15.0, maxWeightKg: 5, costUsd: 0.15, material: 'Recycled Paper', ecoCertified: true },
+      { id: 'zep-b2', name: 'Zepto Large Bag', lengthCm: 45.0, widthCm: 25.0, heightCm: 20.0, maxWeightKg: 10, costUsd: 0.25, material: 'Recycled Paper', ecoCertified: true },
+      { id: 'bli-b1', name: 'Blinkit Paper Bag', lengthCm: 30.0, widthCm: 18.0, heightCm: 12.0, maxWeightKg: 5, costUsd: 0.12, material: 'Kraft Paper', ecoCertified: true },
+      { id: 'bli-b2', name: 'Blinkit Cold Bag', lengthCm: 25.0, widthCm: 20.0, heightCm: 15.0, maxWeightKg: 5, costUsd: 0.55, material: 'Insulated Foil', ecoCertified: true },
+      { id: 'fdx-s', name: 'FedEx Small', lengthCm: 31.0, widthCm: 27.6, heightCm: 3.8, maxWeightKg: 3, costUsd: 0.50, material: 'Recycled', ecoCertified: true },
+      { id: 'ups-m', name: 'UPS Medium', lengthCm: 30.0, widthCm: 20.0, heightCm: 20.0, maxWeightKg: 10, costUsd: 1.10, material: 'Corrugated', ecoCertified: true }
+    ]
+
+    const boxCatalog = boxes && boxes.length > 0 ? (boxes as any[]).map(b => ({
       id: b.id,
       name: b.name,
       sku: b.sku,
@@ -25,7 +42,7 @@ export async function POST(req: Request) {
       costUsd: b.cost_usd,
       material: b.material,
       ecoCertified: b.eco_certified
-    }))
+    })) : DEFAULT_CATALOG
 
     // Parallel processing with SKU/Dimension caching
     const processProduct = async (p: any) => {

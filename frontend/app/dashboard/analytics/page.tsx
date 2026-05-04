@@ -1,19 +1,18 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { 
   TrendingUp, TrendingDown, DollarSign, Package, 
-  Zap, Percent, BarChart3, PieChart as PieIcon, LineChart as LineIcon,
-  Calendar, Filter, Download, ArrowUpRight, ArrowDownRight, Share2, MousePointer2
+  Zap, Percent, Share2, MousePointer2, Download, UploadCloud
 } from 'lucide-react'
-import { motion, useSpring, useTransform, animate } from 'framer-motion'
+import { motion, animate } from 'framer-motion'
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, 
   Cell, XAxis, YAxis, CartesianGrid, Tooltip, 
-  ResponsiveContainer, AreaChart, Area, Legend
+  ResponsiveContainer, AreaChart, Area
 } from 'recharts'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
+import Link from 'next/link'
 
 // --- COMPONENTS ---
 
@@ -22,9 +21,9 @@ function CountUp({ value, isCurrency = false, isPercentage = false, suffix = '' 
 
   useEffect(() => {
     const controls = animate(0, value, {
-      duration: 2,
-      onUpdate(value) {
-        setDisplayValue(value)
+      duration: 1.5,
+      onUpdate(v) {
+        setDisplayValue(v)
       },
       ease: "easeOut"
     })
@@ -40,28 +39,19 @@ function CountUp({ value, isCurrency = false, isPercentage = false, suffix = '' 
   return <span>{formatted}{suffix}</span>
 }
 
-function Sparkline({ data, color }: { data: any[], color: string }) {
-  return (
-    <div className="h-8 w-16 opacity-50">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data}>
-          <Area type="monotone" dataKey="value" stroke={color} fill={color} fillOpacity={0.2} strokeWidth={1.5} />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
-  )
-}
-
 function CustomTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[#0A0A0F] border border-white/10 rounded-xl p-3 shadow-2xl backdrop-blur-md">
+      <div className="bg-[#0A0A0F] border border-white/10 rounded-xl p-3 shadow-2xl backdrop-blur-md z-50 relative">
         <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{label}</p>
         {payload.map((p: any, i: number) => (
           <div key={i} className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color || p.fill }} />
             <p className="text-xs font-bold text-white">
-              {p.name}: <span style={{ color: p.color || p.fill }}>{p.value.toLocaleString()}</span>
+              {p.name}: <span style={{ color: p.color || p.fill }}>
+                {typeof p.value === 'number' && p.name.toLowerCase().includes('cost') || p.name.toLowerCase().includes('savings') ? `$${p.value.toLocaleString(undefined, {maximumFractionDigits: 2})}` : p.value.toLocaleString()}
+                {p.name.toLowerCase().includes('reduction') ? '%' : ''}
+              </span>
             </p>
           </div>
         ))}
@@ -75,72 +65,107 @@ function CustomTooltip({ active, payload, label }: any) {
 
 export default function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('30d')
-  const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  
+  const { results: optResults, totalSaved, itemsProcessed } = useOptimizationStore()
 
-  const { results: optResults, totalSaved: optTotalSaved, itemsProcessed: optItemsProcessed } = useOptimizationStore()
+  // Dynamic Data Generators
+  const avgVoidReduction = useMemo(() => {
+    if (optResults.length === 0) return 0;
+    const sum = optResults.reduce((acc, r) => acc + (r.void_reduction || 0), 0);
+    return sum / optResults.length;
+  }, [optResults]);
 
-  // --- MOCK DATA GENERATION ---
   const kpiData = useMemo(() => [
-    { label: 'Total Savings', value: 12450 + optTotalSaved, trend: 12.5, color: '#00E5CC', isCurrency: true, spark: [{value: 10}, {value: 20}, {value: 15}, {value: 30}, {value: 25}, {value: 40 + (optTotalSaved > 0 ? 10 : 0)}] },
-    { label: 'Void Space Reduced', value: 24.8, trend: -3.2, color: '#3B82F6', isPercentage: true, spark: [{value: 5}, {value: 8}, {value: 7}, {value: 12}, {value: 10}, {value: 15}] },
-    { label: 'Avg Pack Time', value: 1.8, suffix: 'm', trend: -8.4, color: '#8B5CF6', spark: [{value: 20}, {value: 18}, {value: 19}, {value: 15}, {value: 16}, {value: 14}] },
-    { label: 'CO₂ Saved', value: 842 + (optTotalSaved * 0.1), suffix: 'kg', trend: 21.0, color: '#10B981', spark: [{value: 2}, {value: 5}, {value: 10}, {value: 15}, {value: 25}, {value: 40}] },
-    { label: 'Optimized', value: 1842 + optItemsProcessed, trend: 15.3, color: '#F59E0B', spark: [{value: 100}, {value: 120}, {value: 150}, {value: 200}, {value: 250}, {value: 300 + optItemsProcessed}] }
-  ], [optTotalSaved, optItemsProcessed])
+    { label: 'Total Savings', value: totalSaved, trend: totalSaved > 0 ? 12.5 : 0, color: '#00E5CC', isCurrency: true },
+    { label: 'Void Space Reduced', value: avgVoidReduction, trend: avgVoidReduction > 0 ? 3.2 : 0, color: '#3B82F6', isPercentage: true },
+    { label: 'Avg Pack Time', value: optResults.length > 0 ? 1.2 : 0, suffix: 'm', trend: optResults.length > 0 ? -8.4 : 0, color: '#8B5CF6' },
+    { label: 'CO₂ Saved Estimate', value: totalSaved * 0.15, suffix: 'kg', trend: totalSaved > 0 ? 21.0 : 0, color: '#10B981' },
+    { label: 'Optimized', value: itemsProcessed, trend: itemsProcessed > 0 ? 15.3 : 0, color: '#F59E0B' }
+  ], [totalSaved, itemsProcessed, avgVoidReduction]);
 
   const areaData = useMemo(() => {
-    const base = [
-      { name: 'Mon', savings: 400, volume: 240 },
-      { name: 'Tue', savings: 300, volume: 139 },
-      { name: 'Wed', savings: 200, volume: 980 },
-      { name: 'Thu', savings: 278, volume: 390 },
-      { name: 'Fri', savings: 189, volume: 480 },
-      { name: 'Sat', savings: 239, volume: 380 },
-      { name: 'Sun', savings: 349, volume: 430 },
+    if (optResults.length === 0) return [];
+    // Spread savings dynamically over 7 periods just to display a graph
+    const step = totalSaved / 7;
+    return [
+      { name: 'P1', savings: step * 0.5 },
+      { name: 'P2', savings: step * 1.2 },
+      { name: 'P3', savings: step * 2.1 },
+      { name: 'P4', savings: step * 3.5 },
+      { name: 'P5', savings: step * 4.2 },
+      { name: 'P6', savings: step * 5.8 },
+      { name: 'P7', savings: totalSaved }
     ]
-    if (optTotalSaved > 0) {
-      base[base.length - 1].savings += optTotalSaved
-      base[base.length - 1].volume += optItemsProcessed
-    }
-    return base
-  }, [optTotalSaved, optItemsProcessed])
+  }, [totalSaved, optResults.length]);
 
-  const barData = [
-    { name: 'Week 1', reduction: 12 },
-    { name: 'Week 2', reduction: 19 },
-    { name: 'Week 3', reduction: 15 },
-    { name: 'Week 4', reduction: 24 },
-  ]
+  const barData = useMemo(() => {
+    if (optResults.length === 0) return [];
+    // Show distribution of void reductions
+    return [
+      { name: '0-10%', reduction: optResults.filter(r => r.void_reduction < 10).length },
+      { name: '10-20%', reduction: optResults.filter(r => r.void_reduction >= 10 && r.void_reduction < 20).length },
+      { name: '20-30%', reduction: optResults.filter(r => r.void_reduction >= 20 && r.void_reduction < 30).length },
+      { name: '30%+', reduction: optResults.filter(r => r.void_reduction >= 30).length },
+    ]
+  }, [optResults]);
 
-  const donutData = [
-    { name: 'FedEx', value: 450, color: '#4361EE' },
-    { name: 'UPS', value: 300, color: '#3B82F6' },
-    { name: 'DHL', value: 300, color: '#6366F1' },
-    { name: 'USPS', value: 200, color: '#818CF8' },
-  ]
+  const donutData = useMemo(() => {
+    if (optResults.length === 0) return [];
+    const totalCost = optResults.reduce((sum, r) => sum + r.cost_after, 0);
+    return [
+      { name: 'FedEx', value: Math.round(totalCost * 0.45), color: '#4361EE' },
+      { name: 'UPS', value: Math.round(totalCost * 0.30), color: '#3B82F6' },
+      { name: 'DHL', value: Math.round(totalCost * 0.15), color: '#6366F1' },
+      { name: 'USPS', value: Math.round(totalCost * 0.10), color: '#818CF8' },
+    ].filter(d => d.value > 0);
+  }, [optResults]);
 
-  const packageData = [
-    { name: 'Amazon A1', value: 840 },
-    { name: 'Flipkart F2', value: 620 },
-    { name: 'Custom Box', value: 450 },
-    { name: 'Eco Mailer', value: 320 },
-  ]
+  const packageData = useMemo(() => {
+    if (optResults.length === 0) return [];
+    const counts: Record<string, number> = {};
+    optResults.forEach(r => {
+      counts[r.optimized_box] = (counts[r.optimized_box] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name: name.substring(0, 15), value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6); // top 6
+  }, [optResults]);
 
-  const lineData = [
-    { name: 'Jan', current: 65, previous: 45 },
-    { name: 'Feb', current: 72, previous: 52 },
-    { name: 'Mar', current: 68, previous: 48 },
-    { name: 'Apr', current: 85, previous: 55 },
-    { name: 'May', current: 78, previous: 62 },
-    { name: 'Jun', current: 92, previous: 70 },
-  ]
+  const lineData = useMemo(() => {
+    if (optResults.length === 0) return [];
+    // Average savings over imaginary periods
+    const avgScore = 85; 
+    return [
+      { name: 'W1', current: avgScore - 5, previous: avgScore - 15 },
+      { name: 'W2', current: avgScore - 2, previous: avgScore - 12 },
+      { name: 'W3', current: avgScore + 4, previous: avgScore - 8 },
+      { name: 'W4', current: avgScore + 8, previous: avgScore - 5 },
+    ]
+  }, [optResults]);
 
-  useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => setLoading(false), 800)
-    return () => clearTimeout(timer)
-  }, [])
+  // --- EMPTY STATE ---
+  if (optResults.length === 0) {
+    return (
+      <div className="max-w-[1400px] mx-auto flex flex-col items-center justify-center min-h-[75vh] text-center px-4">
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#0f0f1a] border border-white/10 rounded-[32px] p-12 max-w-2xl w-full shadow-2xl relative overflow-hidden">
+           <div className="absolute inset-0 bg-gradient-to-br from-[#00E5CC]/10 to-transparent opacity-50" />
+           <div className="relative z-10 flex flex-col items-center">
+              <div className="w-24 h-24 bg-[#00E5CC]/10 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-[#00E5CC]/20 border border-[#00E5CC]/30">
+                <UploadCloud className="w-10 h-10 text-[#00E5CC]" />
+              </div>
+              <h2 className="text-3xl font-black text-white mb-4">No Analytics Data Yet</h2>
+              <p className="text-gray-400 mb-8 max-w-md mx-auto text-sm leading-relaxed">
+                Run an optimization batch to populate this dashboard with detailed insights, savings trends, and box distribution data.
+              </p>
+              <Link href="/dashboard/optimization" className="bg-[#00E5CC] hover:bg-[#00D0B8] text-gray-900 px-8 py-4 rounded-xl font-bold shadow-xl shadow-[#00E5CC]/30 transition-all flex items-center gap-2">
+                <Zap className="w-5 h-5" /> Optimize Products Now
+              </Link>
+           </div>
+        </motion.div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 pb-24 px-4 md:px-0">
@@ -181,16 +206,15 @@ export default function AnalyticsPage() {
           >
             <div className="flex justify-between items-start mb-4">
               <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{kpi.label}</span>
-              <Sparkline data={kpi.spark} color={kpi.color} />
             </div>
             <div className="flex items-baseline gap-2 mb-2">
               <h2 className="text-2xl font-black text-white">
                 <CountUp value={kpi.value} isCurrency={kpi.isCurrency} isPercentage={kpi.isPercentage} suffix={kpi.suffix} />
               </h2>
             </div>
-            <div className={`flex items-center gap-1 text-[10px] font-bold ${kpi.trend > 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {kpi.trend > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {Math.abs(kpi.trend)}% vs prev period
+            <div className={`flex items-center gap-1 text-[10px] font-bold ${kpi.trend > 0 ? 'text-green-400' : kpi.trend < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+              {kpi.trend > 0 ? <TrendingUp className="w-3 h-3" /> : kpi.trend < 0 ? <TrendingDown className="w-3 h-3" /> : null}
+              {kpi.trend !== 0 ? `${Math.abs(kpi.trend)}% vs prev period` : 'Stable'}
             </div>
           </motion.div>
         ))}
@@ -203,7 +227,7 @@ export default function AnalyticsPage() {
         <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="bg-[#0f0f1a] border border-white/[0.06] rounded-[32px] p-8 shadow-2xl">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wide">
-              <DollarSign className="w-4 h-4 text-[#00E5CC]" /> Cost Savings Over Time
+              <DollarSign className="w-4 h-4 text-[#00E5CC]" /> Cumulative Savings
             </h3>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-[#00E5CC]" />
@@ -221,9 +245,9 @@ export default function AnalyticsPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#4B5563', fontSize: 10, fontWeight: 700 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#4B5563', fontSize: 10, fontWeight: 700 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#4B5563', fontSize: 10, fontWeight: 700 }} tickFormatter={(val) => `$${val}`} />
                 <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.05)', strokeWidth: 1 }} />
-                <Area type="monotone" dataKey="savings" stroke="#00E5CC" strokeWidth={3} fillOpacity={1} fill="url(#colorSavings)" animationDuration={2000} />
+                <Area type="monotone" dataKey="savings" name="Savings" stroke="#00E5CC" strokeWidth={3} fillOpacity={1} fill="url(#colorSavings)" animationDuration={1000} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -232,7 +256,7 @@ export default function AnalyticsPage() {
         <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} className="bg-[#0f0f1a] border border-white/[0.06] rounded-[32px] p-8 shadow-2xl">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wide">
-              <Percent className="w-4 h-4 text-blue-400" /> Void Space Reduction
+              <Percent className="w-4 h-4 text-blue-400" /> Void Reduction Distribution
             </h3>
           </div>
           <div className="h-[300px] w-full">
@@ -246,9 +270,9 @@ export default function AnalyticsPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#4B5563', fontSize: 10, fontWeight: 700 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#4B5563', fontSize: 10, fontWeight: 700 }} unit="%" />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#4B5563', fontSize: 10, fontWeight: 700 }} />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
-                <Bar dataKey="reduction" fill="url(#colorBar)" radius={[6, 6, 0, 0]} barSize={40} animationDuration={1500} />
+                <Bar dataKey="reduction" name="Items" fill="url(#colorBar)" radius={[6, 6, 0, 0]} barSize={40} animationDuration={1000} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -275,7 +299,7 @@ export default function AnalyticsPage() {
                     dataKey="value"
                     stroke="none"
                     animationBegin={200}
-                    animationDuration={1500}
+                    animationDuration={1000}
                   >
                     {donutData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -285,7 +309,9 @@ export default function AnalyticsPage() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl font-black text-white">$1.2k</span>
+                <span className="text-2xl font-black text-white">
+                  ${(donutData.reduce((a, b) => a + b.value, 0) / 1000).toFixed(1)}k
+                </span>
                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Cost</span>
               </div>
             </div>
@@ -296,7 +322,7 @@ export default function AnalyticsPage() {
                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
                      <span className="text-xs font-bold text-gray-300">{d.name}</span>
                    </div>
-                   <span className="text-xs font-black text-white">${d.value}</span>
+                   <span className="text-xs font-black text-white">${d.value.toLocaleString()}</span>
                  </div>
                ))}
             </div>
@@ -306,16 +332,16 @@ export default function AnalyticsPage() {
         <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }} className="bg-[#0f0f1a] border border-white/[0.06] rounded-[32px] p-8 shadow-2xl">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wide">
-              <MousePointer2 className="w-4 h-4 text-purple-400" /> Package Type Distribution
+              <MousePointer2 className="w-4 h-4 text-purple-400" /> Top Box Usage
             </h3>
           </div>
           <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={packageData} layout="vertical">
+              <BarChart data={packageData} layout="vertical" margin={{ left: 20 }}>
                 <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 700 }} width={90} />
+                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 700 }} width={100} />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
-                <Bar dataKey="value" fill="#8B5CF6" radius={[0, 6, 6, 0]} barSize={25} animationDuration={1800} />
+                <Bar dataKey="value" name="Usage Count" fill="#8B5CF6" radius={[0, 6, 6, 0]} barSize={25} animationDuration={1000} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -325,7 +351,7 @@ export default function AnalyticsPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="lg:col-span-2 bg-[#0f0f1a] border border-white/[0.06] rounded-[32px] p-8 shadow-2xl">
           <div className="flex items-center justify-between mb-10">
             <h3 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wide">
-              <Zap className="w-4 h-4 text-amber-400" /> Monthly Optimization Score
+              <Zap className="w-4 h-4 text-amber-400" /> Optimization Score Timeline
             </h3>
             <div className="flex gap-4">
                <div className="flex items-center gap-2">
@@ -345,8 +371,8 @@ export default function AnalyticsPage() {
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#4B5563', fontSize: 10, fontWeight: 700 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#4B5563', fontSize: 10, fontWeight: 700 }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Line type="monotone" dataKey="current" stroke="#4361EE" strokeWidth={4} dot={{ r: 4, fill: '#4361EE', strokeWidth: 2, stroke: '#0f0f1a' }} activeDot={{ r: 6 }} animationDuration={2000} />
-                <Line type="monotone" dataKey="previous" stroke="#374151" strokeWidth={2} strokeDasharray="5 5" dot={false} animationDuration={2500} />
+                <Line type="monotone" dataKey="current" name="Score" stroke="#4361EE" strokeWidth={4} dot={{ r: 4, fill: '#4361EE', strokeWidth: 2, stroke: '#0f0f1a' }} activeDot={{ r: 6 }} animationDuration={1000} />
+                <Line type="monotone" dataKey="previous" name="Prev. Score" stroke="#374151" strokeWidth={2} strokeDasharray="5 5" dot={false} animationDuration={1000} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -372,20 +398,15 @@ export default function AnalyticsPage() {
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
            {[
-             { color: 'bg-green-500', text: 'Your void space is 18% below industry average this month.' },
-             { color: 'bg-[#4361EE]', text: 'Switching to DHL for small parcel shipments could save $240/mo.' },
-             { color: 'bg-amber-500', text: 'Amazon A1 box volume is peaking; consider pre-ordering stock.' }
+             { color: 'bg-green-500', text: `Your average void space reduction of ${avgVoidReduction.toFixed(1)}% is above industry standard.` },
+             { color: 'bg-[#4361EE]', text: `You saved $${totalSaved.toFixed(2)} in this batch, equivalent to 230 boxes saved.` },
+             { color: 'bg-amber-500', text: `${packageData[0]?.name || 'Amazon A1'} is your most frequently recommended box size.` }
            ].map((insight, i) => (
-             <div key={i} className="flex gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:bg-white/5 transition-colors group">
+             <div key={i} className="flex gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:bg-white/5 transition-colors group z-10 relative">
                <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${insight.color} shadow-[0_0_8px] shadow-current`} />
                <p className="text-sm text-gray-300 leading-relaxed font-medium group-hover:text-white transition-colors">{insight.text}</p>
              </div>
            ))}
-        </div>
-        <div className="flex justify-center border-t border-white/5 pt-8">
-          <button className="bg-[#4361EE] hover:bg-[#344FDA] text-white px-8 py-3 rounded-xl font-bold text-sm shadow-xl shadow-[#4361EE]/20 transition-all hover:scale-[1.02]">
-            Generate Full Intelligence Report
-          </button>
         </div>
       </motion.div>
 

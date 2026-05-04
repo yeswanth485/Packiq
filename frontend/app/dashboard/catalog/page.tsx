@@ -25,12 +25,26 @@ function useDebounce<T>(value: T, delay: number): T {
 // --- MOCK DATA ---
 
 const BOX_TEMPLATES = [
-  { id: '1', name: 'Amazon A1', length: 15, width: 10, height: 8, material: 'Corrugated', category: 'Standard', supplier: 'Amazon', cost: 0.45, inStock: true, usage: 1240 },
-  { id: '2', name: 'Amazon A2', length: 20, width: 15, height: 10, material: 'Corrugated', category: 'Standard', supplier: 'Amazon', cost: 0.65, inStock: true, usage: 980 },
-  { id: '3', name: 'Flipkart F1', length: 18, width: 12, height: 12, material: 'Double Wall', category: 'Heavy Duty', supplier: 'Flipkart', cost: 0.85, inStock: true, usage: 750 },
-  { id: '4', name: 'Flipkart F2', length: 25, width: 20, height: 15, material: 'Double Wall', category: 'Heavy Duty', supplier: 'Flipkart', cost: 1.20, inStock: false, usage: 420 },
-  { id: '5', name: 'FedEx Small', length: 12, width: 12, height: 12, material: 'Recycled', category: 'Eco', supplier: 'FedEx', cost: 0.50, inStock: true, usage: 2100 },
-  { id: '6', name: 'UPS Medium', length: 30, width: 20, height: 20, material: 'Corrugated', category: 'Standard', supplier: 'UPS', cost: 1.10, inStock: true, usage: 560 }
+  // Amazon Standard Boxes
+  { id: 'amz-a1', name: 'Amazon A1', length: 15.2, width: 10.1, height: 8.5, material: 'Corrugated', category: 'Standard', supplier: 'Amazon', cost: 0.45, inStock: true, usage: 1240 },
+  { id: 'amz-a3', name: 'Amazon A3', length: 22.8, width: 15.2, height: 10.1, material: 'Corrugated', category: 'Standard', supplier: 'Amazon', cost: 0.65, inStock: true, usage: 980 },
+  { id: 'amz-a4', name: 'Amazon A4', length: 30.4, width: 22.8, height: 12.7, material: 'Corrugated', category: 'Large', supplier: 'Amazon', cost: 0.85, inStock: true, usage: 650 },
+  { id: 'amz-m1', name: 'Amazon Mailer M1', length: 25.4, width: 15.2, height: 2.5, material: 'Kraft Bubble', category: 'Mailer', supplier: 'Amazon', cost: 0.25, inStock: true, usage: 3400 },
+  
+  // Flipkart Boxes
+  { id: 'flp-f1', name: 'Flipkart F1', length: 18.0, width: 12.0, height: 12.0, material: 'Double Wall', category: 'Heavy Duty', supplier: 'Flipkart', cost: 0.85, inStock: true, usage: 750 },
+  { id: 'flp-f2', name: 'Flipkart F2', length: 25.0, width: 20.0, height: 15.0, material: 'Double Wall', category: 'Heavy Duty', supplier: 'Flipkart', cost: 1.20, inStock: false, usage: 420 },
+  { id: 'flp-s1', name: 'Flipkart S1', length: 10.0, width: 10.0, height: 10.0, material: 'Corrugated', category: 'Small', supplier: 'Flipkart', cost: 0.35, inStock: true, usage: 1100 },
+  
+  // Quick Commerce (Zepto & Blinkit)
+  { id: 'zep-b1', name: 'Zepto Grocery Bag', length: 35.0, width: 20.0, height: 15.0, material: 'Recycled Paper', category: 'Bag', supplier: 'Zepto', cost: 0.15, inStock: true, usage: 8900 },
+  { id: 'zep-b2', name: 'Zepto Large Bag', length: 45.0, width: 25.0, height: 20.0, material: 'Recycled Paper', category: 'Bag', supplier: 'Zepto', cost: 0.25, inStock: true, usage: 4100 },
+  { id: 'bli-b1', name: 'Blinkit Paper Bag', length: 30.0, width: 18.0, height: 12.0, material: 'Kraft Paper', category: 'Bag', supplier: 'Blinkit', cost: 0.12, inStock: true, usage: 10500 },
+  { id: 'bli-b2', name: 'Blinkit Cold Bag', length: 25.0, width: 20.0, height: 15.0, material: 'Insulated Foil', category: 'Insulated', supplier: 'Blinkit', cost: 0.55, inStock: true, usage: 2300 },
+  
+  // Logistics Providers
+  { id: 'fdx-s', name: 'FedEx Small', length: 31.0, width: 27.6, height: 3.8, material: 'Recycled', category: 'Eco', supplier: 'FedEx', cost: 0.50, inStock: true, usage: 2100 },
+  { id: 'ups-m', name: 'UPS Medium', length: 30.0, width: 20.0, height: 20.0, material: 'Corrugated', category: 'Standard', supplier: 'UPS', cost: 1.10, inStock: true, usage: 560 }
 ]
 
 const PRODUCT_TEMPLATES = [
