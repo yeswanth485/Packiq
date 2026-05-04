@@ -7,24 +7,24 @@ import { Inter } from 'next/font/google';
 import dynamic from 'next/dynamic';
 import {
   Box, ArrowRight, Play, Menu, X, Check, Brain, ShieldCheck, BarChart2,
-  Database, Truck, Zap
+  Database, Truck, Zap, Globe, Cpu, Infinity as InfinityIcon
 } from 'lucide-react';
 
 const Hero3DBox = dynamic(() => import('@/components/landing/Hero3DBox'), { ssr: false });
 
 const inter = Inter({ subsets: ['latin'] });
 
-// --- Particles Component ---
+// --- Advanced Particles Component ---
 const Particles = () => {
   const [particles, setParticles] = useState<any[]>([]);
 
   useEffect(() => {
-    const newParticles = Array.from({ length: 20 }).map((_, i) => ({
+    const newParticles = Array.from({ length: 40 }).map((_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
-      size: Math.random() * 6 + 2,
-      duration: Math.random() * 20 + 10,
+      size: Math.random() * 4 + 1,
+      duration: Math.random() * 15 + 10,
       delay: Math.random() * 5
     }));
     setParticles(newParticles);
@@ -35,7 +35,7 @@ const Particles = () => {
       {particles.map((p) => (
         <motion.div
           key={p.id}
-          className="absolute rounded-full bg-[#4361EE] opacity-[0.03]"
+          className="absolute rounded-full bg-[#4361EE] opacity-[0.2]"
           style={{
             left: `${p.x}%`,
             top: `${p.y}%`,
@@ -43,8 +43,8 @@ const Particles = () => {
             height: p.size,
           }}
           animate={{
-            y: ['0%', '-1000%'],
-            opacity: [0, 0.2, 0]
+            y: ['0%', '-100%'],
+            opacity: [0, 0.5, 0]
           }}
           transition={{
             duration: p.duration,
@@ -67,6 +67,7 @@ export default function LandingPage() {
   const { scrollY } = useScroll();
   const y1 = useTransform(scrollY, [0, 1000], [0, 200]);
   const y2 = useTransform(scrollY, [0, 1000], [0, -100]);
+  const opacity = useTransform(scrollY, [0, 300], [1, 0]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -77,59 +78,64 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className={`${inter.className} min-h-screen text-slate-800 selection:bg-[#4361EE]/20 overflow-x-hidden bg-white`}>
+    <div className={`${inter.className} min-h-screen text-slate-300 selection:bg-[#4361EE]/40 overflow-x-hidden bg-[#020205]`}>
       
-      {/* --- NAVBAR --- */}
+      {/* --- PREMIUM NAVBAR --- */}
       <nav 
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           isScrolled 
-            ? 'bg-white/80 backdrop-blur-[12px] border-b border-slate-200 py-3 shadow-sm' 
-            : 'bg-transparent py-6'
+            ? 'bg-[#020205]/80 backdrop-blur-[20px] border-b border-white/5 py-4 shadow-2xl' 
+            : 'bg-transparent py-8'
         }`}
       >
-        <div className="max-w-[1200px] mx-auto px-6 flex items-center justify-between">
+        <div className="max-w-[1400px] mx-auto px-8 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group z-50">
-            <div className="w-8 h-8 rounded-[10px] bg-[#4361EE]/10 border border-[#4361EE]/20 flex items-center justify-center group-hover:shadow-[0_0_15px_rgba(67,97,238,0.2)] transition-shadow">
-              <Box className="w-5 h-5 text-[#4361EE]" />
+          <Link href="/" className="flex items-center gap-3 group z-50">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4361EE] to-[#3B82F6] flex items-center justify-center shadow-[0_0_20px_rgba(67,97,238,0.4)] group-hover:scale-110 transition-transform">
+              <Box className="w-6 h-6 text-white" />
             </div>
-            <span className="font-bold text-xl tracking-tight text-slate-900">PackIQ</span>
+            <span className="font-black text-2xl tracking-tighter text-white">PackIQ</span>
           </Link>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex items-center gap-8 text-[15px] font-semibold text-slate-600">
-            {['What We Do', 'How It Works', 'Partners', 'Pricing'].map((item) => (
+          <div className="hidden lg:flex items-center gap-10 text-[14px] font-black uppercase tracking-widest text-slate-400">
+            {['Technology', 'Platform', 'Network', 'Pricing'].map((item) => (
               <a 
                 key={item} 
                 href={`#${item.toLowerCase().replace(/ /g, '-')}`} 
-                className="relative group hover:text-[#4361EE] transition-colors py-2"
+                className="relative group hover:text-white transition-colors py-2"
               >
                 {item}
-                <span className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-[#4361EE] group-hover:w-full group-hover:left-0 transition-all duration-300 rounded-full"></span>
+                <motion.span 
+                  className="absolute bottom-0 left-0 h-[2px] bg-[#4361EE] rounded-full"
+                  initial={{ width: 0 }}
+                  whileHover={{ width: '100%' }}
+                  transition={{ duration: 0.3 }}
+                />
               </a>
             ))}
           </div>
 
           {/* Desktop CTA */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-6">
             <Link 
               href="/auth/login" 
-              className="text-[15px] font-semibold text-slate-600 hover:text-[#4361EE] transition-colors px-4 py-2 rounded-[10px] hover:bg-slate-50 border border-transparent"
+              className="text-[14px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
             >
-              Sign In
+              Access
             </Link>
             <Link 
               href="/auth/signup" 
-              className="group flex items-center gap-2 bg-[#4361EE] hover:bg-[#344FDA] text-white px-5 py-2.5 rounded-[10px] font-medium transition-all shadow-[0_4px_14px_rgba(67,97,238,0.3)] hover:shadow-[0_6px_20px_rgba(67,97,238,0.4)] border border-[#4361EE]"
+              className="group flex items-center gap-2 bg-white text-black px-7 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all hover:bg-[#4361EE] hover:text-white shadow-[0_10px_20px_rgba(255,255,255,0.1)] hover:shadow-[0_10px_20px_rgba(67,97,238,0.3)]"
             >
-              Get Started
+              Initialize
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
 
           {/* Mobile Toggle */}
           <button 
-            className="md:hidden z-50 text-slate-900 p-2"
+            className="lg:hidden z-50 text-white p-2"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X /> : <Menu />}
@@ -140,201 +146,222 @@ export default function LandingPage() {
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="absolute top-full left-0 w-full bg-white/95 backdrop-blur-xl border-b border-slate-200 p-6 flex flex-col gap-6 md:hidden shadow-2xl"
+              initial={{ opacity: 0, x: '100%' }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: '100%' }}
+              className="fixed inset-0 bg-[#020205] z-[40] flex flex-col items-center justify-center gap-8 lg:hidden"
             >
-              {['What We Do', 'How It Works', 'Partners', 'Pricing'].map((item) => (
+              {['Technology', 'Platform', 'Network', 'Pricing'].map((item) => (
                 <a 
                   key={item} 
                   href={`#${item.toLowerCase().replace(/ /g, '-')}`} 
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-lg font-semibold text-slate-800"
+                  className="text-3xl font-black text-white uppercase tracking-tighter"
                 >
                   {item}
                 </a>
               ))}
-              <hr className="border-slate-200" />
-              <Link href="/auth/login" className="text-lg font-semibold text-slate-800" onClick={() => setMobileMenuOpen(false)}>Sign In</Link>
-              <Link 
-                href="/auth/signup" 
-                className="flex items-center justify-center gap-2 bg-[#4361EE] text-white p-3 rounded-[10px] font-medium shadow-md"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Get Started
-                <ArrowRight className="w-5 h-5" />
-              </Link>
+              <div className="flex flex-col gap-4 w-full px-12 mt-8">
+                <Link href="/auth/login" className="text-center py-4 rounded-xl border border-white/10 font-bold" onClick={() => setMobileMenuOpen(false)}>Sign In</Link>
+                <Link 
+                  href="/auth/signup" 
+                  className="text-center py-4 rounded-xl bg-[#4361EE] text-white font-bold"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Get Started
+                </Link>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
       </nav>
 
       {/* --- HERO SECTION --- */}
-      <section className="relative min-h-screen flex flex-col items-center justify-start pt-32 md:pt-40 pb-0 overflow-hidden">
-        {/* Animated Gradient Background */}
-        <div className="absolute inset-0 z-0 opacity-40 bg-slate-50">
+      <section className="relative min-h-screen flex flex-col items-center justify-center pt-20 overflow-hidden">
+        {/* Deep Gradient Background */}
+        <div className="absolute inset-0 z-0">
           <motion.div 
             style={{ y: y1 }}
-            className="absolute top-[10%] left-[20%] w-[500px] h-[500px] bg-[#4361EE]/10 rounded-full blur-[100px] mix-blend-multiply"
-            animate={{ scale: [1, 1.1, 1], x: [0, 30, 0] }}
-            transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute top-[5%] left-[10%] w-[800px] h-[800px] bg-[#4361EE]/20 rounded-full blur-[150px] mix-blend-screen"
+            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+            transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
           />
           <motion.div 
             style={{ y: y2 }}
-            className="absolute bottom-[20%] right-[20%] w-[600px] h-[600px] bg-[#06b6d4]/10 rounded-full blur-[120px] mix-blend-multiply"
-            animate={{ scale: [1, 1.2, 1], x: [0, -30, 0] }}
-            transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute bottom-[10%] right-[10%] w-[900px] h-[900px] bg-[#06b6d4]/15 rounded-full blur-[180px] mix-blend-screen"
+            animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.4, 0.2] }}
+            transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
           />
         </div>
 
         <Particles />
 
-        <div className="relative z-10 max-w-5xl mx-auto px-6 text-center flex flex-col items-center">
+        <div className="relative z-10 max-w-[1400px] mx-auto px-8 w-full grid lg:grid-cols-2 items-center gap-16">
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#4361EE]/10 border border-[#4361EE]/20 mb-8"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 1, ease: "easeOut" }}
           >
-            <span className="w-2 h-2 rounded-full bg-[#4361EE] shadow-[0_0_8px_#4361EE] animate-pulse" />
-            <span className="text-[13px] font-bold text-[#4361EE]">Next-Gen Logistics AI ✦</span>
-          </motion.div>
-
-          <motion.h1 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="text-5xl md:text-[80px] font-black leading-[1.05] tracking-tight mb-8 text-slate-900 max-w-4xl"
-          >
-            Optimization <br className="hidden md:block" />
-            <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-[#4361EE] via-[#3B82F6] to-[#06b6d4]">
-              Redefined.
-              <motion.span 
-                className="absolute bottom-2 left-0 h-1.5 w-full bg-gradient-to-r from-[#4361EE] to-[#06b6d4] rounded-full opacity-30"
-                initial={{ width: 0 }}
-                animate={{ width: "100%" }}
-                transition={{ duration: 1.5, delay: 1, ease: "easeOut" }}
-              />
-            </span>
-          </motion.h1>
-
-          <motion.p 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.35 }}
-            className="text-lg md:text-[20px] text-slate-600 font-medium max-w-2xl leading-relaxed mb-10"
-          >
-            Automate your packaging logic with real-time AI spatial reasoning. Reduce waste, cut costs, and ship faster with PackIQ.
-          </motion.p>
-
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.5 }}
-            className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto"
-          >
-            <Link 
-              href="/auth/signup" 
-              className="w-full sm:w-auto group flex items-center justify-center gap-2 bg-[#4361EE] hover:bg-[#344FDA] text-white px-8 py-4 rounded-[10px] font-bold text-lg transition-all shadow-[0_8px_25px_rgba(67,97,238,0.3)] border border-[#4361EE]"
-            >
-              Launch Platform
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <button className="w-full sm:w-auto group flex items-center justify-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 px-8 py-4 rounded-[10px] font-bold text-lg transition-all shadow-sm">
-              <Play className="w-5 h-5 text-[#4361EE] group-hover:scale-110 transition-transform" />
-              Visual Demo
-            </button>
-          </motion.div>
-        </div>
-
-        {/* 3D Element Centered below buttons before ticker */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.2, delay: 0.2 }}
-          className="relative z-10 w-full h-[300px] md:h-[400px] flex items-center justify-center mt-12 -mb-10 pointer-events-auto"
-        >
-          <Hero3DBox />
-        </motion.div>
-
-        {/* Scrolling Ticker */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.8 }}
-          className="w-full mt-auto border-y border-slate-100 bg-white/60 backdrop-blur-md py-6 flex flex-col items-center overflow-hidden z-20 shadow-sm"
-        >
-          <p className="text-[11px] font-black tracking-[0.2em] uppercase text-slate-400 mb-6">Powering Global Supply Chains</p>
-          <div className="flex w-full overflow-hidden relative" style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}>
             <motion.div 
-              className="flex items-center gap-16 whitespace-nowrap px-8"
-              animate={{ x: ['0%', '-50%'] }}
-              transition={{ duration: 25, ease: 'linear', repeat: Infinity }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.5 }}
+              className="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-white/10 mb-10 backdrop-blur-md"
             >
-              {[...Array(3)].map((_, j) => (
-                <div key={j} className="flex items-center gap-16 opacity-40 grayscale">
-                  <span className="text-xl font-black italic text-slate-800">FEDEX</span>
-                  <span className="text-xl font-black tracking-tighter text-slate-800">DHL</span>
-                  <span className="text-xl font-black text-slate-800">AMAZON</span>
-                  <span className="text-xl font-black italic text-slate-800">UPS</span>
-                  <span className="text-xl font-black tracking-widest text-slate-800">MAERSK</span>
-                  <span className="text-xl font-bold text-slate-800">SHOPIFY</span>
+              <div className="flex -space-x-2">
+                {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full border-2 border-[#020205] bg-slate-700" />)}
+              </div>
+              <span className="text-[12px] font-black uppercase tracking-widest text-[#4361EE]">Version 4.0 Live Now</span>
+            </motion.div>
+
+            <h1 className="text-6xl md:text-[90px] font-black leading-[0.95] tracking-tighter mb-10 text-white">
+              Spatially <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#4361EE] via-[#3B82F6] to-[#06b6d4]">
+                Aware AI.
+              </span>
+            </h1>
+
+            <p className="text-lg md:text-xl text-slate-400 font-medium max-w-xl leading-relaxed mb-12">
+              The world's first autonomous logistics engine powered by real-time neural spatial reasoning. Pack faster, ship cheaper, and eliminate waste at scale.
+            </p>
+
+            <div className="flex flex-wrap gap-6">
+              <Link 
+                href="/auth/signup" 
+                className="group flex items-center gap-3 bg-white text-black px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:scale-105 shadow-[0_20px_40px_rgba(255,255,255,0.1)]"
+              >
+                Launch Intelligence
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <button className="group flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all backdrop-blur-md">
+                <Play className="w-5 h-5 text-[#4361EE] group-hover:scale-110 transition-transform" />
+                View Demo
+              </button>
+            </div>
+
+            <div className="mt-16 grid grid-cols-3 gap-12 border-t border-white/10 pt-10">
+              {[
+                { val: "99.2%", label: "Accuracy" },
+                { val: "40ms", label: "Latency" },
+                { val: "24/7", label: "Uptime" }
+              ].map((s, i) => (
+                <div key={i}>
+                  <p className="text-2xl font-black text-white">{s.val}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{s.label}</p>
                 </div>
               ))}
-            </motion.div>
-          </div>
-        </motion.div>
+            </div>
+          </motion.div>
+
+          {/* 3D Container */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            className="relative h-[600px] w-full"
+          >
+             <div className="absolute inset-0 bg-[#4361EE]/5 rounded-full blur-[100px] animate-pulse" />
+             <Hero3DBox />
+             
+             {/* Floating Labels */}
+             <motion.div 
+               animate={{ y: [0, -15, 0] }}
+               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+               className="absolute top-1/4 -left-4 p-4 bg-[#0A0A0F]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-20"
+             >
+                <div className="flex items-center gap-3">
+                   <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                      <Zap className="w-4 h-4 text-green-500" />
+                   </div>
+                   <div>
+                      <p className="text-[10px] font-black text-gray-500 uppercase">Savings</p>
+                      <p className="text-sm font-black text-white">+$12,450</p>
+                   </div>
+                </div>
+             </motion.div>
+
+             <motion.div 
+               animate={{ y: [0, 20, 0] }}
+               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+               className="absolute bottom-1/4 -right-4 p-4 bg-[#0A0A0F]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-20"
+             >
+                <div className="flex items-center gap-3">
+                   <div className="w-8 h-8 rounded-lg bg-[#4361EE]/20 flex items-center justify-center">
+                      <BarChart2 className="w-4 h-4 text-[#4361EE]" />
+                   </div>
+                   <div>
+                      <p className="text-[10px] font-black text-gray-500 uppercase">Efficiency</p>
+                      <p className="text-sm font-black text-white">98.4%</p>
+                   </div>
+                </div>
+             </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* --- TECH TAPE --- */}
+      <section className="py-12 border-y border-white/5 bg-white/[0.02] backdrop-blur-md overflow-hidden relative z-20">
+        <div className="flex w-full overflow-hidden relative" style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}>
+          <motion.div 
+            className="flex items-center gap-24 whitespace-nowrap px-8"
+            animate={{ x: ['0%', '-50%'] }}
+            transition={{ duration: 30, ease: 'linear', repeat: Infinity }}
+          >
+            {[...Array(2)].map((_, j) => (
+              <div key={j} className="flex items-center gap-24 opacity-30 grayscale invert">
+                {['FEDEX', 'DHL', 'AMAZON', 'UPS', 'MAERSK', 'SHOPIFY', 'WALMART', 'APPLE'].map(brand => (
+                  <span key={brand} className="text-3xl font-black tracking-tighter text-white italic">{brand}</span>
+                ))}
+              </div>
+            ))}
+          </motion.div>
+        </div>
       </section>
 
       {/* --- FEATURES SECTION --- */}
-      <section id="what-we-do" className="py-24 px-6 relative z-10 bg-slate-50">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="flex flex-col items-center text-center mb-20">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="flex items-center gap-3 mb-4"
-            >
-              <div className="w-8 h-[2px] bg-[#4361EE]" />
-              <h2 className="text-sm font-black tracking-[0.15em] text-[#4361EE] uppercase">What We Do</h2>
-              <div className="w-8 h-[2px] bg-[#4361EE]" />
-            </motion.div>
-            <motion.h3 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="text-4xl md:text-5xl font-black tracking-tight max-w-3xl text-slate-900"
-            >
-              Intelligent packaging built for modern fulfillment.
-            </motion.h3>
+      <section id="technology" className="py-32 px-8 relative z-10">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="grid lg:grid-cols-12 gap-16 items-end mb-24">
+             <div className="lg:col-span-7">
+               <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="flex items-center gap-4 mb-6">
+                 <div className="h-[2px] w-12 bg-[#4361EE]" />
+                 <span className="text-xs font-black uppercase tracking-widest text-[#4361EE]">Technical Core</span>
+               </motion.div>
+               <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter leading-[0.95]">
+                 Engineered for <br />
+                 Extreme Performance.
+               </h2>
+             </div>
+             <div className="lg:col-span-5">
+               <p className="text-xl text-slate-400 font-medium leading-relaxed">
+                 We've stripped away the complexity. PackIQ leverages raw spatial compute to solve three-dimensional bin packing problems in milliseconds.
+               </p>
+             </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { icon: Brain, title: "Spatial AI Engine", desc: "Our proprietary algorithms calculate the absolute minimum volume required for any combination of products.", color: "#4361EE" },
-              { icon: ShieldCheck, title: "Real-Time Verification", desc: "Enterprise-grade security with real-time API integrations. Instantly verify dimensions seamlessly.", color: "#06b6d4" },
-              { icon: BarChart2, title: "Savings Analytics", desc: "Visualize every cent saved. Track void-space reduction, weight optimization, and carrier cost drops.", color: "#22c55e" }
+              { icon: Brain, title: "Neural Spatial engine", desc: "Our 4th-gen neural net understands volume, weight distribution, and fragility constraints like a human expert.", color: "#4361EE" },
+              { icon: Globe, title: "Global Logistics API", desc: "Instantly connect to every major carrier worldwide. Real-time rate calculations and verification.", color: "#06b6d4" },
+              { icon: InfinityIcon, title: "Continuous Learning", desc: "Every package processed makes the engine smarter. Self-optimizing feedback loops ensure 100% precision.", color: "#8B5CF6" }
             ].map((item, i) => (
               <motion.div 
                 key={i}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.5, delay: i * 0.15 }}
-                whileHover={{ y: -5, boxShadow: '0 20px 40px rgba(0,0,0,0.08)' }}
-                className="relative group bg-white border border-slate-200 rounded-[20px] p-8 overflow-hidden transition-all hover:border-[#4361EE]/50 shadow-sm"
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: i * 0.1 }}
+                className="group p-10 bg-white/[0.02] border border-white/5 rounded-[40px] hover:bg-white/[0.05] transition-all hover:border-[#4361EE]/50 shadow-2xl relative overflow-hidden"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-white to-slate-50 opacity-0 group-hover:opacity-100 transition-opacity" />
-                
+                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                   <item.icon className="w-32 h-32 text-white" />
+                </div>
                 <div className="relative z-10">
-                  <div className={`w-14 h-14 rounded-[12px] flex items-center justify-center mb-6 shadow-sm`} style={{ backgroundColor: `${item.color}15`, border: `1px solid ${item.color}30` }}>
-                    <item.icon className="w-7 h-7" style={{ color: item.color }} />
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-white/10 to-transparent flex items-center justify-center mb-8 border border-white/10 group-hover:scale-110 transition-transform">
+                    <item.icon className="w-8 h-8 text-white" />
                   </div>
-                  <h4 className="text-2xl font-bold mb-3 text-slate-900">{item.title}</h4>
-                  <p className="text-slate-600 font-medium leading-relaxed">{item.desc}</p>
+                  <h4 className="text-2xl font-black text-white mb-4 uppercase tracking-tighter">{item.title}</h4>
+                  <p className="text-slate-400 font-medium leading-relaxed">{item.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -342,213 +369,60 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* --- HOW IT WORKS SECTION --- */}
-      <section id="how-it-works" className="py-24 px-6 bg-white border-y border-slate-100 relative overflow-hidden">
-        <div className="max-w-[1200px] mx-auto relative z-10">
-          <div className="text-center mb-24">
-             <h2 className="text-sm font-black tracking-[0.15em] text-[#06b6d4] uppercase mb-4">The Process</h2>
-             <h3 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900">How it works</h3>
-          </div>
-
-          <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-12 md:gap-4">
-            {/* Connecting Line (Desktop) */}
-            <div className="hidden md:block absolute top-10 left-[10%] right-[10%] h-[2px] border-t-2 border-dashed border-slate-300 z-0">
-              <motion.div 
-                className="h-full bg-gradient-to-r from-[#4361EE] to-[#06b6d4]"
-                initial={{ width: "0%" }}
-                whileInView={{ width: "100%" }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.5, ease: "easeInOut" }}
-              />
-            </div>
-
-            {[
-              { num: "01", icon: Database, title: "Sync Data", desc: "Connect your inventory. We instantly pull product dimensions and weights." },
-              { num: "02", icon: Zap, title: "AI Optimization", desc: "Our engine processes orders in milliseconds, finding the optimal box size." },
-              { num: "03", icon: Truck, title: "Pack & Ship", desc: "Warehouse staff follow visual 3D guides, reducing errors and shipping costs." }
-            ].map((step, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: i * 0.3 }}
-                className="relative z-10 flex flex-row md:flex-col items-center md:text-center gap-6 md:gap-8 w-full md:w-1/3"
-              >
-                <div className="flex-shrink-0 w-20 h-20 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center relative shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
-                  <span className="text-2xl font-black text-slate-900">{step.num}</span>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-[#4361EE] flex items-center justify-center shadow-lg shadow-[#4361EE]/30 border-2 border-white">
-                     <step.icon className="w-4 h-4 text-white" />
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-xl font-bold text-slate-900 mb-2">{step.title}</h4>
-                  <p className="text-slate-600 font-medium max-w-xs">{step.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* --- PRICING SECTION --- */}
-      <section id="pricing" className="py-24 px-6 bg-slate-50">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-8 text-slate-900">Transparent pricing for every scale</h2>
-            
-            {/* Toggle */}
-            <div className="inline-flex items-center bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-              <button 
-                onClick={() => setAnnualBilling(false)}
-                className={`px-6 py-2 rounded-[8px] text-sm font-bold transition-all ${!annualBilling ? 'bg-[#4361EE] text-white shadow-md shadow-[#4361EE]/20' : 'text-slate-500 hover:text-slate-800'}`}
-              >
-                Monthly
-              </button>
-              <button 
-                onClick={() => setAnnualBilling(true)}
-                className={`px-6 py-2 rounded-[8px] text-sm font-bold transition-all ${annualBilling ? 'bg-[#4361EE] text-white shadow-md shadow-[#4361EE]/20' : 'text-slate-500 hover:text-slate-800'}`}
-              >
-                Annually <span className="text-[#06b6d4] ml-1 bg-[#06b6d4]/10 px-2 py-0.5 rounded-full text-xs">-20%</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 items-center">
-            {/* Starter */}
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="bg-white border border-slate-200 rounded-[20px] p-8 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <h4 className="text-xl font-bold text-slate-900 mb-2">Starter</h4>
-              <p className="text-slate-500 font-medium text-sm mb-6">For growing e-commerce brands.</p>
-              <div className="mb-8">
-                <span className="text-4xl font-black text-slate-900">${annualBilling ? '49' : '59'}</span>
-                <span className="text-slate-500 font-medium">/mo</span>
+      {/* --- CTA SECTION --- */}
+      <section className="py-32 px-8">
+        <div className="max-w-[1400px] mx-auto bg-gradient-to-br from-[#4361EE] to-[#3B82F6] rounded-[60px] p-20 relative overflow-hidden shadow-2xl">
+           <div className="absolute top-0 left-0 w-full h-full opacity-10">
+             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_white_1px,_transparent_1px)] bg-[size:40px_40px]" />
+           </div>
+           <div className="relative z-10 flex flex-col items-center text-center">
+              <h2 className="text-5xl md:text-[80px] font-black text-white tracking-tighter leading-[0.9] mb-12">
+                Ready to optimize <br /> your operations?
+              </h2>
+              <div className="flex flex-wrap justify-center gap-6">
+                <Link href="/auth/signup" className="bg-white text-black px-12 py-6 rounded-3xl font-black text-sm uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl">
+                  Get Started Now
+                </Link>
+                <button className="bg-black/20 backdrop-blur-md text-white border border-white/20 px-12 py-6 rounded-3xl font-black text-sm uppercase tracking-widest hover:bg-black/30 transition-all">
+                  Schedule Demo
+                </button>
               </div>
-              <ul className="space-y-4 mb-8">
-                {['Up to 1,000 orders/mo', 'Standard 3D Algorithm', 'Email Support', 'Basic Analytics'].map((feat, i) => (
-                  <li key={i} className="flex items-center gap-3 text-slate-700 font-medium">
-                    <Check className="w-5 h-5 text-[#22c55e]" />
-                    <span className="text-sm">{feat}</span>
-                  </li>
-                ))}
-              </ul>
-              <button className="w-full py-3 rounded-[10px] bg-white border border-slate-300 hover:bg-slate-50 hover:border-[#4361EE]/50 text-slate-800 font-bold transition-all">
-                Start Free Trial
-              </button>
-            </motion.div>
-
-            {/* Growth (Middle) */}
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="relative bg-white border-2 border-[#4361EE] rounded-[24px] p-8 shadow-[0_20px_50px_rgba(67,97,238,0.15)] md:-mt-6 md:mb-6"
-            >
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#4361EE] text-white text-[11px] font-black uppercase tracking-widest py-1.5 px-4 rounded-full shadow-lg">
-                Most Popular
-              </div>
-              <h4 className="text-xl font-bold text-slate-900 mb-2">Growth</h4>
-              <p className="text-slate-500 font-medium text-sm mb-6">For high-volume fulfillment centers.</p>
-              <div className="mb-8">
-                <span className="text-5xl font-black text-slate-900">${annualBilling ? '199' : '249'}</span>
-                <span className="text-slate-500 font-medium">/mo</span>
-              </div>
-              <ul className="space-y-4 mb-8">
-                {['Up to 10,000 orders/mo', 'Advanced Spatial Engine', 'Priority Support', 'Custom Box Sizes', 'API Access'].map((feat, i) => (
-                  <li key={i} className="flex items-center gap-3 text-slate-800 font-bold">
-                    <Check className="w-5 h-5 text-[#4361EE]" />
-                    <span className="text-sm">{feat}</span>
-                  </li>
-                ))}
-              </ul>
-              <button className="w-full py-3.5 rounded-[10px] bg-[#4361EE] hover:bg-[#344FDA] text-white font-bold transition-all shadow-[0_8px_20px_rgba(67,97,238,0.25)] border border-[#4361EE]">
-                Get Started
-              </button>
-            </motion.div>
-
-            {/* Enterprise */}
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="bg-white border border-slate-200 rounded-[20px] p-8 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <h4 className="text-xl font-bold text-slate-900 mb-2">Enterprise</h4>
-              <p className="text-slate-500 font-medium text-sm mb-6">For global supply chain operations.</p>
-              <div className="mb-8">
-                <span className="text-4xl font-black text-slate-900">Custom</span>
-              </div>
-              <ul className="space-y-4 mb-8">
-                {['Unlimited orders', 'Dedicated Infrastructure', '24/7 Phone Support', 'WMS/ERP Integration', 'SLA Guarantee'].map((feat, i) => (
-                  <li key={i} className="flex items-center gap-3 text-slate-700 font-medium">
-                    <Check className="w-5 h-5 text-slate-400" />
-                    <span className="text-sm">{feat}</span>
-                  </li>
-                ))}
-              </ul>
-              <button className="w-full py-3 rounded-[10px] bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 text-slate-800 font-bold transition-all">
-                Contact Sales
-              </button>
-            </motion.div>
-          </div>
+           </div>
         </div>
       </section>
 
       {/* --- FOOTER --- */}
-      <footer className="relative bg-white pt-20 pb-10 border-t border-slate-200">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 lg:gap-24 mb-16">
-            <div className="col-span-1 md:col-span-1">
-              <Link href="/" className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-[10px] bg-[#4361EE] flex items-center justify-center border border-[#4361EE] shadow-md">
-                  <Box className="w-4 h-4 text-white" />
+      <footer className="pt-32 pb-16 px-8 border-t border-white/5">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-20 mb-24">
+            <div className="col-span-1">
+              <Link href="/" className="flex items-center gap-3 mb-8">
+                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center">
+                  <Box className="w-6 h-6 text-black" />
                 </div>
-                <span className="font-bold text-lg text-slate-900">PackIQ</span>
+                <span className="font-black text-2xl tracking-tighter text-white">PackIQ</span>
               </Link>
-              <p className="text-slate-500 font-medium text-sm leading-relaxed mb-6">
-                Next-generation spatial AI engine optimizing global logistics and supply chains.
+              <p className="text-slate-500 font-medium leading-relaxed">
+                Autonomous logistics intelligence for the modern supply chain. Powered by advanced spatial reasoning.
               </p>
             </div>
             
-            <div>
-              <h5 className="text-slate-900 font-bold mb-4">Product</h5>
-              <ul className="space-y-3">
-                {['Features', 'Integrations', 'Pricing', 'Changelog', 'Docs'].map(link => (
-                  <li key={link}><a href="#" className="text-slate-500 hover:text-[#4361EE] font-medium text-sm transition-colors">{link}</a></li>
-                ))}
-              </ul>
-            </div>
-            
-            <div>
-              <h5 className="text-slate-900 font-bold mb-4">Company</h5>
-              <ul className="space-y-3">
-                {['About Us', 'Careers', 'Blog', 'Contact', 'Partners'].map(link => (
-                  <li key={link}><a href="#" className="text-slate-500 hover:text-[#4361EE] font-medium text-sm transition-colors">{link}</a></li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h5 className="text-slate-900 font-bold mb-4">Connect</h5>
-              <div className="flex items-center gap-4">
-                <a href="#" className="text-slate-500 hover:text-[#4361EE] font-medium transition-all text-sm">
-                  Contact Us
-                </a>
+            {['Product', 'Company', 'Legal', 'Social'].map((title, i) => (
+              <div key={i}>
+                <h5 className="text-white font-black uppercase tracking-widest text-xs mb-8">{title}</h5>
+                <ul className="space-y-4">
+                  {['Features', 'API', 'Docs', 'Network'].map(link => (
+                    <li key={link}><a href="#" className="text-slate-500 hover:text-white transition-colors font-medium">{link}</a></li>
+                  ))}
+                </ul>
               </div>
-            </div>
+            ))}
           </div>
 
-          <div className="border-t border-slate-100 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-slate-500 font-medium text-sm">© 2026 PackIQ Technologies Inc. All rights reserved.</p>
-            <div className="flex gap-6">
-              <a href="#" className="text-slate-500 hover:text-slate-900 font-medium text-sm transition-colors">Privacy Policy</a>
-              <a href="#" className="text-slate-500 hover:text-slate-900 font-medium text-sm transition-colors">Terms of Service</a>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-12 border-t border-white/5">
+            <p className="text-slate-600 font-bold text-xs uppercase tracking-widest">© 2026 PackIQ Technologies. Designed for excellence.</p>
+            <div className="flex gap-10">
+              {['Twitter', 'LinkedIn', 'Github'].map(s => <a key={s} href="#" className="text-slate-600 hover:text-white transition-colors text-xs font-black uppercase tracking-widest">{s}</a>)}
             </div>
           </div>
         </div>

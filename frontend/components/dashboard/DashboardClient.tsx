@@ -92,28 +92,8 @@ export default function DashboardClient() {
     show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' as const } }
   }
 
-  // --- EMPTY STATE ---
-  if (optResults.length === 0) {
-    return (
-      <div className="max-w-7xl mx-auto flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#0f0f1a] border border-white/10 rounded-[32px] p-12 max-w-2xl w-full shadow-2xl relative overflow-hidden">
-           <div className="absolute inset-0 bg-gradient-to-br from-[#4361EE]/10 to-transparent opacity-50" />
-           <div className="relative z-10 flex flex-col items-center">
-              <div className="w-24 h-24 bg-[#4361EE]/10 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-[#4361EE]/20 border border-[#4361EE]/30">
-                <UploadCloud className="w-10 h-10 text-[#4361EE]" />
-              </div>
-              <h2 className="text-3xl font-black text-white mb-4">Welcome to PackIQ</h2>
-              <p className="text-gray-400 mb-8 max-w-md mx-auto text-sm leading-relaxed">
-                Your dashboard is currently empty. Head over to the Optimization tab to upload your first dataset and discover potential savings.
-              </p>
-              <Link href="/dashboard/optimization" className="bg-[#4361EE] hover:bg-[#344FDA] text-white px-8 py-4 rounded-xl font-bold shadow-xl shadow-[#4361EE]/30 transition-all flex items-center gap-2">
-                <Zap className="w-5 h-5" /> Start Optimizing Now
-              </Link>
-           </div>
-        </motion.div>
-      </div>
-    )
-  }
+  // --- EMPTY STATE REMOVED AS PER USER REQUEST ---
+  // Dashboard now shows nil data instead of a placeholder screen
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-10">

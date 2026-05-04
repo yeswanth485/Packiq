@@ -1,8 +1,8 @@
 'use client'
 
-import { Suspense, useRef } from 'react'
+import { Suspense, useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Box, Edges, Float } from '@react-three/drei'
+import { OrbitControls, Box, Edges, Float, MeshDistortMaterial, Stars, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
 
 function PackagingBox() {
@@ -10,9 +10,7 @@ function PackagingBox() {
   
   useFrame((state, delta) => {
     if (meshRef.current) {
-      // Smooth floating rotation
-      meshRef.current.rotation.y += delta * 0.2
-      meshRef.current.rotation.z += delta * 0.1
+      meshRef.current.rotation.y += delta * 0.25
     }
   })
 
@@ -20,55 +18,93 @@ function PackagingBox() {
     <group>
       <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
         <Box ref={meshRef} args={[2.8, 2, 1.8]}>
-          {/* Light Theme Material */}
+          {/* Premium Dark Glass Material */}
           <meshStandardMaterial 
-            color="#ffffff" 
-            roughness={0.2}
-            metalness={0.1}
+            color="#0a0a0f" 
+            roughness={0.1}
+            metalness={0.9}
+            transparent
+            opacity={0.9}
           />
-          {/* Bright vibrant edges */}
+          {/* Glowing Neon Edges */}
           <Edges 
-            linewidth={2} 
+            linewidth={3} 
             threshold={15} 
             color="#4361EE" 
           />
           
-          {/* Subtle "PackIQ" logo simulation on the box */}
           <mesh position={[0, 0, 0.91]}>
-             <planeGeometry args={[1.5, 0.5]} />
-             <meshBasicMaterial color="#4361EE" transparent opacity={0.8} />
+             <planeGeometry args={[1.6, 0.6]} />
+             <meshBasicMaterial color="#4361EE" transparent opacity={0.4} />
           </mesh>
         </Box>
+        
+        {/* Inner Core Glow */}
+        <mesh scale={[2.4, 1.6, 1.4]}>
+          <boxGeometry />
+          <meshBasicMaterial color="#4361EE" transparent opacity={0.05} />
+        </mesh>
       </Float>
     </group>
   )
 }
 
+function TechParticles() {
+  const count = 40
+  const points = useMemo(() => {
+    const p = new Float32Array(count * 3)
+    for (let i = 0; i < count; i++) {
+      p[i * 3] = (Math.random() - 0.5) * 10
+      p[i * 3 + 1] = (Math.random() - 0.5) * 10
+      p[i * 3 + 2] = (Math.random() - 0.5) * 10
+    }
+    return p
+  }, [])
+
+  return (
+    <points>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          args={[points, 3]}
+        />
+      </bufferGeometry>
+      <pointsMaterial size={0.05} color="#4361EE" transparent opacity={0.4} />
+    </points>
+  )
+}
+
 export default function Hero3DBox() {
   return (
-    <div className="w-full h-full min-h-[400px] relative pointer-events-auto cursor-grab active:cursor-grabbing">
-      <Suspense fallback={<div className="w-full h-full bg-slate-100 animate-pulse rounded-2xl" />}>
-        {/* Performance optimization: dpr limits pixel ratio for less lag */}
-        <Canvas dpr={[1, 1.5]} camera={{ position: [0, 0, 7], fov: 35 }}>
-          <ambientLight intensity={0.8} />
+    <div className="w-full h-full min-h-[450px] relative pointer-events-auto cursor-grab active:cursor-grabbing">
+      <Suspense fallback={<div className="w-full h-full bg-[#050505] animate-pulse rounded-2xl" />}>
+        <Canvas dpr={[1, 2]} camera={{ position: [0, 0, 8], fov: 35 }}>
+          <color attach="background" args={['#050505']} />
+          <ambientLight intensity={0.2} />
           
-          {/* Simplified Lighting for performance */}
-          <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} />
-          <pointLight position={[-10, -10, -10]} color="#4361EE" intensity={0.5} />
+          {/* Advanced Studio Lighting */}
+          <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={2} color="#4361EE" />
+          <pointLight position={[-10, -5, -10]} color="#06b6d4" intensity={1} />
+          <pointLight position={[0, 5, 5]} color="#ffffff" intensity={0.5} />
+          
+          <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
           
           <PackagingBox />
+          <TechParticles />
+          
+          <ContactShadows position={[0, -2.5, 0]} opacity={0.4} scale={10} blur={2.5} far={4} color="#4361EE" />
           
           <OrbitControls 
             enableZoom={false} 
             enablePan={false} 
             autoRotate 
-            autoRotateSpeed={0.8} 
+            autoRotateSpeed={1.2} 
           />
         </Canvas>
       </Suspense>
       
-      {/* Visual background glow (Light Theme) */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#4361EE]/10 blur-[80px] -z-10 rounded-full" />
+      {/* Dynamic Background Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#4361EE]/10 blur-[120px] -z-10 rounded-full animate-pulse" />
     </div>
   )
 }

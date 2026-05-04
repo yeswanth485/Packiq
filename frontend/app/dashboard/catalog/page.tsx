@@ -55,32 +55,7 @@ const PRODUCT_TEMPLATES = [
 
 // --- COMPONENTS ---
 
-function CSS3DBox({ l, w, h, color = '#4361EE' }: { l: number, w: number, h: number, color?: string }) {
-  // Scale dimensions for visualization
-  const max = Math.max(l, w, h)
-  const scale = 120 / max
-  const sl = l * scale
-  const sw = w * scale
-  const sh = h * scale
-
-  return (
-    <div className="w-full h-48 perspective-[1000px] flex items-center justify-center">
-      <motion.div 
-        animate={{ rotateY: 360, rotateX: 20 }}
-        transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-        className="relative transform-style-3d group hover:[animation-play-state:paused]"
-        style={{ width: sl, height: sh }}
-      >
-        <div className="absolute inset-0 border border-white/20 bg-white/5 transform" style={{ transform: `translateZ(${sw / 2}px)`, width: sl, height: sh }} />
-        <div className="absolute inset-0 border border-white/20 bg-white/5 transform" style={{ transform: `translateZ(${-sw / 2}px)`, width: sl, height: sh }} />
-        <div className="absolute inset-0 border border-white/20 bg-white/5 transform" style={{ transform: `rotateY(90deg) translateZ(${sl / 2}px)`, width: sw, height: sh }} />
-        <div className="absolute inset-0 border border-white/20 bg-white/5 transform" style={{ transform: `rotateY(-90deg) translateZ(${sl / 2}px)`, width: sw, height: sh }} />
-        <div className="absolute inset-0 border border-white/20 bg-white/5 transform" style={{ transform: `rotateX(90deg) translateZ(${sh / 2}px)`, width: sl, height: sw }} />
-        <div className="absolute inset-0 border border-white/20 bg-white/5 transform" style={{ transform: `rotateX(-90deg) translateZ(${sh / 2}px)`, width: sl, height: sw }} />
-      </motion.div>
-    </div>
-  )
-}
+import Box3DViewer from '@/components/dashboard/Box3DViewer'
 
 // --- MAIN PAGE ---
 
@@ -335,8 +310,8 @@ const CatalogPage = () => {
                   </div>
                 </div>
 
-                <div className="bg-black/20 rounded-2xl p-4 border border-white/5 mb-8">
-                   <CSS3DBox l={selectedItem.length} w={selectedItem.width} h={selectedItem.height} />
+                <div className="h-64 mb-8">
+                   <Box3DViewer l={selectedItem.length} w={selectedItem.width} h={selectedItem.height} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-8">

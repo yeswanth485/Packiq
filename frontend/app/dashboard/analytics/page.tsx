@@ -144,28 +144,8 @@ export default function AnalyticsPage() {
     ]
   }, [optResults]);
 
-  // --- EMPTY STATE ---
-  if (optResults.length === 0) {
-    return (
-      <div className="max-w-[1400px] mx-auto flex flex-col items-center justify-center min-h-[75vh] text-center px-4">
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#0f0f1a] border border-white/10 rounded-[32px] p-12 max-w-2xl w-full shadow-2xl relative overflow-hidden">
-           <div className="absolute inset-0 bg-gradient-to-br from-[#00E5CC]/10 to-transparent opacity-50" />
-           <div className="relative z-10 flex flex-col items-center">
-              <div className="w-24 h-24 bg-[#00E5CC]/10 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-[#00E5CC]/20 border border-[#00E5CC]/30">
-                <UploadCloud className="w-10 h-10 text-[#00E5CC]" />
-              </div>
-              <h2 className="text-3xl font-black text-white mb-4">No Analytics Data Yet</h2>
-              <p className="text-gray-400 mb-8 max-w-md mx-auto text-sm leading-relaxed">
-                Run an optimization batch to populate this dashboard with detailed insights, savings trends, and box distribution data.
-              </p>
-              <Link href="/dashboard/optimization" className="bg-[#00E5CC] hover:bg-[#00D0B8] text-gray-900 px-8 py-4 rounded-xl font-bold shadow-xl shadow-[#00E5CC]/30 transition-all flex items-center gap-2">
-                <Zap className="w-5 h-5" /> Optimize Products Now
-              </Link>
-           </div>
-        </motion.div>
-      </div>
-    )
-  }
+  // --- EMPTY STATE REMOVED AS PER USER REQUEST ---
+  // Analytics now shows nil data instead of a placeholder screen
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 pb-24 px-4 md:px-0">
