@@ -1,429 +1,642 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import { motion, useScroll, useTransform, AnimatePresence, useInView, animate } from 'framer-motion';
 import { Inter } from 'next/font/google';
-import dynamic from 'next/dynamic';
 import {
   Box, ArrowRight, Play, Menu, X, Check, Brain, ShieldCheck, BarChart2,
-  Database, Truck, Zap, Globe, Cpu, Infinity as InfinityIcon
+  Database, Zap, Truck, Plus, Minus, TrendingUp, Clock, DollarSign
 } from 'lucide-react';
-
-const Hero3DBox = dynamic(() => import('@/components/landing/Hero3DBox'), { ssr: false });
 
 const inter = Inter({ subsets: ['latin'] });
 
-// --- Advanced Particles Component ---
-const Particles = () => {
-  const [particles, setParticles] = useState<any[]>([]);
+// --- ANIMATED COUNTER COMPONENT ---
+function Counter({ value, suffix = '', prefix = '', isDecimal = false }: { value: number, suffix?: string, prefix?: string, isDecimal?: boolean }) {
+  const [displayValue, setDisplayValue] = useState(0);
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-50px" });
 
   useEffect(() => {
-    const newParticles = Array.from({ length: 40 }).map((_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 4 + 1,
-      duration: Math.random() * 15 + 10,
-      delay: Math.random() * 5
-    }));
-    setParticles(newParticles);
-  }, []);
+    if (isInView) {
+      const controls = animate(0, value, {
+        duration: 2,
+        onUpdate(v) {
+          setDisplayValue(v);
+        },
+        ease: "easeOut"
+      });
+      return () => controls.stop();
+    }
+  }, [value, isInView]);
 
+  const formatted = isDecimal ? displayValue.toFixed(1) : Math.floor(displayValue).toLocaleString();
+
+  return <span ref={ref}>{prefix}{formatted}{suffix}</span>;
+}
+
+// --- ACCORDION COMPONENT ---
+function FAQAccordion({ question, answer }: { question: string, answer: string }) {
+  const [isOpen, setIsOpen] = useState(false);
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      {particles.map((p) => (
-        <motion.div
-          key={p.id}
-          className="absolute rounded-full bg-[#4361EE] opacity-[0.2]"
-          style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            width: p.size,
-            height: p.size,
-          }}
-          animate={{
-            y: ['0%', '-100%'],
-            opacity: [0, 0.5, 0]
-          }}
-          transition={{
-            duration: p.duration,
-            repeat: Infinity,
-            delay: p.delay,
-            ease: 'linear'
-          }}
-        />
-      ))}
+    <div className="border-b border-white/10 py-4">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex w-full items-center justify-between text-left focus:outline-none"
+      >
+        <span className="text-[15px] font-medium text-white">{question}</span>
+        {isOpen ? <Minus className="w-4 h-4 text-gray-400" /> : <Plus className="w-4 h-4 text-gray-400" />}
+      </button>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <p className="pt-3 text-[14px] text-gray-400 leading-relaxed">
+              {answer}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
-};
+}
 
+// --- MAIN PAGE ---
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [annualBilling, setAnnualBilling] = useState(false);
-  
-  // Parallax for hero
-  const { scrollY } = useScroll();
-  const y1 = useTransform(scrollY, [0, 1000], [0, 200]);
-  const y2 = useTransform(scrollY, [0, 1000], [0, -100]);
-  const opacity = useTransform(scrollY, [0, 300], [1, 0]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    const element = document.getElementById(id);
+    if (element) {
+      window.scrollTo({
+        top: element.offsetTop - 80,
+        behavior: 'smooth'
+      });
+    }
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <div className={`${inter.className} min-h-screen text-slate-300 selection:bg-[#4361EE]/40 overflow-x-hidden bg-[#020205]`}>
+    <div className={`${inter.className} min-h-screen text-gray-400 bg-[#0A0A0F] selection:bg-[#185FA5]/30 overflow-x-hidden touch-manipulation`}>
       
-      {/* --- PREMIUM NAVBAR --- */}
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          SECTION 1 — STICKY NAV BAR
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <nav 
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled 
-            ? 'bg-[#020205]/80 backdrop-blur-[20px] border-b border-white/5 py-4 shadow-2xl' 
-            : 'bg-transparent py-8'
+            ? 'bg-[#0A0A0F]/80 backdrop-blur-[12px] border-b border-white/10 py-4' 
+            : 'bg-transparent py-6 border-b border-transparent'
         }`}
       >
-        <div className="max-w-[1400px] mx-auto px-8 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group z-50">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4361EE] to-[#3B82F6] flex items-center justify-center shadow-[0_0_20px_rgba(67,97,238,0.4)] group-hover:scale-110 transition-transform">
-              <Box className="w-6 h-6 text-white" />
+        <div className="max-w-[1200px] mx-auto px-6 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 group z-50">
+            <div className="w-6 h-6 rounded bg-[#185FA5] flex items-center justify-center p-1">
+              <Box className="w-full h-full text-white" strokeWidth={2.5} />
             </div>
-            <span className="font-black text-2xl tracking-tighter text-white">PackIQ</span>
+            <span className="font-medium text-[16px] text-white tracking-tight">PackIQ</span>
           </Link>
 
-          {/* Desktop Nav Links */}
-          <div className="hidden lg:flex items-center gap-10 text-[14px] font-black uppercase tracking-widest text-slate-400">
-            {['Technology', 'Platform', 'Network', 'Pricing'].map((item) => (
+          <div className="hidden md:flex items-center gap-8 text-[13px] text-gray-400">
+            {['What we do', 'How it works', 'Partners', 'Pricing'].map((item) => (
               <a 
                 key={item} 
                 href={`#${item.toLowerCase().replace(/ /g, '-')}`} 
-                className="relative group hover:text-white transition-colors py-2"
+                onClick={(e) => scrollToSection(e, item.toLowerCase().replace(/ /g, '-'))}
+                className="hover:text-white transition-colors py-2"
               >
                 {item}
-                <motion.span 
-                  className="absolute bottom-0 left-0 h-[2px] bg-[#4361EE] rounded-full"
-                  initial={{ width: 0 }}
-                  whileHover={{ width: '100%' }}
-                  transition={{ duration: 0.3 }}
-                />
               </a>
             ))}
           </div>
 
-          {/* Desktop CTA */}
-          <div className="hidden lg:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-4">
             <Link 
               href="/auth/login" 
-              className="text-[14px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
+              className="text-[13px] font-medium text-gray-300 hover:text-white px-4 py-2 rounded-lg border border-white/20 hover:bg-white/5 transition-all"
             >
-              Access
+              Sign in
             </Link>
             <Link 
               href="/auth/signup" 
-              className="group flex items-center gap-2 bg-white text-black px-7 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all hover:bg-[#4361EE] hover:text-white shadow-[0_10px_20px_rgba(255,255,255,0.1)] hover:shadow-[0_10px_20px_rgba(67,97,238,0.3)]"
+              className="text-[13px] font-medium text-white bg-[#185FA5] hover:bg-[#144D86] px-5 py-2 rounded-lg transition-all"
             >
-              Initialize
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              Get started
             </Link>
           </div>
 
-          {/* Mobile Toggle */}
           <button 
-            className="lg:hidden z-50 text-white p-2"
+            className="md:hidden z-50 text-white p-2"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            {mobileMenuOpen ? <X /> : <Menu />}
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
 
-        {/* Mobile Menu Drawer */}
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div 
-              initial={{ opacity: 0, x: '100%' }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: '100%' }}
-              className="fixed inset-0 bg-[#020205] z-[40] flex flex-col items-center justify-center gap-8 lg:hidden"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-full left-0 w-full bg-[#0A0A0F]/95 backdrop-blur-xl border-b border-white/10 p-6 flex flex-col gap-4 md:hidden"
             >
-              {['Technology', 'Platform', 'Network', 'Pricing'].map((item) => (
+              {['What we do', 'How it works', 'Partners', 'Pricing'].map((item) => (
                 <a 
                   key={item} 
                   href={`#${item.toLowerCase().replace(/ /g, '-')}`} 
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-3xl font-black text-white uppercase tracking-tighter"
+                  onClick={(e) => scrollToSection(e, item.toLowerCase().replace(/ /g, '-'))}
+                  className="text-[15px] font-medium text-white py-2"
                 >
                   {item}
                 </a>
               ))}
-              <div className="flex flex-col gap-4 w-full px-12 mt-8">
-                <Link href="/auth/login" className="text-center py-4 rounded-xl border border-white/10 font-bold" onClick={() => setMobileMenuOpen(false)}>Sign In</Link>
-                <Link 
-                  href="/auth/signup" 
-                  className="text-center py-4 rounded-xl bg-[#4361EE] text-white font-bold"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Get Started
-                </Link>
-              </div>
+              <div className="h-[1px] bg-white/10 my-2" />
+              <Link href="/auth/login" className="text-[15px] font-medium text-gray-300 py-2" onClick={() => setMobileMenuOpen(false)}>Sign in</Link>
+              <Link 
+                href="/auth/signup" 
+                className="text-[15px] font-medium text-white bg-[#185FA5] py-3 rounded-lg text-center mt-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Get started
+              </Link>
             </motion.div>
           )}
         </AnimatePresence>
       </nav>
 
-      {/* --- HERO SECTION --- */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center pt-20 overflow-hidden">
-        {/* Deep Gradient Background */}
-        <div className="absolute inset-0 z-0">
-          <motion.div 
-            style={{ y: y1 }}
-            className="absolute top-[5%] left-[10%] w-[800px] h-[800px] bg-[#4361EE]/20 rounded-full blur-[150px] mix-blend-screen"
-            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-            transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
-          />
-          <motion.div 
-            style={{ y: y2 }}
-            className="absolute bottom-[10%] right-[10%] w-[900px] h-[900px] bg-[#06b6d4]/15 rounded-full blur-[180px] mix-blend-screen"
-            animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.4, 0.2] }}
-            transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        </div>
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          SECTION 2 — HERO
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section className="relative pt-[160px] pb-12 px-6 flex flex-col items-center text-center">
+        {/* Subtle Background Glow to avoid pure black dullness */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[500px] bg-[#185FA5]/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#185FA5]/20 border border-[#185FA5]/30 mb-6"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-[#185FA5] animate-pulse" />
+          <span className="text-[11px] font-medium text-blue-200 uppercase tracking-wide">Next-gen logistics AI</span>
+        </motion.div>
 
-        <Particles />
+        <motion.h1 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-[36px] font-medium leading-[1.2] tracking-tight mb-6 text-white max-w-[560px]"
+        >
+          Packaging intelligence that pays for itself.
+        </motion.h1>
 
-        <div className="relative z-10 max-w-[1400px] mx-auto px-8 w-full grid lg:grid-cols-2 items-center gap-16">
-          <motion.div 
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1, ease: "easeOut" }}
+        <motion.p 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-[15px] text-gray-400 max-w-[480px] leading-relaxed mb-8"
+        >
+          Reduce void space by 40%, cut carrier costs, and ship faster — all powered by real-time AI spatial reasoning.
+        </motion.p>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto"
+        >
+          <Link 
+            href="/auth/signup" 
+            className="w-full sm:w-auto flex items-center justify-center bg-[#185FA5] hover:bg-[#144D86] text-white px-6 py-3 rounded-lg font-medium text-[14px] transition-all"
           >
+            Launch platform
+          </Link>
+          <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-transparent hover:bg-white/5 border border-white/20 text-white px-6 py-3 rounded-lg font-medium text-[14px] transition-all">
+            <Play className="w-4 h-4" /> Watch 2-min demo
+          </button>
+        </motion.div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          SECTION 3 — PARTNER LOGO MARQUEE
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section id="partners" className="py-12 border-y border-white/5 bg-white/[0.01] overflow-hidden">
+        <div className="max-w-[1200px] mx-auto flex flex-col items-center">
+          <p className="text-[11px] font-medium tracking-[0.1em] uppercase text-gray-500 mb-8">Powering global supply chains</p>
+          <div className="w-full relative" style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}>
             <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5 }}
-              className="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-white/10 mb-10 backdrop-blur-md"
+              className="flex items-center gap-6 whitespace-nowrap px-4"
+              animate={{ x: ['0%', '-50%'] }}
+              transition={{ duration: 30, ease: 'linear', repeat: Infinity }}
             >
-              <div className="flex -space-x-2">
-                {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full border-2 border-[#020205] bg-slate-700" />)}
-              </div>
-              <span className="text-[12px] font-black uppercase tracking-widest text-[#4361EE]">Version 4.0 Live Now</span>
-            </motion.div>
-
-            <h1 className="text-6xl md:text-[90px] font-black leading-[0.95] tracking-tighter mb-10 text-white">
-              Spatially <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#4361EE] via-[#3B82F6] to-[#06b6d4]">
-                Aware AI.
-              </span>
-            </h1>
-
-            <p className="text-lg md:text-xl text-slate-400 font-medium max-w-xl leading-relaxed mb-12">
-              The world's first autonomous logistics engine powered by real-time neural spatial reasoning. Pack faster, ship cheaper, and eliminate waste at scale.
-            </p>
-
-            <div className="flex flex-wrap gap-6">
-              <Link 
-                href="/auth/signup" 
-                className="group flex items-center gap-3 bg-white text-black px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:scale-105 shadow-[0_20px_40px_rgba(255,255,255,0.1)]"
-              >
-                Launch Intelligence
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <button className="group flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all backdrop-blur-md">
-                <Play className="w-5 h-5 text-[#4361EE] group-hover:scale-110 transition-transform" />
-                View Demo
-              </button>
-            </div>
-
-            <div className="mt-16 grid grid-cols-3 gap-12 border-t border-white/10 pt-10">
-              {[
-                { val: "99.2%", label: "Accuracy" },
-                { val: "40ms", label: "Latency" },
-                { val: "24/7", label: "Uptime" }
-              ].map((s, i) => (
-                <div key={i}>
-                  <p className="text-2xl font-black text-white">{s.val}</p>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{s.label}</p>
+              {[...Array(2)].map((_, j) => (
+                <div key={j} className="flex items-center gap-6">
+                  {['FedEx', 'DHL', 'Amazon', 'UPS', 'Maersk', 'Shopify'].map((brand, i) => (
+                    <div key={`${j}-${i}`} className="px-6 py-2 rounded-full border border-white/10 bg-white/[0.02] flex items-center justify-center min-w-[120px]">
+                      <span className="text-[14px] font-semibold tracking-wide text-gray-300 opacity-80">{brand}</span>
+                    </div>
+                  ))}
                 </div>
               ))}
-            </div>
-          </motion.div>
-
-          {/* 3D Container */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            transition={{ duration: 1.5, ease: "easeOut" }}
-            className="relative h-[600px] w-full"
-          >
-             <div className="absolute inset-0 bg-[#4361EE]/5 rounded-full blur-[100px] animate-pulse" />
-             <Hero3DBox />
-             
-             {/* Floating Labels */}
-             <motion.div 
-               animate={{ y: [0, -15, 0] }}
-               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-               className="absolute top-1/4 -left-4 p-4 bg-[#0A0A0F]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-20"
-             >
-                <div className="flex items-center gap-3">
-                   <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
-                      <Zap className="w-4 h-4 text-green-500" />
-                   </div>
-                   <div>
-                      <p className="text-[10px] font-black text-gray-500 uppercase">Savings</p>
-                      <p className="text-sm font-black text-white">+$12,450</p>
-                   </div>
-                </div>
-             </motion.div>
-
-             <motion.div 
-               animate={{ y: [0, 20, 0] }}
-               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-               className="absolute bottom-1/4 -right-4 p-4 bg-[#0A0A0F]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-20"
-             >
-                <div className="flex items-center gap-3">
-                   <div className="w-8 h-8 rounded-lg bg-[#4361EE]/20 flex items-center justify-center">
-                      <BarChart2 className="w-4 h-4 text-[#4361EE]" />
-                   </div>
-                   <div>
-                      <p className="text-[10px] font-black text-gray-500 uppercase">Efficiency</p>
-                      <p className="text-sm font-black text-white">98.4%</p>
-                   </div>
-                </div>
-             </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* --- TECH TAPE --- */}
-      <section className="py-12 border-y border-white/5 bg-white/[0.02] backdrop-blur-md overflow-hidden relative z-20">
-        <div className="flex w-full overflow-hidden relative" style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}>
-          <motion.div 
-            className="flex items-center gap-24 whitespace-nowrap px-8"
-            animate={{ x: ['0%', '-50%'] }}
-            transition={{ duration: 30, ease: 'linear', repeat: Infinity }}
-          >
-            {[...Array(2)].map((_, j) => (
-              <div key={j} className="flex items-center gap-24 opacity-30 grayscale invert">
-                {['FEDEX', 'DHL', 'AMAZON', 'UPS', 'MAERSK', 'SHOPIFY', 'WALMART', 'APPLE'].map(brand => (
-                  <span key={brand} className="text-3xl font-black tracking-tighter text-white italic">{brand}</span>
-                ))}
-              </div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* --- FEATURES SECTION --- */}
-      <section id="technology" className="py-32 px-8 relative z-10">
-        <div className="max-w-[1400px] mx-auto">
-          <div className="grid lg:grid-cols-12 gap-16 items-end mb-24">
-             <div className="lg:col-span-7">
-               <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="flex items-center gap-4 mb-6">
-                 <div className="h-[2px] w-12 bg-[#4361EE]" />
-                 <span className="text-xs font-black uppercase tracking-widest text-[#4361EE]">Technical Core</span>
-               </motion.div>
-               <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter leading-[0.95]">
-                 Engineered for <br />
-                 Extreme Performance.
-               </h2>
-             </div>
-             <div className="lg:col-span-5">
-               <p className="text-xl text-slate-400 font-medium leading-relaxed">
-                 We've stripped away the complexity. PackIQ leverages raw spatial compute to solve three-dimensional bin packing problems in milliseconds.
-               </p>
-             </div>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { icon: Brain, title: "Neural Spatial engine", desc: "Our 4th-gen neural net understands volume, weight distribution, and fragility constraints like a human expert.", color: "#4361EE" },
-              { icon: Globe, title: "Global Logistics API", desc: "Instantly connect to every major carrier worldwide. Real-time rate calculations and verification.", color: "#06b6d4" },
-              { icon: InfinityIcon, title: "Continuous Learning", desc: "Every package processed makes the engine smarter. Self-optimizing feedback loops ensure 100% precision.", color: "#8B5CF6" }
-            ].map((item, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: i * 0.1 }}
-                className="group p-10 bg-white/[0.02] border border-white/5 rounded-[40px] hover:bg-white/[0.05] transition-all hover:border-[#4361EE]/50 shadow-2xl relative overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                   <item.icon className="w-32 h-32 text-white" />
-                </div>
-                <div className="relative z-10">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-white/10 to-transparent flex items-center justify-center mb-8 border border-white/10 group-hover:scale-110 transition-transform">
-                    <item.icon className="w-8 h-8 text-white" />
-                  </div>
-                  <h4 className="text-2xl font-black text-white mb-4 uppercase tracking-tighter">{item.title}</h4>
-                  <p className="text-slate-400 font-medium leading-relaxed">{item.desc}</p>
-                </div>
-              </motion.div>
-            ))}
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* --- CTA SECTION --- */}
-      <section className="py-32 px-8">
-        <div className="max-w-[1400px] mx-auto bg-gradient-to-br from-[#4361EE] to-[#3B82F6] rounded-[60px] p-20 relative overflow-hidden shadow-2xl">
-           <div className="absolute top-0 left-0 w-full h-full opacity-10">
-             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_white_1px,_transparent_1px)] bg-[size:40px_40px]" />
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          SECTION 4 — STATS BAR
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section className="py-16 px-6 max-w-[1200px] mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-0 border border-white/10 rounded-2xl bg-white/[0.02] overflow-hidden">
+           <div className="p-8 text-center md:border-r md:border-b-0 border-b border-white/10 flex flex-col items-center justify-center">
+              <span className="text-[32px] font-medium text-[#185FA5] mb-2">
+                <Counter value={40} suffix="%" />
+              </span>
+              <span className="text-[13px] text-gray-400">Average void space reduction</span>
            </div>
-           <div className="relative z-10 flex flex-col items-center text-center">
-              <h2 className="text-5xl md:text-[80px] font-black text-white tracking-tighter leading-[0.9] mb-12">
-                Ready to optimize <br /> your operations?
-              </h2>
-              <div className="flex flex-wrap justify-center gap-6">
-                <Link href="/auth/signup" className="bg-white text-black px-12 py-6 rounded-3xl font-black text-sm uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl">
-                  Get Started Now
+           <div className="p-8 text-center md:border-r md:border-b-0 border-b border-white/10 flex flex-col items-center justify-center">
+              <span className="text-[32px] font-medium text-[#185FA5] mb-2">
+                <Counter value={2.4} prefix="$" suffix="M" isDecimal={true} />
+              </span>
+              <span className="text-[13px] text-gray-400">Saved by customers in 2025</span>
+           </div>
+           <div className="p-8 text-center flex flex-col items-center justify-center">
+              <span className="text-[32px] font-medium text-[#185FA5] mb-2">
+                <Counter value={12} suffix="ms" />
+              </span>
+              <span className="text-[13px] text-gray-400">Average optimization time</span>
+           </div>
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          SECTION 5 — FEATURES (WHAT WE DO)
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section id="what-we-do" className="py-16 px-6 max-w-[1200px] mx-auto">
+        <div className="mb-12">
+          <h2 className="text-[11px] font-medium tracking-[0.1em] uppercase text-gray-500 mb-3">What we do</h2>
+          <h3 className="text-[28px] font-medium text-white tracking-tight">Intelligent packaging for modern fulfillment.</h3>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          {[
+            { icon: Brain, title: "Spatial AI engine", desc: "Advanced 3D bin-packing algorithms instantly calculate the absolute minimum volume required for any combination of products." },
+            { icon: ShieldCheck, title: "Real-time verification", desc: "Enterprise-grade security with real-time API integrations. Seamlessly connect your WMS and verify dimensions on the fly." },
+            { icon: BarChart2, title: "Savings analytics", desc: "Visualize every cent saved. Track void-space reduction, weight optimization, and carrier cost drops across all orders." }
+          ].map((item, i) => (
+            <motion.div 
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.5, delay: i * 0.1 }}
+              whileHover={{ y: -4 }}
+              className="bg-white/[0.02] border border-white/10 rounded-xl p-6 transition-all hover:shadow-[0_8px_30px_rgba(0,0,0,0.2)]"
+            >
+              <div className="w-10 h-10 rounded-lg bg-[#185FA5]/20 flex items-center justify-center mb-5 border border-[#185FA5]/30">
+                <item.icon className="w-5 h-5 text-[#185FA5]" />
+              </div>
+              <h4 className="text-[16px] font-medium mb-2 text-white">{item.title}</h4>
+              <p className="text-[14px] text-gray-400 leading-relaxed">{item.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          SECTION 6 — PRODUCT DEMO PREVIEW
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section className="py-16 px-6 max-w-[1200px] mx-auto flex flex-col items-center">
+        <div className="text-center mb-12">
+          <h2 className="text-[11px] font-medium tracking-[0.1em] uppercase text-gray-500 mb-3">Product preview</h2>
+          <h3 className="text-[28px] font-medium text-white tracking-tight">See it in action.</h3>
+        </div>
+
+        <div className="w-full max-w-[900px] bg-[#12121A] border border-white/10 rounded-xl overflow-hidden shadow-2xl mb-8">
+           {/* Browser Chrome */}
+           <div className="bg-[#1A1A24] border-b border-white/10 px-4 py-3 flex items-center gap-4">
+              <div className="flex gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                <div className="w-3 h-3 rounded-full bg-amber-500/80" />
+                <div className="w-3 h-3 rounded-full bg-green-500/80" />
+              </div>
+              <div className="flex-1 flex justify-center">
+                 <div className="bg-black/30 px-4 py-1.5 rounded-md text-[11px] text-gray-500 font-medium font-mono flex items-center gap-2">
+                    app.packiq.com/dashboard
+                 </div>
+              </div>
+           </div>
+           
+           {/* Dashboard Mock Content */}
+           <div className="p-8 bg-[#0A0A0F]">
+              <div className="flex items-center justify-between mb-8">
+                 <h4 className="text-[18px] font-medium text-white">Analytics Overview</h4>
+                 <div className="text-[12px] text-gray-500">Today, May 4, 2026</div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                 {[
+                   { label: 'Orders optimized today', value: '1,247', sub: '+18% vs yesterday', icon: Box },
+                   { label: 'Cost saved today', value: '$4,821', sub: '+22% vs yesterday', icon: DollarSign },
+                   { label: 'Void space reduction', value: '38.4%', sub: '+4% vs yesterday', icon: TrendingUp },
+                   { label: 'Avg optimization time', value: '11ms', sub: '-2ms vs yesterday', icon: Clock }
+                 ].map((kpi, i) => (
+                   <div key={i} className="bg-white/[0.03] border border-white/5 rounded-lg p-5">
+                      <div className="flex items-center gap-2 mb-2 text-gray-400">
+                         <kpi.icon className="w-4 h-4" />
+                         <span className="text-[12px]">{kpi.label}</span>
+                      </div>
+                      <div className="text-[24px] font-medium text-white mb-2">{kpi.value}</div>
+                      <div className="text-[11px] text-green-400">{kpi.sub}</div>
+                   </div>
+                 ))}
+              </div>
+           </div>
+        </div>
+
+        <Link href="/auth/signup" className="text-[#185FA5] hover:text-[#2178D1] text-[14px] font-medium flex items-center gap-2 transition-colors">
+          Try the live platform <ArrowRight className="w-4 h-4" />
+        </Link>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          SECTION 7 — HOW IT WORKS
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section id="how-it-works" className="py-16 px-6 max-w-[1200px] mx-auto border-t border-white/5 mt-8">
+        <div className="text-center mb-16">
+          <h2 className="text-[11px] font-medium tracking-[0.1em] uppercase text-gray-500 mb-3">How it works</h2>
+          <h3 className="text-[28px] font-medium text-white tracking-tight">Three steps to smarter shipping.</h3>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8 relative">
+          {/* Desktop Dividers */}
+          <div className="hidden md:block absolute top-0 bottom-0 left-[33%] w-[1px] bg-white/10" />
+          <div className="hidden md:block absolute top-0 bottom-0 left-[66%] w-[1px] bg-white/10" />
+
+          {[
+            { num: "01", title: "Sync: Connect your inventory", desc: "Import via CSV, REST API, or direct WMS integrations instantly." },
+            { num: "02", title: "Optimize: AI finds the perfect box", desc: "Millisecond processing tests thousands of configurations." },
+            { num: "03", title: "Ship: Pack and go", desc: "Visual 3D packing guides reduce warehouse errors and speed up fulfillment." }
+          ].map((step, i) => (
+            <motion.div 
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.1 }}
+              className="flex flex-col md:px-6"
+            >
+              <div className="text-[12px] font-medium text-[#185FA5] mb-4">Step {step.num}</div>
+              <h4 className="text-[16px] font-medium text-white mb-3">{step.title}</h4>
+              <p className="text-[14px] text-gray-400 leading-relaxed">{step.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          SECTION 8 — TESTIMONIALS
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section className="py-16 px-6 max-w-[1200px] mx-auto bg-white/[0.01] rounded-2xl border border-white/5 mb-16">
+        <div className="text-center mb-12">
+          <h2 className="text-[11px] font-medium tracking-[0.1em] uppercase text-gray-500 mb-3">Customer stories</h2>
+          <h3 className="text-[28px] font-medium text-white tracking-tight">Trusted by fulfillment leaders.</h3>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6 px-4 md:px-12">
+           <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6 flex flex-col justify-between">
+              <p className="text-[15px] text-gray-300 leading-relaxed mb-8 italic">
+                "PackIQ cut our packaging waste by 43% in the first month. The visual packing guides completely eliminated our new-hire training time."
+              </p>
+              <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 rounded-full bg-[#185FA5]/20 flex items-center justify-center text-[#185FA5] font-medium text-[13px]">
+                   RK
+                 </div>
+                 <div>
+                   <div className="text-[14px] font-medium text-white">Rahul Krishnan</div>
+                   <div className="text-[12px] text-gray-500">VP Operations, NimbleCart</div>
+                 </div>
+              </div>
+           </div>
+
+           <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6 flex flex-col justify-between">
+              <p className="text-[15px] text-gray-300 leading-relaxed mb-8 italic">
+                "We process 8,000 orders a day. PackIQ handles all of them in real time via API. The carrier cost savings alone paid for the software in three days."
+              </p>
+              <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-medium text-[13px]">
+                   SL
+                 </div>
+                 <div>
+                   <div className="text-[14px] font-medium text-white">Sarah Lin</div>
+                   <div className="text-[12px] text-gray-500">Head of Logistics, SwiftFulfilment</div>
+                 </div>
+              </div>
+           </div>
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          SECTION 9 — PRICING
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section id="pricing" className="py-16 px-6 max-w-[1200px] mx-auto">
+        <div className="text-center mb-12">
+          <h3 className="text-[28px] font-medium text-white tracking-tight mb-8">Simple, transparent pricing.</h3>
+          
+          <div className="inline-flex items-center bg-[#12121A] p-1 rounded-lg border border-white/10">
+            <button 
+              onClick={() => setAnnualBilling(false)}
+              className={`px-5 py-2 rounded-md text-[13px] font-medium transition-all ${!annualBilling ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
+            >
+              Monthly
+            </button>
+            <button 
+              onClick={() => setAnnualBilling(true)}
+              className={`px-5 py-2 rounded-md text-[13px] font-medium transition-all flex items-center gap-2 ${annualBilling ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
+            >
+              Annually <span className="text-blue-400 text-[10px] bg-blue-500/10 px-1.5 py-0.5 rounded">20% off</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6 items-center">
+          {/* Starter */}
+          <div className="bg-white/[0.02] border border-white/10 rounded-xl p-8 hover:-translate-y-1 transition-transform">
+            <h4 className="text-[16px] font-medium text-white mb-2">Starter</h4>
+            <p className="text-[13px] text-gray-500 mb-6">For growing e-commerce brands.</p>
+            <div className="mb-6">
+              <span className="text-[32px] font-medium text-white">${annualBilling ? '49' : '59'}</span>
+              <span className="text-[13px] text-gray-500">/mo</span>
+            </div>
+            <ul className="space-y-4 mb-8">
+              {['Up to 1,000 orders/mo', 'Standard 3D Algorithm', 'Email Support', 'Basic Analytics'].map((feat, i) => (
+                <li key={i} className="flex items-center gap-3 text-[13px] text-gray-300">
+                  <Check className="w-4 h-4 text-gray-500" /> {feat}
+                </li>
+              ))}
+            </ul>
+            <button className="w-full py-2.5 rounded-lg border border-white/20 text-white hover:bg-white/5 text-[13px] font-medium transition-all">
+              Start free trial
+            </button>
+          </div>
+
+          {/* Growth */}
+          <div className="relative bg-[#12121A] border-2 border-[#185FA5] rounded-xl p-8 hover:-translate-y-1 transition-transform md:-mt-4 md:mb-4 shadow-2xl">
+            <div className="absolute -top-3 right-6 bg-[#185FA5] text-white text-[10px] font-medium uppercase tracking-wide py-1 px-3 rounded-full">
+              Most popular
+            </div>
+            <h4 className="text-[16px] font-medium text-white mb-2">Growth</h4>
+            <p className="text-[13px] text-gray-500 mb-6">For high-volume fulfillment centers.</p>
+            <div className="mb-6">
+              <span className="text-[32px] font-medium text-white">${annualBilling ? '199' : '249'}</span>
+              <span className="text-[13px] text-gray-500">/mo</span>
+            </div>
+            <ul className="space-y-4 mb-8">
+              {['Up to 10,000 orders/mo', 'Advanced Spatial Engine', 'Priority Support', 'Custom Box Sizes', 'API Access'].map((feat, i) => (
+                <li key={i} className="flex items-center gap-3 text-[13px] text-white">
+                  <Check className="w-4 h-4 text-[#185FA5]" /> {feat}
+                </li>
+              ))}
+            </ul>
+            <button className="w-full py-2.5 rounded-lg bg-[#185FA5] hover:bg-[#144D86] text-white text-[13px] font-medium transition-all">
+              Get started
+            </button>
+          </div>
+
+          {/* Enterprise */}
+          <div className="bg-white/[0.02] border border-white/10 rounded-xl p-8 hover:-translate-y-1 transition-transform">
+            <h4 className="text-[16px] font-medium text-white mb-2">Enterprise</h4>
+            <p className="text-[13px] text-gray-500 mb-6">For global supply chain operations.</p>
+            <div className="mb-6">
+              <span className="text-[32px] font-medium text-white">Custom</span>
+            </div>
+            <ul className="space-y-4 mb-8">
+              {['Unlimited orders', 'Dedicated Infrastructure', '24/7 Phone Support', 'WMS/ERP Integration', 'SLA Guarantee'].map((feat, i) => (
+                <li key={i} className="flex items-center gap-3 text-[13px] text-gray-300">
+                  <Check className="w-4 h-4 text-gray-500" /> {feat}
+                </li>
+              ))}
+            </ul>
+            <button className="w-full py-2.5 rounded-lg border border-white/20 text-white hover:bg-white/5 text-[13px] font-medium transition-all">
+              Talk to sales
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          SECTION 10 — FAQ
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section className="py-16 px-6 max-w-[800px] mx-auto">
+        <div className="mb-10 text-center">
+          <h2 className="text-[11px] font-medium tracking-[0.1em] uppercase text-gray-500 mb-3">FAQ</h2>
+          <h3 className="text-[28px] font-medium text-white tracking-tight">Common questions answered.</h3>
+        </div>
+        
+        <div className="border-t border-white/10">
+          <FAQAccordion 
+            question="Do I need to sign a long-term contract?" 
+            answer="No, all plans are month-to-month. You can cancel at any time without penalty. We also offer annual billing with a 20% discount if you choose to commit." 
+          />
+          <FAQAccordion 
+            question="How does the free trial work?" 
+            answer="You get 14 days of unrestricted access to the platform. No credit card is required to sign up. You can test imports, run optimizations, and view savings analytics." 
+          />
+          <FAQAccordion 
+            question="Can I import from my existing WMS?" 
+            answer="Yes — we support bulk CSV imports, a robust REST API, and direct integrations with popular WMS platforms like ShipBob and Shopify." 
+          />
+          <FAQAccordion 
+            question="How accurate is the AI optimization?" 
+            answer="Our 3D spatial reasoning engine operates at 94–98% void-space efficiency, thoroughly verified against thousands of real-world fulfillment shipments." 
+          />
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          SECTION 11 — FINAL CTA BANNER
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section className="py-16 px-6 max-w-[1200px] mx-auto mb-16">
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-12 text-center relative overflow-hidden">
+           <div className="absolute inset-0 bg-[#185FA5]/5" />
+           <div className="relative z-10">
+              <h2 className="text-[32px] font-medium text-white tracking-tight mb-4">Ready to cut shipping costs?</h2>
+              <p className="text-[15px] text-gray-400 mb-8 max-w-md mx-auto">
+                Join 500+ fulfillment teams. Free 14-day trial, no credit card needed.
+              </p>
+              <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <Link href="/auth/signup" className="bg-[#185FA5] hover:bg-[#144D86] text-white px-8 py-3 rounded-lg font-medium text-[15px] transition-all">
+                  Start free trial
                 </Link>
-                <button className="bg-black/20 backdrop-blur-md text-white border border-white/20 px-12 py-6 rounded-3xl font-black text-sm uppercase tracking-widest hover:bg-black/30 transition-all">
-                  Schedule Demo
+                <button className="bg-transparent hover:bg-white/5 border border-white/20 text-white px-8 py-3 rounded-lg font-medium text-[15px] transition-all">
+                  Talk to sales
                 </button>
               </div>
            </div>
         </div>
       </section>
 
-      {/* --- FOOTER --- */}
-      <footer className="pt-32 pb-16 px-8 border-t border-white/5">
-        <div className="max-w-[1400px] mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-20 mb-24">
-            <div className="col-span-1">
-              <Link href="/" className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center">
-                  <Box className="w-6 h-6 text-black" />
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          SECTION 12 — FOOTER
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <footer className="pt-16 pb-8 px-6 border-t border-white/10 bg-[#0A0A0F]">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-16">
+            <div className="col-span-2 md:col-span-1">
+              <Link href="/" className="flex items-center gap-2 mb-6">
+                <div className="w-5 h-5 rounded-[4px] bg-[#185FA5] flex items-center justify-center p-0.5">
+                  <Box className="w-full h-full text-white" strokeWidth={2.5} />
                 </div>
-                <span className="font-black text-2xl tracking-tighter text-white">PackIQ</span>
+                <span className="font-medium text-[15px] text-white tracking-tight">PackIQ</span>
               </Link>
-              <p className="text-slate-500 font-medium leading-relaxed">
-                Autonomous logistics intelligence for the modern supply chain. Powered by advanced spatial reasoning.
+              <p className="text-[13px] text-gray-500 max-w-[200px] leading-relaxed">
+                Logistics intelligence designed to eliminate waste and accelerate fulfillment.
               </p>
             </div>
             
-            {['Product', 'Company', 'Legal', 'Social'].map((title, i) => (
-              <div key={i}>
-                <h5 className="text-white font-black uppercase tracking-widest text-xs mb-8">{title}</h5>
-                <ul className="space-y-4">
-                  {['Features', 'API', 'Docs', 'Network'].map(link => (
-                    <li key={link}><a href="#" className="text-slate-500 hover:text-white transition-colors font-medium">{link}</a></li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            <div>
+              <h5 className="text-white font-medium text-[13px] mb-4">Product</h5>
+              <ul className="space-y-3">
+                {['Features', 'Pricing', 'Integrations', 'Changelog'].map(link => (
+                  <li key={link}><Link href={`/${link.toLowerCase()}`} className="text-[13px] text-gray-500 hover:text-white transition-colors">{link}</Link></li>
+                ))}
+              </ul>
+            </div>
+            
+            <div>
+              <h5 className="text-white font-medium text-[13px] mb-4">Company</h5>
+              <ul className="space-y-3">
+                {['About Us', 'Careers', 'Blog', 'Contact'].map(link => (
+                  <li key={link}><Link href={`/${link.toLowerCase().replace(' ', '-')}`} className="text-[13px] text-gray-500 hover:text-white transition-colors">{link}</Link></li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h5 className="text-white font-medium text-[13px] mb-4">Legal</h5>
+              <ul className="space-y-3">
+                {['Privacy Policy', 'Terms of Service', 'Security'].map(link => (
+                  <li key={link}><Link href={`/${link.toLowerCase().replace(/ /g, '-')}`} className="text-[13px] text-gray-500 hover:text-white transition-colors">{link}</Link></li>
+                ))}
+              </ul>
+            </div>
           </div>
 
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-12 border-t border-white/5">
-            <p className="text-slate-600 font-bold text-xs uppercase tracking-widest">© 2026 PackIQ Technologies. Designed for excellence.</p>
-            <div className="flex gap-10">
-              {['Twitter', 'LinkedIn', 'Github'].map(s => <a key={s} href="#" className="text-slate-600 hover:text-white transition-colors text-xs font-black uppercase tracking-widest">{s}</a>)}
-            </div>
+          <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-white/5 gap-4">
+            <p className="text-[12px] text-gray-500">© 2026 PackIQ Technologies Inc.</p>
+            <p className="text-[12px] text-gray-500">Made with AI in India</p>
           </div>
         </div>
       </footer>
