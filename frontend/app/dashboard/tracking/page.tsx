@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useMemo } from 'react'
 import { 
   Search, Package, MapPin, Truck, CheckCircle2, 
   Clock, Calendar, ArrowRight, ShieldCheck, 
@@ -8,6 +7,18 @@ import {
   ExternalLink, ChevronRight, X, Info
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import SkeletonRow from '@/components/dashboard/SkeletonRow'
+import SkeletonCard from '@/components/dashboard/SkeletonCard'
+import React, { memo, useState, useEffect, useMemo } from 'react'
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => { setDebouncedValue(value); }, delay);
+    return () => { clearTimeout(handler); };
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 // --- MOCK DATA ---
 
@@ -136,21 +147,28 @@ function StatusBadge({ status }: { status: string }) {
 
 // --- MAIN PAGE ---
 
-export default function TrackingPage() {
+const TrackingPage = () => {
   const [searchQuery, setSearchQuery] = useState('')
+  const debouncedSearch = useDebounce(searchQuery, 300)
   const [activeFilter, setActiveFilter] = useState('All')
+  const [loading, setLoading] = useState(true)
   const [selectedShipment, setSelectedShipment] = useState<any | null>(null)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 800)
+    return () => clearTimeout(timer)
+  }, [])
 
   const filters = ['All', 'In Transit', 'Out for Delivery', 'Delivered', 'Delayed', 'Exception']
 
   const filteredShipments = useMemo(() => {
     return SHIPMENTS.filter(s => {
-      const matchesSearch = s.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            s.orderId.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesSearch = s.id.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
+                            s.orderId.toLowerCase().includes(debouncedSearch.toLowerCase())
       const matchesFilter = activeFilter === 'All' || s.status === activeFilter
       return matchesSearch && matchesFilter
     })
-  }, [searchQuery, activeFilter])
+  }, [debouncedSearch, activeFilter])
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-8 pb-24 px-4 md:px-0 relative">
@@ -197,10 +215,12 @@ export default function TrackingPage() {
         </div>
       </div>
 
-      {/* Tracking Cards Grid */}
       <div className="grid md:grid-cols-2 gap-6">
-        <AnimatePresence mode="popLayout">
-          {filteredShipments.map((s, i) => (
+        {loading ? (
+          [1,2,3,4].map(i => <SkeletonCard key={i} />)
+        ) : (
+          <AnimatePresence mode="popLayout">
+            {filteredShipments.map((s, i) => (
             <motion.div 
               key={s.id}
               initial={{ opacity: 0, y: 20 }}
@@ -275,8 +295,9 @@ export default function TrackingPage() {
                  </div>
               </div>
             </motion.div>
-          ))}
-        </AnimatePresence>
+            ))}
+          </AnimatePresence>
+        )}
       </div>
 
       {/* Detail Drawer */}
@@ -395,3 +416,5 @@ export default function TrackingPage() {
     </div>
   )
 }
+
+export default memo(TrackingPage)

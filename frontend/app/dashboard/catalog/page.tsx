@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { 
   Box, Search, Plus, Edit2, Trash2, 
@@ -10,6 +9,17 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
+import React, { memo, useState, useEffect, useMemo } from 'react'
+import SkeletonCard from '@/components/dashboard/SkeletonCard'
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => { setDebouncedValue(value); }, delay);
+    return () => { clearTimeout(handler); };
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 // --- MOCK DATA ---
 
@@ -59,10 +69,18 @@ function CSS3DBox({ l, w, h, color = '#4361EE' }: { l: number, w: number, h: num
 
 // --- MAIN PAGE ---
 
-export default function CatalogPage() {
+const CatalogPage = () => {
   const [activeTab, setActiveTab] = useState('Box Sizes')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [loading, setLoading] = useState(true)
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 1000)
+    return () => clearTimeout(timer)
+  }, [])
+
   const [searchQuery, setSearchQuery] = useState('')
+  const debouncedSearch = useDebounce(searchQuery, 300)
   const [selectedItem, setSelectedItem] = useState<any | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -70,8 +88,8 @@ export default function CatalogPage() {
 
   const currentItems = useMemo(() => {
     const base = activeTab === 'Box Sizes' ? BOX_TEMPLATES : activeTab === 'Products' ? PRODUCT_TEMPLATES : []
-    return base.filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
-  }, [activeTab, searchQuery])
+    return base.filter(item => item.name.toLowerCase().includes(debouncedSearch.toLowerCase()))
+  }, [activeTab, debouncedSearch])
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 pb-24 px-4 md:px-0 relative">
@@ -149,10 +167,13 @@ export default function CatalogPage() {
             {viewMode === 'grid' ? (
               <motion.div 
                 key="grid"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
               >
-                {currentItems.map((item, i) => (
+                {loading ? (
+                  [1,2,3,4,5,6].map(i => <SkeletonCard key={i} />)
+                ) : (
+                  currentItems.map((item, i) => (
+
                   <motion.div 
                     key={item.id}
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -201,7 +222,8 @@ export default function CatalogPage() {
                        </button>
                     </div>
                   </motion.div>
-                ))}
+                  ))
+                )}
               </motion.div>
             ) : (
               <motion.div 
@@ -406,3 +428,5 @@ export default function CatalogPage() {
     </div>
   )
 }
+
+export default memo(CatalogPage)

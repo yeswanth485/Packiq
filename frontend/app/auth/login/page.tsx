@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Loader2, Mail, Lock, ArrowRight, CheckCircle2, Eye, EyeOff, Box } from 'lucide-react'
+import { Loader2, Mail, Lock, ArrowRight, CheckCircle2, Eye, EyeOff, Box, Zap, Brain, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -212,6 +212,9 @@ export default function LoginPage() {
 
   return (
     <div className={`${inter.className} min-h-screen flex w-full bg-[#05050a] overflow-hidden`}>
+      <head>
+        <meta name="theme-color" content="#0a0a0f" />
+      </head>
       
       {/* LEFT PANEL - 3D ANIMATED SCENE */}
       <div className="hidden lg:flex w-[60%] relative flex-col items-center justify-center border-r border-[rgba(255,255,255,0.05)]">
@@ -226,47 +229,41 @@ export default function LoginPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.8 }}
-            className="text-white font-bold text-[48px] leading-[1.1] mb-4"
+            className="text-white font-bold text-[48px] leading-[1.1] mb-12"
           >
             Welcome Back <br />to the Future.
           </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.8 }}
-            className="text-[#64748b] text-[18px] max-w-md mx-auto"
-          >
-            Your AI logistics command center awaits.
-          </motion.p>
-        </div>
-
-        {/* Micro-stat pills */}
-        <div className="absolute bottom-16 left-0 right-0 flex justify-center gap-4 px-12 z-10">
-          {[
-            "2.3M Shipments Optimized",
-            "38% Avg Cost Reduction",
-            "99.9% Uptime"
-          ].map((stat, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 + (i * 0.1), duration: 0.5 }}
-              className="bg-[#0f0f1a]/80 backdrop-blur-md border border-[rgba(255,255,255,0.07)] px-4 py-2 rounded-full text-[#06b6d4] text-[12px] font-semibold"
-            >
-              {stat}
-            </motion.div>
-          ))}
+          
+          <div className="flex flex-col gap-6 max-w-sm mx-auto">
+            {[
+              { icon: Zap, text: "Reduce packaging waste by 40%", color: "#4361EE" },
+              { icon: Brain, text: "AI-optimized in milliseconds", color: "#06b6d4" },
+              { icon: ShieldCheck, text: "Trusted by 500+ fulfillment centers", color: "#22c55e" }
+            ].map((prop, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 + (i * 0.1), duration: 0.5 }}
+                className="flex items-center gap-4 bg-[#0f0f1a]/50 backdrop-blur-md border border-white/5 p-4 rounded-2xl"
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${prop.color}20` }}>
+                  <prop.icon className="w-5 h-5" style={{ color: prop.color }} />
+                </div>
+                <span className="text-gray-300 font-medium text-sm text-left">{prop.text}</span>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* RIGHT PANEL - LOGIN FORM */}
-      <div className="w-full lg:w-[40%] bg-[#0f0f1a] flex items-center justify-center p-8 sm:p-12 relative z-20">
+      <div className="w-full lg:w-[40%] bg-[#0f0f1a] flex items-center justify-center p-6 relative z-20">
         <motion.div 
           initial={{ x: 40, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ type: "spring", stiffness: 200, damping: 20, duration: 0.6 }}
-          className="w-full max-w-[400px]"
+          className="w-full max-w-[420px] bg-[#05050a]/40 border border-white/5 p-8 rounded-[32px] backdrop-blur-xl"
         >
           {/* Logo */}
           <motion.div custom={0} variants={formVariants} initial="hidden" animate="visible" className="flex items-center justify-center gap-2 mb-10">
@@ -293,30 +290,31 @@ export default function LoginPage() {
             className="space-y-5"
           >
             {/* Email Field */}
-            <div>
-              <label className="block text-[12px] text-[#64748b] mb-1.5 font-medium">Business Email</label>
+            <div className="space-y-1.5">
+              <label className="block text-[12px] text-[#64748b] font-medium ml-1">Business Email</label>
               <div className="relative">
-                <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${errorShake ? 'text-[#f59e0b]' : 'text-[#64748b]'}`} />
+                <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${errorShake && !formData.email ? 'text-red-500' : 'text-[#64748b]'}`} />
                 <input
                   type="email" required name="email" value={formData.email} onChange={handleChange}
                   placeholder="name@company.com"
-                  className={`w-full bg-[#1a1a2e] border ${errorShake ? 'border-[#f59e0b]' : 'border-[rgba(255,255,255,0.1)]'} rounded-[10px] pl-10 pr-4 py-3 text-white text-[14px] focus:outline-none focus:border-[#4361EE] focus:shadow-[0_0_15px_rgba(67,97,238,0.2)] transition-all`}
+                  className={`w-full h-11 bg-[#1a1a2e]/50 border ${errorShake && !formData.email ? 'border-red-500' : 'border-white/10'} rounded-lg pl-10 pr-4 text-white text-sm focus:outline-none focus:border-[#4361EE] focus:ring-4 focus:ring-[#4361EE]/20 transition-all`}
                 />
               </div>
+              {errorShake && !formData.email && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider ml-1">Email is required</p>}
             </div>
 
             {/* Password Field */}
-            <div>
-              <div className="flex justify-between items-center mb-1.5">
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center ml-1">
                 <label className="block text-[12px] text-[#64748b] font-medium">Password</label>
                 <Link href="#" className="text-[12px] text-[#4361EE] hover:underline">Forgot?</Link>
               </div>
               <div className="relative">
-                <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${errorShake ? 'text-[#f59e0b]' : 'text-[#64748b]'}`} />
+                <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${errorShake && !formData.password ? 'text-red-500' : 'text-[#64748b]'}`} />
                 <input
                   type={showPassword ? "text" : "password"} required name="password" value={formData.password} onChange={handleChange}
                   placeholder="••••••••"
-                  className={`w-full bg-[#1a1a2e] border ${errorShake ? 'border-[#f59e0b]' : 'border-[rgba(255,255,255,0.1)]'} rounded-[10px] pl-10 pr-10 py-3 text-white text-[14px] focus:outline-none focus:border-[#4361EE] focus:shadow-[0_0_15px_rgba(67,97,238,0.2)] transition-all`}
+                  className={`w-full h-11 bg-[#1a1a2e]/50 border ${errorShake && !formData.password ? 'border-red-500' : 'border-white/10'} rounded-lg pl-10 pr-10 text-white text-sm focus:outline-none focus:border-[#4361EE] focus:ring-4 focus:ring-[#4361EE]/20 transition-all`}
                 />
                 <button 
                   type="button" 
@@ -326,12 +324,13 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {errorShake && !formData.password && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider ml-1">Password is required</p>}
             </div>
 
             {/* Submit Button */}
             <button
               type="submit" disabled={loading || isSuccess}
-              className="w-full h-[48px] mt-2 bg-[#4361EE] hover:bg-[#344FDA] disabled:opacity-80 text-white rounded-[10px] font-bold text-[15px] transition-all flex items-center justify-center gap-2 hover:scale-[1.01] hover:shadow-[0_4px_20px_rgba(67,97,238,0.3)] relative overflow-hidden"
+              className="w-full h-11 mt-2 bg-[#4361EE] hover:bg-[#344FDA] disabled:opacity-80 text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(67,97,238,0.3)]"
             >
               <AnimatePresence mode="wait">
                 {loading && !isSuccess ? (
@@ -360,7 +359,7 @@ export default function LoginPage() {
             {/* Google Button */}
             <button
               type="button" onClick={handleGoogle}
-              className="w-full h-[48px] flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-[#0f0f1a] rounded-[10px] text-[15px] font-bold transition-all hover:shadow-[0_4px_14px_rgba(255,255,255,0.1)] border border-transparent"
+              className="w-full h-11 flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-[#0f0f1a] rounded-lg text-sm font-bold transition-all"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

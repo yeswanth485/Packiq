@@ -93,7 +93,7 @@ export default function UploadZone({ onSuccess }: UploadZoneProps) {
               </div>
             </div>
             <p className="text-white font-medium mb-2">Analyzing {fileName}...</p>
-            <p className="text-zinc-500 text-sm">Claude 3.5 Sonnet is optimizing your packaging.</p>
+            <p className="text-zinc-500 text-sm">Claude 4 Sonnet is optimizing your packaging.</p>
           </motion.div>
         )}
 

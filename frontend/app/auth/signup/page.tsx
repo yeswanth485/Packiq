@@ -153,12 +153,6 @@ export default function SignupPage() {
       newErrors.email = 'Invalid email format'
     }
     
-    if (!formData.phone) {
-      newErrors.phone = 'Mobile Number is required'
-    } else if (!validatePhone(formData.phone)) {
-      newErrors.phone = 'Must be in E.164 format (e.g. +1234567890)'
-    }
-    
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -194,11 +188,16 @@ export default function SignupPage() {
     e.preventDefault()
     
     const newErrors: Record<string, string> = {}
+    if (!formData.phone) {
+      newErrors.phone = 'Mobile Number is required'
+    } else if (!validatePhone(formData.phone)) {
+      newErrors.phone = 'Invalid phone format'
+    }
     if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters'
     if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match'
     if (!formData.agreeTerms) newErrors.agreeTerms = 'You must agree to the terms'
     
-    setTouched(prev => ({ ...prev, password: true, confirmPassword: true, agreeTerms: true }))
+    setTouched(prev => ({ ...prev, phone: true, password: true, confirmPassword: true, agreeTerms: true }))
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
@@ -306,21 +305,22 @@ export default function SignupPage() {
     })
   }
 
-  const Field = ({ label, name, type, icon: Icon, placeholder, value, onChange, error, touched }: any) => (
+  const Field = ({ label, name, type, icon: Icon, placeholder, value, onChange, error, touched, children }: any) => (
     <div className="mb-4">
-      <label className="block text-[12px] text-[#64748b] mb-1.5 font-medium">{label}</label>
+      <label className="block text-[12px] text-[#64748b] mb-1.5 font-medium ml-1">{label}</label>
       <div className="relative">
-        <Icon className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${touched && error ? 'text-[#f59e0b]' : 'text-[#64748b]'}`} />
+        <Icon className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${touched && error ? 'text-red-500' : 'text-[#64748b]'}`} />
         <input
           type={type} name={name} value={value} onChange={onChange}
           placeholder={placeholder}
-          className={`w-full bg-[#1a1a2e] border ${touched && error ? 'border-[#f59e0b]' : 'border-[rgba(255,255,255,0.1)]'} rounded-[10px] pl-10 pr-4 py-3 text-white text-[14px] focus:outline-none focus:border-[#4361EE] focus:shadow-[0_0_15px_rgba(67,97,238,0.2)] transition-all`}
+          className={`w-full h-11 bg-[#1a1a2e]/50 border ${touched && error ? 'border-red-500' : 'border-white/10'} rounded-lg pl-10 pr-10 text-white text-sm focus:outline-none focus:border-[#4361EE] focus:ring-4 focus:ring-[#4361EE]/20 transition-all`}
         />
+        {children}
       </div>
       <AnimatePresence>
         {touched && error && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-[#f59e0b] text-[11px] mt-1.5 flex items-center gap-1 overflow-hidden">
-            <AlertCircle className="w-3 h-3" /> {error}
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-red-500 text-[10px] font-bold uppercase tracking-wider mt-1.5 ml-1 flex items-center gap-1 overflow-hidden">
+            {error}
           </motion.div>
         )}
       </AnimatePresence>
@@ -329,6 +329,9 @@ export default function SignupPage() {
 
   return (
     <div className={`${inter.className} min-h-screen flex w-full bg-[#05050a] overflow-hidden`}>
+      <head>
+        <meta name="theme-color" content="#0a0a0f" />
+      </head>
       
       {/* LEFT PANEL - 3D ANIMATED SCENE */}
       <div className="hidden lg:flex w-[60%] relative flex-col items-center justify-center border-r border-[rgba(255,255,255,0.05)]">
@@ -368,35 +371,10 @@ export default function SignupPage() {
       </div>
 
       {/* RIGHT PANEL - SIGNUP FORM */}
-      <div className="w-full lg:w-[40%] bg-[#0f0f1a] flex flex-col items-center justify-center p-8 sm:p-12 relative z-20">
+      <div className="w-full lg:w-[40%] bg-[#0f0f1a] flex flex-col items-center justify-center p-6 relative z-20">
         
         {/* Step Indicator */}
-        <div className="w-full max-w-[400px] mb-8">
-          <div className="flex items-center justify-center relative w-[250px] mx-auto mb-2">
-            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-[rgba(255,255,255,0.1)] z-0" />
-            <motion.div 
-              className="absolute left-0 top-1/2 -translate-y-1/2 h-[2px] bg-[#4361EE] z-0" 
-              initial={{ width: '0%' }}
-              animate={{ width: step === 2 ? '100%' : '0%' }}
-              transition={{ duration: 0.4 }}
-            />
-            
-            <div className="flex justify-between w-full z-10 relative">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors duration-300 ${step >= 1 ? 'bg-[#4361EE] text-white shadow-[0_0_10px_rgba(67,97,238,0.5)]' : 'bg-[#1a1a2e] text-[#64748b] border border-[rgba(255,255,255,0.1)]'}`}>
-                {step > 1 ? <CheckCircle2 className="w-4 h-4 text-white" /> : '1'}
-              </div>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors duration-300 ${step === 2 ? 'bg-[#4361EE] text-white shadow-[0_0_10px_rgba(67,97,238,0.5)]' : 'bg-[#1a1a2e] text-[#64748b] border border-[rgba(255,255,255,0.1)]'}`}>
-                2
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-between w-[270px] mx-auto text-[11px] font-bold uppercase tracking-wider text-[#64748b]">
-            <span className={step >= 1 ? 'text-white' : ''}>Personal</span>
-            <span className={step === 2 ? 'text-white' : ''}>Security</span>
-          </div>
-        </div>
-
-        <div className="w-full max-w-[400px] relative">
+        <div className="w-full max-w-[420px] bg-[#05050a]/40 border border-white/5 p-8 rounded-[32px] backdrop-blur-xl relative">
           {/* Logo & Header outside of animation so it doesn't move */}
           <div className="flex flex-col items-center mb-8">
             <Link href="/" className="flex items-center gap-2 group mb-6">
@@ -434,14 +412,11 @@ export default function SignupPage() {
                   <motion.div custom={2} variants={formVariants} initial="hidden" animate="visible">
                     <Field label="Business Email" name="email" type="email" icon={Mail} placeholder="name@company.com" value={formData.email} onChange={handleChange} error={errors.email} touched={touched.email} />
                   </motion.div>
-                  <motion.div custom={3} variants={formVariants} initial="hidden" animate="visible">
-                    <Field label="Mobile Number (E.164)" name="phone" type="tel" icon={Phone} placeholder="+1234567890" value={formData.phone} onChange={handleChange} error={errors.phone} touched={touched.phone} />
-                  </motion.div>
 
                   <motion.div custom={4} variants={formVariants} initial="hidden" animate="visible">
                     <button
                       type="button" onClick={handleNextStep}
-                      className="w-full h-[48px] mt-2 bg-[#4361EE] hover:bg-[#344FDA] text-white rounded-[10px] font-bold text-[15px] transition-all flex items-center justify-center gap-2 hover:scale-[1.01] hover:shadow-[0_4px_20px_rgba(67,97,238,0.3)]"
+                      className="w-full h-11 mt-4 bg-[#4361EE] hover:bg-[#344FDA] text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(67,97,238,0.3)]"
                     >
                       Continue <ArrowRight className="w-4 h-4" />
                     </button>
@@ -456,7 +431,7 @@ export default function SignupPage() {
 
                     <button
                       type="button" onClick={handleGoogle}
-                      className="w-full h-[48px] flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-[#0f0f1a] rounded-[10px] text-[15px] font-bold transition-all hover:shadow-[0_4px_14px_rgba(255,255,255,0.1)] border border-transparent"
+                      className="w-full h-11 flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-[#0f0f1a] rounded-lg text-sm font-bold transition-all"
                     >
                       <svg className="w-5 h-5" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -484,13 +459,34 @@ export default function SignupPage() {
                   <form onSubmit={handleEmailSignup} className="space-y-4">
                     <motion.div custom={0} variants={formVariants} initial="hidden" animate="visible">
                       <div className="mb-4">
-                        <label className="block text-[12px] text-[#64748b] mb-1.5 font-medium">Password</label>
+                        <label className="block text-[12px] text-[#64748b] mb-1.5 font-medium ml-1">Mobile Number</label>
+                        <div className="flex gap-2">
+                          <select className="bg-[#1a1a2e]/50 border border-white/10 rounded-lg px-2 text-white text-xs focus:outline-none focus:border-[#4361EE]">
+                            <option value="+1">+1</option>
+                            <option value="+44">+44</option>
+                            <option value="+91">+91</option>
+                            <option value="+61">+61</option>
+                          </select>
+                          <div className="relative flex-1">
+                            <Phone className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${touched.phone && errors.phone ? 'text-red-500' : 'text-[#64748b]'}`} />
+                            <input
+                              type="tel" name="phone" value={formData.phone} onChange={handleChange}
+                              placeholder="1234567890"
+                              className={`w-full h-11 bg-[#1a1a2e]/50 border ${touched.phone && errors.phone ? 'border-red-500' : 'border-white/10'} rounded-lg pl-10 pr-4 text-white text-sm focus:outline-none focus:border-[#4361EE] focus:ring-4 focus:ring-[#4361EE]/20 transition-all`}
+                            />
+                          </div>
+                        </div>
+                        {touched.phone && errors.phone && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider mt-1.5 ml-1">{errors.phone}</p>}
+                      </div>
+
+                      <div className="mb-4">
+                        <label className="block text-[12px] text-[#64748b] mb-1.5 font-medium ml-1">Password</label>
                         <div className="relative">
-                          <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${touched.password && errors.password ? 'text-[#f59e0b]' : 'text-[#64748b]'}`} />
+                          <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${touched.password && errors.password ? 'text-red-500' : 'text-[#64748b]'}`} />
                           <input
                             type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange}
                             placeholder="••••••••"
-                            className={`w-full bg-[#1a1a2e] border ${touched.password && errors.password ? 'border-[#f59e0b]' : 'border-[rgba(255,255,255,0.1)]'} rounded-[10px] pl-10 pr-10 py-3 text-white text-[14px] focus:outline-none focus:border-[#4361EE] focus:shadow-[0_0_15px_rgba(67,97,238,0.2)] transition-all`}
+                            className={`w-full h-11 bg-[#1a1a2e]/50 border ${touched.password && errors.password ? 'border-red-500' : 'border-white/10'} rounded-lg pl-10 pr-10 text-white text-sm focus:outline-none focus:border-[#4361EE] focus:ring-4 focus:ring-[#4361EE]/20 transition-all`}
                           />
                           <button 
                             type="button" onClick={() => setShowPassword(!showPassword)}
@@ -500,20 +496,22 @@ export default function SignupPage() {
                           </button>
                         </div>
                         {formData.password.length > 0 && (
-                          <div className="mt-2">
+                          <div className="mt-2 ml-1">
                             <div className="flex justify-between items-center mb-1">
-                              <span className="text-[11px] text-[#64748b]">Strength</span>
-                              <span className="text-[11px] font-medium" style={{ color: strength.score > 1 ? '#fff' : '#f59e0b' }}>{strength.label}</span>
+                              <span className="text-[11px] text-[#64748b]">Security Strength</span>
+                              <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: strength.score > 2 ? '#22c55e' : strength.score > 1 ? '#eab308' : '#ef4444' }}>{strength.label}</span>
                             </div>
-                            <div className="h-1 w-full bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
-                              <div className={`h-full ${strength.color} transition-all duration-300`} style={{ width: strength.width }} />
+                            <div className="flex gap-1 h-1 w-full">
+                              {[1, 2, 3, 4].map((s) => (
+                                <div key={s} className={`h-full flex-1 rounded-full transition-all duration-500 ${strength.score >= s ? strength.color : 'bg-white/5'}`} />
+                              ))}
                             </div>
                           </div>
                         )}
                         <AnimatePresence>
                           {touched.password && errors.password && (
-                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-[#f59e0b] text-[11px] mt-1.5 flex items-center gap-1">
-                              <AlertCircle className="w-3 h-3" /> {errors.password}
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-red-500 text-[10px] font-bold uppercase tracking-wider mt-1.5 ml-1">
+                              {errors.password}
                             </motion.div>
                           )}
                         </AnimatePresence>
@@ -522,22 +520,22 @@ export default function SignupPage() {
 
                     <motion.div custom={1} variants={formVariants} initial="hidden" animate="visible">
                       <div className="mb-4">
-                        <label className="block text-[12px] text-[#64748b] mb-1.5 font-medium">Confirm Password</label>
+                        <label className="block text-[12px] text-[#64748b] mb-1.5 font-medium ml-1">Confirm Password</label>
                         <div className="relative">
-                          <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${touched.confirmPassword && errors.confirmPassword ? 'text-[#f59e0b]' : 'text-[#64748b]'}`} />
+                          <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${touched.confirmPassword && errors.confirmPassword ? 'text-red-500' : 'text-[#64748b]'}`} />
                           <input
                             type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={formData.confirmPassword} onChange={handleChange}
                             placeholder="••••••••"
-                            className={`w-full bg-[#1a1a2e] border ${touched.confirmPassword && errors.confirmPassword ? 'border-[#f59e0b]' : passwordsMatch ? 'border-[#22c55e]' : 'border-[rgba(255,255,255,0.1)]'} rounded-[10px] pl-10 pr-10 py-3 text-white text-[14px] focus:outline-none focus:border-[#4361EE] focus:shadow-[0_0_15px_rgba(67,97,238,0.2)] transition-all`}
+                            className={`w-full h-11 bg-[#1a1a2e]/50 border ${touched.confirmPassword && errors.confirmPassword ? 'border-red-500' : passwordsMatch ? 'border-green-500/50' : 'border-white/10'} rounded-lg pl-10 pr-10 text-white text-sm focus:outline-none focus:border-[#4361EE] focus:ring-4 focus:ring-[#4361EE]/20 transition-all`}
                           />
                           {passwordsMatch && (
-                            <CheckCircle2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#22c55e]" />
+                            <CheckCircle2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
                           )}
                         </div>
                         <AnimatePresence>
                           {touched.confirmPassword && errors.confirmPassword && (
-                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-[#f59e0b] text-[11px] mt-1.5 flex items-center gap-1">
-                              <AlertCircle className="w-3 h-3" /> {errors.confirmPassword}
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-red-500 text-[10px] font-bold uppercase tracking-wider mt-1.5 ml-1">
+                              {errors.confirmPassword}
                             </motion.div>
                           )}
                         </AnimatePresence>
@@ -580,7 +578,7 @@ export default function SignupPage() {
                       </button>
                       <button
                         type="submit" disabled={loading || isSuccess}
-                        className="flex-1 h-[48px] bg-[#4361EE] hover:bg-[#344FDA] disabled:opacity-80 text-white rounded-[10px] font-bold text-[15px] transition-all flex items-center justify-center gap-2 hover:scale-[1.01] hover:shadow-[0_4px_20px_rgba(67,97,238,0.3)] relative overflow-hidden"
+                        className="flex-1 h-11 bg-[#4361EE] hover:bg-[#344FDA] disabled:opacity-80 text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(67,97,238,0.3)] relative overflow-hidden"
                       >
                         <AnimatePresence mode="wait">
                           {loading && !isSuccess ? (
@@ -603,7 +601,7 @@ export default function SignupPage() {
                     <AnimatePresence>
                       {errorShake && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center mt-4">
-                           <span className="text-[#f59e0b] text-[12px]">Please fix the errors above to continue.</span>
+                           <span className="text-red-500 text-[10px] font-bold uppercase tracking-wider">Please fix errors to continue</span>
                         </motion.div>
                       )}
                     </AnimatePresence>

@@ -43,7 +43,7 @@ const PLANS = [
     features: [
       '500 Optimizations / month',
       'Custom Box Dimensions',
-      'Priority AI (Claude 3.5)',
+      'Priority AI (Claude 4)',
       'CO2 Savings Analytics',
       'Direct API Access',
       '5 Admin Users'

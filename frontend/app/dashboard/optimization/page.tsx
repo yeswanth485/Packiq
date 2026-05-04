@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Zap, Clock, Plus, Trash2, Box, ArrowRight, X, FileSpreadsheet, 
@@ -47,7 +47,7 @@ function CSS3DBox({ outerDim, innerItems }: any) {
 }
 
 // --- MAIN PAGE ---
-export default function OptimizationPage() {
+const OptimizationPage = () => {
   const { refreshStats } = useDashboard()
 
   // State
@@ -524,3 +524,5 @@ export default function OptimizationPage() {
     </div>
   )
 }
+
+export default memo(OptimizationPage)

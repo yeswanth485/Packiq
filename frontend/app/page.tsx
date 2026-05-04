@@ -96,11 +96,11 @@ export default function LandingPage() {
       <nav 
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled 
-            ? 'bg-[#05050a]/80 backdrop-blur-[20px] border-b border-[rgba(255,255,255,0.07)] py-4' 
+            ? 'bg-[#05050a]/60 backdrop-blur-[12px] border-b border-[rgba(255,255,255,0.07)] py-3' 
             : 'bg-transparent py-6'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-6 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group z-50">
             <div className="w-8 h-8 rounded-[10px] bg-[#4361EE]/20 border border-[#4361EE]/50 flex items-center justify-center group-hover:shadow-[0_0_15px_rgba(67,97,238,0.5)] transition-shadow">
@@ -218,10 +218,18 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.2 }}
-            className="text-5xl md:text-[80px] font-black leading-[1.05] tracking-tight mb-8 text-white"
+            className="text-5xl md:text-[80px] font-black leading-[1.05] tracking-tight mb-8 text-white max-w-4xl"
           >
             Optimization <br className="hidden md:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-[#f1f5f9] to-[#64748b]">Redefined.</span>
+            <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-white via-[#f1f5f9] to-[#64748b]">
+              Redefined.
+              <motion.span 
+                className="absolute bottom-2 left-0 h-1.5 w-full bg-gradient-to-r from-[#4361EE] to-[#06b6d4] rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 1.5, delay: 1, ease: "easeOut" }}
+              />
+            </span>
           </motion.h1>
 
           <motion.p 
@@ -268,23 +276,23 @@ export default function LandingPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 0.8 }}
-          className="w-full mt-auto border-y border-[rgba(255,255,255,0.04)] bg-[#0A0A14]/50 backdrop-blur-md py-6 flex flex-col items-center overflow-hidden z-20"
+          className="w-full mt-auto border-y border-[rgba(255,255,255,0.04)] bg-[#0A0A14]/30 backdrop-blur-md py-4 flex flex-col items-center overflow-hidden z-20"
         >
-          <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#64748b] mb-6">Powering Global Supply Chains</p>
-          <div className="flex w-full overflow-hidden relative" style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}>
+          <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#64748b] mb-4">Powering Global Supply Chains</p>
+          <div className="flex w-full overflow-hidden relative" style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}>
             <motion.div 
               className="flex items-center gap-16 whitespace-nowrap px-8"
               animate={{ x: ['0%', '-50%'] }}
-              transition={{ duration: 25, ease: 'linear', repeat: Infinity }}
+              transition={{ duration: 15, ease: 'linear', repeat: Infinity }}
             >
               {[...Array(2)].map((_, j) => (
-                <div key={j} className="flex items-center gap-16 opacity-40 grayscale">
-                  <span className="text-2xl font-black italic">FEDEX</span>
-                  <span className="text-2xl font-black tracking-tighter">DHL</span>
-                  <span className="text-2xl font-black">AMAZON</span>
-                  <span className="text-2xl font-black italic">UPS</span>
-                  <span className="text-2xl font-black tracking-widest">MAERSK</span>
-                  <span className="text-2xl font-bold">SHOPIFY</span>
+                <div key={j} className="flex items-center gap-16 opacity-30 grayscale">
+                  <span className="text-xl font-black italic">FEDEX</span>
+                  <span className="text-xl font-black tracking-tighter">DHL</span>
+                  <span className="text-xl font-black">AMAZON</span>
+                  <span className="text-xl font-black italic">UPS</span>
+                  <span className="text-xl font-black tracking-widest">MAERSK</span>
+                  <span className="text-xl font-bold">SHOPIFY</span>
                 </div>
               ))}
             </motion.div>
@@ -293,8 +301,8 @@ export default function LandingPage() {
       </section>
 
       {/* --- FEATURES SECTION --- */}
-      <section id="what-we-do" className="py-32 px-6 relative z-10">
-        <div className="max-w-7xl mx-auto">
+      <section id="what-we-do" className="py-20 px-6 relative z-10">
+        <div className="max-w-[1200px] mx-auto">
           <div className="flex flex-col items-center text-center mb-20">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -329,8 +337,8 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.5, delay: i * 0.15 }}
-                whileHover={{ y: -4 }}
-                className="relative group bg-[#0f0f1a] border border-[rgba(255,255,255,0.07)] rounded-[16px] p-8 overflow-hidden transition-all hover:border-[#4361EE]/50 hover:shadow-[0_10px_30px_rgba(67,97,238,0.1)]"
+                whileHover={{ y: -3, boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}
+                className="relative group bg-[#0f0f1a] border border-[rgba(255,255,255,0.07)] rounded-[16px] p-8 overflow-hidden transition-all hover:border-[#4361EE]/50"
               >
                 {/* Shimmer sweep effect */}
                 <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
@@ -349,8 +357,8 @@ export default function LandingPage() {
       </section>
 
       {/* --- HOW IT WORKS SECTION --- */}
-      <section id="how-it-works" className="py-32 px-6 bg-[#0a0a12] border-y border-[rgba(255,255,255,0.04)] relative overflow-hidden">
-        <div className="max-w-7xl mx-auto relative z-10">
+      <section id="how-it-works" className="py-20 px-6 bg-[#0a0a12] border-y border-[rgba(255,255,255,0.04)] relative overflow-hidden">
+        <div className="max-w-[1200px] mx-auto relative z-10">
           <div className="text-center mb-24">
              <h2 className="text-sm font-bold tracking-[0.15em] text-[#06b6d4] uppercase mb-4">The Process</h2>
              <h3 className="text-4xl md:text-5xl font-bold tracking-tight">How it works</h3>
@@ -399,8 +407,8 @@ export default function LandingPage() {
       </section>
 
       {/* --- PARTNERS SECTION --- */}
-      <section id="partners" className="py-24 px-6 bg-[#05050a]">
-        <div className="max-w-7xl mx-auto bg-[#0f0f1a] border border-[rgba(255,255,255,0.07)] rounded-[24px] p-12 md:p-20 text-center">
+      <section id="partners" className="py-20 px-6 bg-[#05050a]">
+        <div className="max-w-[1200px] mx-auto bg-[#0f0f1a] border border-[rgba(255,255,255,0.07)] rounded-[24px] p-12 md:p-20 text-center">
           <h3 className="text-2xl font-semibold text-white mb-12">Trusted by global leaders in logistics</h3>
           <div className="flex flex-wrap justify-center items-center gap-10 md:gap-20">
              <div className="text-3xl font-black italic text-[#64748b] hover:text-[#f1f5f9] transition-colors duration-300">FEDEX</div>
@@ -412,8 +420,8 @@ export default function LandingPage() {
       </section>
 
       {/* --- PRICING SECTION --- */}
-      <section id="pricing" className="py-32 px-6">
-        <div className="max-w-7xl mx-auto">
+      <section id="pricing" className="py-20 px-6">
+        <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-8">Transparent pricing for every scale</h2>
             
@@ -467,9 +475,9 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="relative bg-[#0f0f1a] border-2 border-[#4361EE] rounded-[16px] p-8 shadow-[0_0_40px_rgba(67,97,238,0.15)] md:-mt-8 md:mb-8"
+              className="relative bg-[#0f0f1a] border-2 border-[#4361EE] rounded-[16px] p-8 shadow-[0_0_40px_rgba(67,97,238,0.15)] md:-mt-4 md:mb-4"
             >
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#4361EE] text-white text-xs font-bold uppercase tracking-wider py-1 px-3 rounded-full border border-white/20">
+              <div className="absolute top-4 right-4 bg-[#4361EE] text-white text-[10px] font-bold uppercase tracking-wider py-1 px-3 rounded-full border border-white/20">
                 Most Popular
               </div>
               <h4 className="text-xl font-semibold text-[#f1f5f9] mb-2">Growth</h4>
@@ -525,8 +533,8 @@ export default function LandingPage() {
         {/* Gradient Top Border */}
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#4361EE] to-transparent opacity-50" />
         
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 lg:gap-24 mb-16">
             <div className="col-span-1 md:col-span-1">
               <Link href="/" className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 rounded-[10px] bg-[#4361EE] flex items-center justify-center border border-[#4361EE]">

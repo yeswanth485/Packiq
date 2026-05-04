@@ -174,7 +174,7 @@ export default function ResultsSlideOver({ isOpen, onClose, data }: ResultsSlide
             {/* Footer */}
             <div className="p-6 border-t border-white/5 bg-gray-900/50 flex justify-between items-center">
               <div className="text-xs text-gray-500">
-                Processed with Claude 3.5 Sonnet
+                Processed with Claude 4 Sonnet
               </div>
               <div className="flex gap-3">
                 <button onClick={onClose} className="px-6 py-2.5 rounded-xl text-sm font-medium text-white bg-white/10 hover:bg-white/20 transition-colors">

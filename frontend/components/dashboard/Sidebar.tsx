@@ -44,7 +44,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: any) {
 
   return (
     <motion.aside 
-      animate={{ width: isCollapsed ? 64 : 240 }}
+      animate={{ width: isCollapsed ? 40 : 240 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
       className="fixed left-0 top-0 h-full bg-[#0a0a12] border-r border-white/5 flex flex-col z-40"
     >
@@ -74,7 +74,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: any) {
             <div key={item.href} className="relative group">
               <Link
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 relative ${
+                className={`flex items-center gap-3 px-3 h-[40px] rounded-xl text-[13px] font-medium transition-all duration-300 relative ${
                   active
                     ? 'bg-[#00E5CC]/10 text-white'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'

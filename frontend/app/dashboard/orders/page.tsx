@@ -9,6 +9,18 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
+import useSWR from 'swr'
+import React, { memo } from 'react'
+import SkeletonRow from '@/components/dashboard/SkeletonRow'
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => { setDebouncedValue(value); }, delay);
+    return () => { clearTimeout(handler); };
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 // --- MOCK 3D CSS VISUALIZATION ---
 function CSS3DBox({ outerDim }: { outerDim: string }) {
@@ -35,13 +47,10 @@ function CSS3DBox({ outerDim }: { outerDim: string }) {
   )
 }
 
-export default function OrdersPage() {
-  const [orders, setOrders] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const supabase = createClient()
-
+const OrdersPage = () => {
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState('')
+  const debouncedSearch = useDebounce(searchQuery, 300)
   const [statusFilter, setStatusFilter] = useState('All')
   const [carrierFilter, setCarrierFilter] = useState('All')
 
@@ -51,47 +60,45 @@ export default function OrdersPage() {
   // Selection & Pagination
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 8
+  const itemsPerPage = 25
 
   // Drawer
   const [drawerOrder, setDrawerOrder] = useState<any | null>(null)
 
-  useEffect(() => {
-    async function loadOrders() {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*, product:product_id(*), optimization:optimization_id(*), box:box_id(*)')
-        .order('created_at', { ascending: false })
-      
-      if (error) {
-        toast.error('Failed to load orders')
-      } else {
-        // Enhance with mock data for missing fields
-        const enhanced = (data || []).map((o: any) => {
-          const char1 = o.id.charCodeAt(0) || 0
-          const char2 = o.id.charCodeAt(1) || 0
-          const names = ['Acme Corp', 'Stark Industries', 'Wayne Enterprises', 'Globex', 'Soylent Corp', 'Initech', 'Umbrella Corp']
-          const carriers = ['FedEx', 'UPS', 'DHL', 'USPS', 'OnTrac']
-          return {
-            ...o,
-            customer_name: names[char1 % names.length],
-            carrier: carriers[char2 % carriers.length],
-            items_count: (char1 % 5) + 1,
-            cost: ((char1 % 100) + (char2 % 50)).toFixed(2)
-          }
-        })
-        setOrders(enhanced)
+  const fetcher = async () => {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*, product:product_id(*), optimization:optimization_id(*), box:box_id(*)')
+      .order('created_at', { ascending: false })
+    
+    if (error) throw error
+    
+    return (data || []).map((o: any) => {
+      const char1 = o.id.charCodeAt(0) || 0
+      const char2 = o.id.charCodeAt(1) || 0
+      const names = ['Acme Corp', 'Stark Industries', 'Wayne Enterprises', 'Globex', 'Soylent Corp', 'Initech', 'Umbrella Corp']
+      const carriers = ['FedEx', 'UPS', 'DHL', 'USPS', 'OnTrac']
+      return {
+        ...o,
+        customer_name: names[char1 % names.length],
+        carrier: carriers[char2 % carriers.length],
+        items_count: (char1 % 5) + 1,
+        cost: ((char1 % 100) + (char2 % 50)).toFixed(2)
       }
-      setLoading(false)
-    }
-    loadOrders()
-  }, [supabase])
+    })
+  }
+
+  const { data: orders = [], isLoading: loading } = useSWR('orders-data', fetcher, { 
+    revalidateOnFocus: false,
+    dedupingInterval: 60000
+  })
 
   // --- DERIVED DATA ---
   const filteredOrders = useMemo(() => {
-    return orders.filter(o => {
-      const matchesSearch = o.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            o.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
+    return orders.filter((o: any) => {
+      const matchesSearch = o.id.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
+                            o.customer_name.toLowerCase().includes(debouncedSearch.toLowerCase())
       const matchesStatus = statusFilter === 'All' || o.status.toLowerCase() === statusFilter.toLowerCase()
       const matchesCarrier = carrierFilter === 'All' || o.carrier.toLowerCase() === carrierFilter.toLowerCase()
       return matchesSearch && matchesStatus && matchesCarrier
@@ -213,8 +220,12 @@ export default function OrdersPage() {
       {/* Orders Table */}
       <div className="bg-[#0f0f1a] rounded-[20px] border border-white/[0.06] overflow-hidden shadow-xl min-h-[500px]">
         {loading ? (
-           <div className="p-6 space-y-4">
-             {[1,2,3,4,5,6].map(i => <div key={i} className="h-12 bg-white/5 rounded-lg animate-pulse" />)}
+           <div className="overflow-x-auto w-full">
+             <table className="w-full text-left text-sm whitespace-nowrap">
+               <tbody>
+                 {[1,2,3,4,5].map(i => <SkeletonRow key={i} />)}
+               </tbody>
+             </table>
            </div>
         ) : filteredOrders.length === 0 ? (
            <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -406,3 +417,5 @@ export default function OrdersPage() {
     </div>
   )
 }
+
+export default memo(OrdersPage)

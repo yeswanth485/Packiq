@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
-import { runOptimization } from '@/lib/openrouter'
+import { runOptimization, DEFAULT_MODEL } from '@/lib/openrouter'
 import type { UploadedProduct } from '@/types'
 
 export async function POST(request: NextRequest) {
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 })
 
-    // Background Optimization using Claude 3.5 Sonnet
+    // Background Optimization using Claude 4 Sonnet
     const { data: boxes } = await supabase.from('box_catalog').select('*')
     
     // We process the first 5 in the response for speed, others could be backgrounded
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
             space_utilization: opt.spaceUtilization,
             cost_savings_usd: opt.costSavingsUsd,
             co2_savings_kg: opt.co2SavingsKg,
-            ai_model: 'anthropic/claude-3.5-sonnet'
+            ai_model: DEFAULT_MODEL
           }).select().single()
 
           // Automatically create an order for the optimization
