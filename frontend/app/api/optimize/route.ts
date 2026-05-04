@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { parseDimensions } from '@/lib/utils/parser'
-import { runOptimization, DEFAULT_MODEL } from '@/lib/openrouter'
+import { runOptimization, LIGHTWEIGHT_MODEL, FREE_MODEL } from '@/lib/openrouter'
 
 export async function POST(req: Request) {
   try {
@@ -9,29 +9,10 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Per-user rate limiting: max 30 requests per minute
-    const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
-    const { count, error: countErr } = await supabase
-      .from('optimizations')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .gt('created_at', oneMinuteAgo)
-
-    if (countErr) console.error('Rate limit check error:', countErr)
-    if (count !== null && count >= 30) {
-      return NextResponse.json({ 
-        error: 'Our AI is processing a high volume of requests, retrying...',
-        retryAfter: 60 
-      }, { status: 429 })
-    }
-
     const { products } = await req.json()
     if (!products || !Array.isArray(products)) return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
 
-    const results = []
-    const failed = []
-
-    // Fetch available boxes once for the entire batch
+    // Fetch available boxes once
     const { data: boxes } = await supabase.from('box_catalog').select('*')
     const boxCatalog = (boxes as any[] || []).map(b => ({
       id: b.id,
@@ -46,26 +27,66 @@ export async function POST(req: Request) {
       ecoCertified: b.eco_certified
     }))
 
-    for (const p of products) {
+    // Parallel processing with SKU/Dimension caching
+    const processProduct = async (p: any) => {
       try {
-        const prodDim = parseDimensions(p['product L*W*H'])
-        const boxDim = parseDimensions(p['current used box L*W*H'])
-        const price = parseFloat(p['box price'])
+        const prodDimStr = p['product L*W*H'] || p['product_l*w*h']
+        const boxDimStr = p['box L*W*H'] || p['box_l*w*h']
+        const price = parseFloat(p['price'] || p['box_price'])
+        const prodDim = parseDimensions(prodDimStr)
 
-        if (!prodDim || !boxDim || isNaN(price)) throw new Error('Invalid numeric data')
+        if (!prodDim || isNaN(price)) throw new Error('Invalid numeric data')
 
-        const aiResult = await runOptimization({
-          productName: p['product id'] || 'Unknown Product',
-          weightKg: 0, // Not provided in this legacy format, using 0
-          lengthCm: prodDim.l,
-          widthCm: prodDim.w,
-          heightCm: prodDim.h,
-          fragile: false,
-          availableBoxes: boxCatalog
-        })
+        // 1. CHECK CACHE (Search for identical product dimensions and available boxes)
+        const { data: cached }: { data: any } = await supabase
+          .from('optimizations')
+          .select('*')
+          .eq('product_snapshot->product L*W*H', prodDimStr)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
 
-        // Store result in DB
-        const { error: dbErr } = await supabase.from('optimizations').insert({
+        if (cached && cached.ai_response) {
+          return {
+            product_id: p['product_id'] || p['product id'],
+            product_name: p['product_name'] || p['product name'],
+            original_box: boxDimStr,
+            optimized_box: cached.recommended_box,
+            cost_before: price,
+            cost_after: price - cached.cost_savings_usd,
+            savings: cached.cost_savings_usd,
+            reasoning: cached.ai_response.reasoning,
+            cached: true
+          }
+        }
+
+        // 2. RUN AI OPTIMIZATION (Try Claude Haiku, then Gemini Free)
+        let aiResult
+        try {
+          aiResult = await runOptimization({
+            productName: p['product_name'] || p['product name'] || 'Unknown',
+            weightKg: 0,
+            lengthCm: prodDim.l,
+            widthCm: prodDim.w,
+            heightCm: prodDim.h,
+            fragile: false,
+            availableBoxes: boxCatalog
+          }, LIGHTWEIGHT_MODEL)
+        } catch (err) {
+          console.warn('Claude failed, falling back to Gemini Free:', err)
+          aiResult = await runOptimization({
+            productName: p['product_name'] || p['product name'] || 'Unknown',
+            weightKg: 0,
+            lengthCm: prodDim.l,
+            widthCm: prodDim.w,
+            heightCm: prodDim.h,
+            fragile: false,
+            availableBoxes: boxCatalog
+          }, FREE_MODEL)
+        }
+
+        // 3. STORE IN DB
+        await supabase.from('optimizations').insert({
           user_id: user.id,
           status: 'completed',
           product_snapshot: p,
@@ -74,28 +95,35 @@ export async function POST(req: Request) {
           cost_savings_usd: aiResult.costSavingsUsd,
           efficiency_score: aiResult.efficiencyScore,
           space_utilization: aiResult.spaceUtilization,
-          ai_model: DEFAULT_MODEL
+          ai_model: aiResult.model || LIGHTWEIGHT_MODEL
         } as any)
 
-        if (dbErr) throw dbErr
-
-        // Format for legacy frontend compatibility
-        results.push({
-          product_id: p['product id'],
-          original_box: p['current used box L*W*H'],
+        return {
+          product_id: p['product_id'] || p['product id'],
+          product_name: p['product_name'] || p['product name'],
+          original_box: boxDimStr,
           optimized_box: aiResult.recommendedBoxName,
           cost_before: price,
           cost_after: price - aiResult.costSavingsUsd,
           savings: aiResult.costSavingsUsd,
-          reasoning: aiResult.reasoning
-        })
+          reasoning: aiResult.reasoning,
+          cached: false
+        }
       } catch (err: any) {
-        console.error('Optimization step failed:', err)
-        failed.push({ id: p['product id'], error: err.message })
+        console.error('Processing error:', err)
+        return { product_id: p['product_id'] || p['product id'], error: err.message, status: 'error' }
       }
     }
 
-    return NextResponse.json({ success: true, results, failed, count: results.length })
+    // Process all products in the batch in parallel
+    const results = await Promise.all(products.map(processProduct))
+    
+    return NextResponse.json({ 
+      success: true, 
+      results: results.filter(r => !r.error), 
+      failed: results.filter(r => r.error),
+      count: results.length 
+    })
   } catch (error: any) {
     console.error('Optimize route error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })

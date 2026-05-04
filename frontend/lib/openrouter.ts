@@ -11,6 +11,7 @@ const openrouter = new OpenAI({
 
 export const DEFAULT_MODEL = 'anthropic/claude-sonnet-4-20250514'
 export const LIGHTWEIGHT_MODEL = 'anthropic/claude-haiku-4-5-20251001'
+export const FREE_MODEL = 'google/gemini-2.0-flash-lite-preview-02-05:free'
 
 export interface OptimizeInput {
   productName: string
@@ -46,6 +47,7 @@ export interface OptimizeOutput {
   packingTips: string[]
   alternativeBoxId?: string
   alternativeBoxName?: string
+  model?: string
 }
 
 async function wait(ms: number) {
@@ -92,7 +94,7 @@ async function callOpenRouterWithRetry(params: any, retries = 3) {
   throw lastError
 }
 
-export async function runOptimization(input: OptimizeInput): Promise<OptimizeOutput> {
+export async function runOptimization(input: OptimizeInput, modelOverride?: string): Promise<OptimizeOutput> {
   const systemPrompt = `You are an expert logistics and packaging engineer specializing in 3D spatial geometry and load optimization.
 Your task is to select the most efficient shipping box for a product from the provided catalog.
 
@@ -133,8 +135,9 @@ Respond ONLY with this JSON schema:
 }
 `
 
-  return await callOpenRouterWithRetry({
-    model: DEFAULT_MODEL,
+  const model = modelOverride || DEFAULT_MODEL
+  const result = await callOpenRouterWithRetry({
+    model,
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
@@ -143,6 +146,8 @@ Respond ONLY with this JSON schema:
     max_tokens: 2048,
     response_format: { type: "json_object" }
   })
+
+  return { ...result, model }
 }
 
 export async function runLightweightTask(prompt: string, data: any): Promise<any> {

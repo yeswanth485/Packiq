@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { motion, animate } from 'framer-motion'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 import { useDashboard } from '@/lib/context/DashboardContext'
+import { useOptimizationStore } from '@/lib/store/optimizationStore'
 
 // Animated Counter
 function CountUp({ value, prefix = '', suffix = '', decimals = 0 }: { value: number, prefix?: string, suffix?: string, decimals?: number }) {
@@ -51,11 +52,12 @@ const activities = [
 
 export default function DashboardClient() {
   const { stats, isRefreshing } = useDashboard()
+  const { results: optResults, totalSaved: optTotalSaved, itemsProcessed: optItemsProcessed, lastRun: optLastRun } = useOptimizationStore()
 
   const kpis = [
-    { label: 'Total Shipments', value: 8439, icon: Package, color: '#4361EE', trend: '+12%', isPositive: true },
-    { label: 'Cost Saved', value: stats.totalSavings || 12450, icon: DollarSign, color: '#22c55e', trend: '+8.4%', isPositive: true, prefix: '$' },
-    { label: 'Void Space Reduced', value: 24.5, icon: Zap, color: '#06b6d4', trend: '+2.1%', isPositive: true, suffix: '%', decimals: 1 },
+    { label: 'Orders Optimized Today', value: optItemsProcessed || 8439, icon: Package, color: '#4361EE', trend: '+12%', isPositive: true },
+    { label: 'Total Cost Saved', value: (stats.totalSavings || 12450) + optTotalSaved, icon: DollarSign, color: '#22c55e', trend: '+8.4%', isPositive: true, prefix: '$' },
+    { label: 'Avg Void Reduction', value: 24.5, icon: Zap, color: '#06b6d4', trend: '+2.1%', isPositive: true, suffix: '%', decimals: 1 },
     { label: 'Active Orders', value: 142, icon: Box, color: '#f59e0b', trend: '-1.5%', isPositive: false }
   ]
 
@@ -173,6 +175,37 @@ export default function DashboardClient() {
           </div>
         </motion.div>
       </motion.div>
+
+      {/* Latest Optimization Run Widget */}
+      {optLastRun && (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+          className="bg-gradient-to-r from-[#4361EE]/10 to-[#3B82F6]/10 border border-[#4361EE]/20 rounded-[24px] p-6 flex flex-col md:flex-row items-center justify-between gap-6"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-[#4361EE] rounded-2xl flex items-center justify-center shadow-lg shadow-[#4361EE]/40">
+              <Zap className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Latest Optimization Run</h3>
+              <p className="text-sm text-gray-400">Completed {new Date(optLastRun).toLocaleTimeString()}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-8">
+            <div className="text-center">
+              <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Items</p>
+              <p className="text-xl font-black text-white">{optItemsProcessed}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Savings</p>
+              <p className="text-xl font-black text-green-400">${optTotalSaved.toFixed(2)}</p>
+            </div>
+            <Link href="/dashboard/optimization" className="bg-white/10 hover:bg-white/20 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all border border-white/10">
+              View Full Report
+            </Link>
+          </div>
+        </motion.div>
+      )}
 
       {/* Activity Feed */}
       <motion.div 

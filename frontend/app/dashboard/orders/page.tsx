@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import useSWR from 'swr'
 import React, { memo } from 'react'
 import SkeletonRow from '@/components/dashboard/SkeletonRow'
+import { useOptimizationStore } from '@/lib/store/optimizationStore'
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -53,6 +54,9 @@ const OrdersPage = () => {
   const debouncedSearch = useDebounce(searchQuery, 300)
   const [statusFilter, setStatusFilter] = useState('All')
   const [carrierFilter, setCarrierFilter] = useState('All')
+  const [showOptimizedOnly, setShowOptimizedOnly] = useState(false)
+
+  const { results: optResults } = useOptimizationStore()
 
   // Sort State
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc'|'desc' }>({ key: 'created_at', direction: 'desc' })
@@ -101,13 +105,17 @@ const OrdersPage = () => {
                             o.customer_name.toLowerCase().includes(debouncedSearch.toLowerCase())
       const matchesStatus = statusFilter === 'All' || o.status.toLowerCase() === statusFilter.toLowerCase()
       const matchesCarrier = carrierFilter === 'All' || o.carrier.toLowerCase() === carrierFilter.toLowerCase()
-      return matchesSearch && matchesStatus && matchesCarrier
+      
+      const isOptimizedInStore = optResults.some(r => r.product_id === o.product_id)
+      const matchesOptimized = !showOptimizedOnly || isOptimizedInStore || !!o.optimization_id
+
+      return matchesSearch && matchesStatus && matchesCarrier && matchesOptimized
     }).sort((a, b) => {
       if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1
       if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1
       return 0
     })
-  }, [orders, searchQuery, statusFilter, carrierFilter, sortConfig])
+  }, [orders, searchQuery, statusFilter, carrierFilter, sortConfig, showOptimizedOnly, optResults])
 
   const currentData = filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
@@ -197,6 +205,14 @@ const OrdersPage = () => {
           <div className="relative">
             <input type="date" className="bg-[#1a1a2e] border border-white/5 rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:border-[#4361EE]/50 min-w-[140px] [&::-webkit-calendar-picker-indicator]:invert-[0.6]" />
           </div>
+          <button 
+            onClick={() => setShowOptimizedOnly(!showOptimizedOnly)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+              showOptimizedOnly ? 'bg-[#4361EE]/20 border-[#4361EE] text-white' : 'bg-white/5 border-white/5 text-gray-300 hover:bg-white/10'
+            }`}
+          >
+            <Zap className={`w-4 h-4 ${showOptimizedOnly ? 'fill-[#4361EE]' : ''}`} /> Optimized Only
+          </button>
           <button className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-gray-300 px-4 py-2 rounded-lg text-sm font-medium border border-white/5 transition-colors">
             <Download className="w-4 h-4" /> Export CSV
           </button>
@@ -279,8 +295,22 @@ const OrdersPage = () => {
                        <td className="px-4 text-center" onClick={e => e.stopPropagation()}>
                          <input type="checkbox" checked={selectedIds.includes(order.id)} onChange={() => toggleSelect(order.id)} className="rounded border-gray-600 bg-transparent text-[#4361EE] focus:ring-offset-0 focus:ring-transparent cursor-pointer" />
                        </td>
-                       <td className="px-4 font-mono text-gray-300">ORD-{order.id.slice(0, 6).toUpperCase()}</td>
-                       <td className="px-4 text-white font-medium">{order.customer_name}</td>
+                       <td className="px-4 font-mono text-gray-300"><div className="flex items-center gap-2">
+                             ORD-{order.id.slice(0, 6).toUpperCase()}
+                             {(optResults.some(r => r.product_id === order.product_id) || order.optimization_id) && (
+                               <div className="flex items-center gap-1 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded text-[9px] font-bold text-green-400">
+                                 <CheckCircle2 className="w-2.5 h-2.5" /> OPTIMIZED
+                               </div>
+                             )}
+                          </div></td>
+                       <td className="px-4 text-white font-medium">
+                          <div className="flex flex-col">
+                            <span>{order.customer_name}</span>
+                            {optResults.find(r => r.product_id === order.product_id)?.savings && (
+                              <span className="text-[10px] text-green-400 font-bold tracking-tight">Saved ${(optResults.find(r => r.product_id === order.product_id)?.savings || 0).toFixed(2)}</span>
+                            )}
+                          </div>
+                        </td>
                        <td className="px-4 text-gray-400">{order.items_count}</td>
                        <td className="px-4 text-gray-400">{order.carrier}</td>
                        <td className="px-4">

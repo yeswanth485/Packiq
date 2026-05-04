@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import React, { memo, useState, useEffect, useMemo } from 'react'
 import SkeletonCard from '@/components/dashboard/SkeletonCard'
+import { useOptimizationStore } from '@/lib/store/optimizationStore'
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -73,6 +74,15 @@ const CatalogPage = () => {
   const [activeTab, setActiveTab] = useState('Box Sizes')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [loading, setLoading] = useState(true)
+  const { results: optResults } = useOptimizationStore()
+
+  const boxUsageCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    optResults.forEach(r => {
+      if (r.optimized_box) counts[r.optimized_box] = (counts[r.optimized_box] || 0) + 1
+    })
+    return counts
+  }, [optResults])
   
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1000)
@@ -187,6 +197,11 @@ const CatalogPage = () => {
                         {activeTab === 'Box Sizes' ? <Box className="w-6 h-6" /> : <Package className="w-6 h-6" />}
                       </div>
                       <div className="flex gap-2">
+                        {activeTab === 'Box Sizes' && boxUsageCounts[item.name] > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-green-500/10 text-green-400 border border-green-500/20">
+                            Frequent Fit
+                          </span>
+                        )}
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-white/5 text-gray-500">
                           {item.category}
                         </span>

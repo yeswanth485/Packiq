@@ -13,6 +13,7 @@ import {
   Cell, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, AreaChart, Area, Legend
 } from 'recharts'
+import { useOptimizationStore } from '@/lib/store/optimizationStore'
 
 // --- COMPONENTS ---
 
@@ -77,24 +78,33 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
+  const { results: optResults, totalSaved: optTotalSaved, itemsProcessed: optItemsProcessed } = useOptimizationStore()
+
   // --- MOCK DATA GENERATION ---
   const kpiData = useMemo(() => [
-    { label: 'Total Savings', value: 12450, trend: 12.5, color: '#00E5CC', isCurrency: true, spark: [{value: 10}, {value: 20}, {value: 15}, {value: 30}, {value: 25}, {value: 40}] },
+    { label: 'Total Savings', value: 12450 + optTotalSaved, trend: 12.5, color: '#00E5CC', isCurrency: true, spark: [{value: 10}, {value: 20}, {value: 15}, {value: 30}, {value: 25}, {value: 40 + (optTotalSaved > 0 ? 10 : 0)}] },
     { label: 'Void Space Reduced', value: 24.8, trend: -3.2, color: '#3B82F6', isPercentage: true, spark: [{value: 5}, {value: 8}, {value: 7}, {value: 12}, {value: 10}, {value: 15}] },
     { label: 'Avg Pack Time', value: 1.8, suffix: 'm', trend: -8.4, color: '#8B5CF6', spark: [{value: 20}, {value: 18}, {value: 19}, {value: 15}, {value: 16}, {value: 14}] },
-    { label: 'CO₂ Saved', value: 842, suffix: 'kg', trend: 21.0, color: '#10B981', spark: [{value: 2}, {value: 5}, {value: 10}, {value: 15}, {value: 25}, {value: 40}] },
-    { label: 'Optimized', value: 1842, trend: 15.3, color: '#F59E0B', spark: [{value: 100}, {value: 120}, {value: 150}, {value: 200}, {value: 250}, {value: 300}] }
-  ], [])
+    { label: 'CO₂ Saved', value: 842 + (optTotalSaved * 0.1), suffix: 'kg', trend: 21.0, color: '#10B981', spark: [{value: 2}, {value: 5}, {value: 10}, {value: 15}, {value: 25}, {value: 40}] },
+    { label: 'Optimized', value: 1842 + optItemsProcessed, trend: 15.3, color: '#F59E0B', spark: [{value: 100}, {value: 120}, {value: 150}, {value: 200}, {value: 250}, {value: 300 + optItemsProcessed}] }
+  ], [optTotalSaved, optItemsProcessed])
 
-  const areaData = [
-    { name: 'Mon', savings: 400, volume: 240 },
-    { name: 'Tue', savings: 300, volume: 139 },
-    { name: 'Wed', savings: 200, volume: 980 },
-    { name: 'Thu', savings: 278, volume: 390 },
-    { name: 'Fri', savings: 189, volume: 480 },
-    { name: 'Sat', savings: 239, volume: 380 },
-    { name: 'Sun', savings: 349, volume: 430 },
-  ]
+  const areaData = useMemo(() => {
+    const base = [
+      { name: 'Mon', savings: 400, volume: 240 },
+      { name: 'Tue', savings: 300, volume: 139 },
+      { name: 'Wed', savings: 200, volume: 980 },
+      { name: 'Thu', savings: 278, volume: 390 },
+      { name: 'Fri', savings: 189, volume: 480 },
+      { name: 'Sat', savings: 239, volume: 380 },
+      { name: 'Sun', savings: 349, volume: 430 },
+    ]
+    if (optTotalSaved > 0) {
+      base[base.length - 1].savings += optTotalSaved
+      base[base.length - 1].volume += optItemsProcessed
+    }
+    return base
+  }, [optTotalSaved, optItemsProcessed])
 
   const barData = [
     { name: 'Week 1', reduction: 12 },
