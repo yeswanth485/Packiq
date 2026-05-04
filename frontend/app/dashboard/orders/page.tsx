@@ -115,7 +115,7 @@ const OrdersPage = () => {
       if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1
       return 0
     })
-  }, [orders, searchQuery, statusFilter, carrierFilter, sortConfig, showOptimizedOnly, optResults])
+  }, [orders, searchQuery, statusFilter, carrierFilter, sortConfig, showOptimizedOnly, optResults, debouncedSearch])
 
   const currentData = filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)

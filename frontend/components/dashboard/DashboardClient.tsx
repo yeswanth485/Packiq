@@ -200,7 +200,7 @@ export default function DashboardClient() {
                 <RechartsTooltip 
                   contentStyle={{ backgroundColor: '#0f0f1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                   itemStyle={{ color: '#fff' }}
-                  formatter={(value: number) => `$${value.toFixed(2)}`}
+                  formatter={(value: any) => `$${Number(value || 0).toFixed(2)}`}
                 />
               </PieChart>
             </ResponsiveContainer>

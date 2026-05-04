@@ -81,7 +81,7 @@ export default function AnalyticsPage() {
     { label: 'Avg Pack Time', value: optResults.length > 0 ? 1.2 : 0, suffix: 'm', trend: optResults.length > 0 ? -8.4 : 0, color: '#8B5CF6' },
     { label: 'CO₂ Saved Estimate', value: totalSaved * 0.15, suffix: 'kg', trend: totalSaved > 0 ? 21.0 : 0, color: '#10B981' },
     { label: 'Optimized', value: itemsProcessed, trend: itemsProcessed > 0 ? 15.3 : 0, color: '#F59E0B' }
-  ], [totalSaved, itemsProcessed, avgVoidReduction]);
+  ], [totalSaved, itemsProcessed, avgVoidReduction, optResults.length]);
 
   const areaData = useMemo(() => {
     if (optResults.length === 0) return [];
