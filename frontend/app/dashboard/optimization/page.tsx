@@ -110,10 +110,37 @@ const OptimizationPage = () => {
     const fileType = selectedFile.name.split('.').pop()?.toLowerCase()
 
     const handleData = (data: any[]) => {
-      // Validation: product_id, product_name, product L*W*H, box L*W*H, price
-      const required = ['product_id', 'product_name', 'product L*W*H', 'box L*W*H', 'price']
-      const headers = data.length > 0 ? Object.keys(data[0]) : []
-      const missing = required.filter(h => !headers.includes(h))
+      if (!data || data.length === 0) return setValidationError('The file appears to be empty')
+
+      const rawHeaders = Object.keys(data[0])
+      
+      // Define requirement mapping (fuzzy matches)
+      const mappings: Record<string, string[]> = {
+        'product_id': ['product_id', 'productid', 'sku', 'id', 'item_id', 'product id', 'pid'],
+        'product_name': ['product_name', 'name', 'product name', 'item_name', 'item', 'description'],
+        'product L*W*H': ['product_l*w*h', 'product dimensions', 'dimensions', 'dims', 'product_dims', 'product l*w*h', 'product dims', 'item dims'],
+        'box L*W*H': ['box_l*w*h', 'box dimensions', 'box dims', 'box_dims', 'box l*w*h', 'package dims'],
+        'price': ['price', 'cost', 'value', 'unit_price', 'amount', 'rate']
+      }
+
+      const foundHeaders: Record<string, string> = {}
+      const missing: string[] = []
+
+      // Normalize a header for comparison
+      const normalize = (h: string) => h.toLowerCase().trim().replace(/[^a-z0-9]/g, '')
+
+      Object.keys(mappings).forEach(targetKey => {
+        const match = rawHeaders.find(h => {
+          const normalizedH = normalize(h)
+          return mappings[targetKey].some(m => normalize(m) === normalizedH)
+        })
+        
+        if (match) {
+          foundHeaders[targetKey] = match
+        } else {
+          missing.push(targetKey)
+        }
+      })
 
       if (missing.length > 0) {
         setValidationError(`Missing required columns: ${missing.join(', ')}`)
@@ -122,29 +149,43 @@ const OptimizationPage = () => {
         return
       }
 
-      setParsedData(data)
-      setItemsTotal(data.length)
-      toast.success('File validated successfully!')
+      // Map data to internal format
+      const normalizedData = data.map(row => {
+        const newRow: any = {}
+        Object.keys(foundHeaders).forEach(targetKey => {
+          newRow[targetKey] = row[foundHeaders[targetKey]]
+        })
+        // Copy other fields too
+        Object.keys(row).forEach(k => {
+          if (!Object.values(foundHeaders).includes(k)) {
+            newRow[k] = row[k]
+          }
+        })
+        return newRow
+      })
+
+      setParsedData(normalizedData)
+      setItemsTotal(normalizedData.length)
+      toast.success(`Successfully loaded ${normalizedData.length} items`)
     }
 
     if (fileType === 'csv') {
       Papa.parse(selectedFile, { 
         header: true, 
-        skipEmptyLines: true, 
-        transformHeader: (h) => h.trim().toLowerCase().replace(/ /g, '_').replace(/l\*w\*h/g, 'L*W*H'),
-        complete: (res) => {
-           // We need to map headers back to the expected format for validation if transformHeader changed them too much
-           // But actually the user request said: product_id, product_name, product L*W*H, box L*W*H, price
-           // Let's stick to what they said.
-           handleData(res.data)
-        } 
+        skipEmptyLines: true,
+        complete: (res) => handleData(res.data),
+        error: (err) => setValidationError(`CSV Parse Error: ${err.message}`)
       })
     } else if (fileType === 'xlsx' || fileType === 'xls') {
       const reader = new FileReader()
       reader.onload = (e) => {
-        const wb = XLSX.read(e.target?.result, { type: 'binary' })
-        const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]])
-        handleData(json)
+        try {
+          const wb = XLSX.read(e.target?.result, { type: 'binary' })
+          const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]])
+          handleData(json)
+        } catch (err: any) {
+          setValidationError(`Excel Parse Error: ${err.message}`)
+        }
       }
       reader.readAsBinaryString(selectedFile)
     }
