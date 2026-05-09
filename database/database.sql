@@ -159,3 +159,25 @@ drop trigger if exists trg_notify_inspection on public.inspections;
 create trigger trg_notify_inspection
 after insert on public.inspections
 for each row execute function notify_inspection();
+
+-- 8. AUTH SYNC TRIGGER
+-- Automatically creates a profile when a new user signs up
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, email, full_name, avatar_url)
+  values (
+    new.id, 
+    new.email, 
+    new.raw_user_meta_data->>'full_name', 
+    new.raw_user_meta_data->>'avatar_url'
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists on_auth_user_created on auth.users;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();

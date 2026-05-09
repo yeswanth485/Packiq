@@ -29,32 +29,32 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#0A0A0F] text-white selection:bg-[#00FFD1]/30">
       
       {/* Navigation */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? 'bg-[#0A0A0F]/80 backdrop-blur-xl border-b border-white/5 py-4' : 'bg-transparent py-8'
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        isScrolled ? 'bg-[#0A0A0F]/80 backdrop-blur-2xl border-b border-white/5 py-5' : 'bg-transparent py-10'
       }`}>
         <div className="max-w-[1200px] mx-auto px-6 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 z-50">
-            <div className="w-8 h-8 rounded-lg bg-[#00FFD1] flex items-center justify-center">
-              <Box className="w-5 h-5 text-[#0A0A0F]" />
+          <Link href="/" className="flex items-center gap-3 z-50 group">
+            <div className="w-10 h-10 rounded-xl bg-[#00FFD1] flex items-center justify-center group-hover:rotate-12 transition-transform">
+              <Box className="w-6 h-6 text-[#0A0A0F]" />
             </div>
-            <span className="font-bold text-2xl font-syne text-white">PackIQ</span>
+            <span className="font-bold text-3xl font-syne text-white tracking-tighter">PackIQ</span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-10 text-xs font-black uppercase tracking-widest text-gray-400">
-            <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
-            <a href="#roi" className="hover:text-white transition-colors">ROI Calculator</a>
-            <a href="#tech" className="hover:text-white transition-colors">Technology</a>
-            <Link href="/auth/login" className="hover:text-white transition-colors">Login</Link>
+          <div className="hidden md:flex items-center gap-12 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+            <a href="#how-it-works" className="hover:text-[#00FFD1] transition-colors">How it works</a>
+            <a href="#roi" className="hover:text-[#00FFD1] transition-colors">ROI Calculator</a>
+            <a href="#tech" className="hover:text-[#00FFD1] transition-colors">Technology</a>
+            <Link href="/auth/login" className="hover:text-white transition-colors">Sign In</Link>
             <Link 
               href="/auth/signup" 
-              className="bg-[#00FFD1] text-[#0A0A0F] px-6 py-3 rounded-xl hover:scale-105 transition-transform"
+              className="bg-white text-[#0A0A0F] px-8 py-4 rounded-xl hover:bg-[#00FFD1] transition-all font-black"
             >
               Start Pilot
             </Link>
           </div>
 
           <button 
-            className="md:hidden z-50 p-2 text-white"
+            className="md:hidden z-50 p-3 bg-white/5 rounded-xl border border-white/10 text-white"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
