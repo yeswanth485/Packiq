@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Play, Box } from 'lucide-react'
 import { StaggerContainer, StaggerItem } from '@/components/animations'
 import BoxPreview from '@/components/3d/BoxPreview'
@@ -36,6 +36,7 @@ const FloatingBox = ({ delay = 0, x = '10%', y = '10%', size = 40 }) => (
 
 export function HeroSection() {
   const [mounted, setMounted] = useState(false)
+  const [showVideo, setShowVideo] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -108,7 +109,10 @@ export function HeroSection() {
                 >
                   Get Started Free <ArrowRight className="w-5 h-5" />
                 </Link>
-                <button className="w-full sm:w-auto bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] text-white px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all backdrop-blur-md">
+                <button 
+                  onClick={() => setShowVideo(true)}
+                  className="w-full sm:w-auto bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] text-white px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all backdrop-blur-md"
+                >
                   <Play className="w-5 h-5 text-[#00FFD1]" /> Watch Demo
                 </button>
               </div>
@@ -163,6 +167,36 @@ export function HeroSection() {
           ))}
         </div>
       </div>
+
+      {/* Video Modal */}
+      <AnimatePresence>
+        {showVideo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+          >
+            <div className="relative w-full max-w-5xl aspect-video bg-[#0A0A0F] rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(0,255,209,0.15)]">
+              <button 
+                onClick={() => setShowVideo(false)} 
+                className="absolute top-6 right-6 z-10 w-12 h-12 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-colors backdrop-blur-md border border-white/10"
+              >
+                ✕
+              </button>
+              <iframe 
+                width="100%" 
+                height="100%" 
+                src="https://www.youtube.com/embed/lJIrF4YjHfQ?autoplay=1" 
+                title="PackIQ Demo" 
+                frameBorder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowFullScreen
+              ></iframe>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   )
 }

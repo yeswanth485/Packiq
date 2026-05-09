@@ -9,8 +9,8 @@ const openrouter = new OpenAI({
   },
 })
 
-export const DEFAULT_MODEL = 'anthropic/claude-sonnet-4-20250514'
-export const LIGHTWEIGHT_MODEL = 'anthropic/claude-haiku-4-5-20251001'
+export const DEFAULT_MODEL = 'anthropic/claude-3.7-sonnet'
+export const LIGHTWEIGHT_MODEL = 'anthropic/claude-3.5-haiku'
 export const FREE_MODEL = 'google/gemini-2.0-flash-lite-preview-02-05:free'
 
 export interface OptimizeInput {
