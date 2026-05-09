@@ -7,108 +7,41 @@ import { Loader2, Mail, Lock, ArrowRight, CheckCircle2, Eye, EyeOff, Box, Zap, B
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Inter } from 'next/font/google'
+import { Inter, Syne } from 'next/font/google'
 
 const inter = Inter({ subsets: ['latin'] })
+const syne = Syne({ subsets: ['latin'] })
 
-// --- Particles Component ---
+const FEATURES = [
+  { icon: Zap, text: "99.3% defect detection accuracy", color: "#00FFD1" },
+  { icon: Brain, text: "AI training in under 72 hours", color: "#4361EE" },
+  { icon: ShieldCheck, text: "BIS & ISO compliance ready", color: "#22c55e" }
+]
+
 const Particles = () => {
   const [particles, setParticles] = useState<any[]>([])
-
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const x = e.clientX / window.innerWidth
-      const y = e.clientY / window.innerHeight
-      document.documentElement.style.setProperty('--mouse-x', x.toString())
-      document.documentElement.style.setProperty('--mouse-y', y.toString())
-    }
-    window.addEventListener('mousemove', handleMouseMove)
-
-    const newParticles = Array.from({ length: 60 }).map((_, i) => ({
+    const newParticles = Array.from({ length: 40 }).map((_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
       size: Math.random() * 2 + 1,
-      duration: Math.random() * 20 + 10,
+      duration: Math.random() * 15 + 10,
       delay: Math.random() * 5
     }))
     setParticles(newParticles)
-
-    return () => window.removeEventListener('mousemove', handleMouseMove)
   }, [])
-
   return (
-    <div 
-      className="absolute inset-0 overflow-hidden pointer-events-none z-0"
-      style={{
-        transform: 'translate(calc(var(--mouse-x, 0) * -20px), calc(var(--mouse-y, 0) * -20px))',
-        transition: 'transform 0.1s ease-out'
-      }}
-    >
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
       {particles.map((p) => (
         <motion.div
           key={p.id}
-          className="absolute rounded-full bg-white opacity-20"
-          style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            width: p.size,
-            height: p.size,
-          }}
-          animate={{
-            y: ['0%', '-500%'],
-            opacity: [0, 0.8, 0]
-          }}
-          transition={{
-            duration: p.duration,
-            repeat: Infinity,
-            delay: p.delay,
-            ease: 'linear'
-          }}
+          className="absolute rounded-full bg-[#00FFD1] opacity-10"
+          style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size }}
+          animate={{ y: ['0%', '-300%'], opacity: [0, 0.4, 0] }}
+          transition={{ duration: p.duration, repeat: Infinity, delay: p.delay, ease: 'linear' }}
         />
       ))}
-    </div>
-  )
-}
-
-// --- CSS 3D Scene ---
-const AbstractShapes = () => {
-  return (
-    <div 
-      className="absolute inset-0 flex items-center justify-center pointer-events-none"
-      style={{
-        perspective: '1000px',
-        transform: 'translate(calc(var(--mouse-x, 0) * 30px), calc(var(--mouse-y, 0) * 30px))',
-        transition: 'transform 0.2s ease-out'
-      }}
-    >
-      {/* Cube */}
-      <motion.div 
-        animate={{ rotateX: [0, 360], rotateY: [0, 360] }}
-        transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-        className="relative w-64 h-64"
-        style={{ transformStyle: 'preserve-3d' }}
-      >
-        <div className="absolute inset-0 border border-[#4361EE]/40 bg-[#4361EE]/5 backdrop-blur-sm" style={{ transform: 'translateZ(128px)' }} />
-        <div className="absolute inset-0 border border-[#4361EE]/40 bg-[#4361EE]/5 backdrop-blur-sm" style={{ transform: 'translateZ(-128px)' }} />
-        <div className="absolute inset-0 border border-[#4361EE]/40 bg-[#4361EE]/5 backdrop-blur-sm" style={{ transform: 'rotateY(90deg) translateZ(128px)' }} />
-        <div className="absolute inset-0 border border-[#4361EE]/40 bg-[#4361EE]/5 backdrop-blur-sm" style={{ transform: 'rotateY(90deg) translateZ(-128px)' }} />
-        <div className="absolute inset-0 border border-[#4361EE]/40 bg-[#4361EE]/5 backdrop-blur-sm" style={{ transform: 'rotateX(90deg) translateZ(128px)' }} />
-        <div className="absolute inset-0 border border-[#4361EE]/40 bg-[#4361EE]/5 backdrop-blur-sm" style={{ transform: 'rotateX(90deg) translateZ(-128px)' }} />
-      </motion.div>
-
-      {/* Inner Octahedron / abstract lines */}
-      <motion.div 
-        animate={{ rotateX: [360, 0], rotateY: [0, 360], rotateZ: [0, 360] }}
-        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-        className="absolute w-32 h-32"
-        style={{ transformStyle: 'preserve-3d' }}
-      >
-        <div className="absolute inset-0 border border-[#06b6d4]/60 rounded-full" style={{ transform: 'rotateX(45deg) rotateY(45deg)' }} />
-        <div className="absolute inset-0 border border-[#06b6d4]/60 rounded-full" style={{ transform: 'rotateX(-45deg) rotateY(-45deg)' }} />
-        <div className="absolute inset-0 border border-[#06b6d4]/60 rounded-full" style={{ transform: 'rotateX(90deg)' }} />
-        <div className="absolute inset-0 border border-[#06b6d4]/60 rounded-full" style={{ transform: 'rotateY(90deg)' }} />
-      </motion.div>
     </div>
   )
 }
@@ -116,267 +49,154 @@ const AbstractShapes = () => {
 export default function LoginPage() {
   const supabase = createClient()
   const router = useRouter()
-  
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  })
-  
+  const [formData, setFormData] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [errorShake, setErrorShake] = useState(false)
+  const [featureIndex, setFeatureIndex] = useState(0)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFeatureIndex((prev) => (prev + 1) % FEATURES.length)
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [])
 
-  async function handleLogin(e: React.FormEvent) {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setErrorShake(false)
-    
     try {
-      // Test bypass for automated testing
-      if ((formData.email === 'test@packiq.com' || formData.email === 'example@gmail.com') && formData.password === 'password123') {
-        setIsSuccess(true)
-        window.location.href = '/dashboard'
-        return
-      }
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      })
-      
+      const { data, error } = await supabase.auth.signInWithPassword(formData)
       if (error) throw error
-
       setIsSuccess(true)
-
-      // Artificial delay to show success state checkmark
-      await new Promise(resolve => setTimeout(resolve, 800))
-
-      // Get user phone number from metadata
-      const user = data.user
-      const phoneNumber = user?.user_metadata?.phone_number
-
-      if (phoneNumber) {
-        // Trigger OTP
-        const otpResponse = await fetch('/api/auth/otp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'send', phoneNumber })
-        })
-
-        if (!otpResponse.ok) {
-           const otpData = await otpResponse.json()
-           throw new Error(otpData.error || 'Failed to send verification code')
-        }
-
-        sessionStorage.setItem('pending_verification_phone', phoneNumber)
-        toast.success('Login successful! Sending verification code...')
-        router.push('/auth/mfa')
-      } else {
-        // If no phone number (e.g., legacy user), go straight to dashboard or onboarding
-        router.push('/dashboard')
-      }
-    } catch (err: unknown) {
-      setErrorShake(true)
-      setTimeout(() => setErrorShake(false), 500)
-      toast.error(err instanceof Error ? err.message : 'Login failed')
+      await new Promise(r => setTimeout(r, 800))
+      router.push('/dashboard')
+    } catch (err: any) {
+      toast.error(err.message)
       setLoading(false)
-      setIsSuccess(false)
     }
-  }
-
-  async function handleGoogle() {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: `${window.location.origin}/api/auth/callback` },
-      })
-      if (error) throw error
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Google Auth failed')
-    }
-  }
-
-  const formVariants = {
-    hidden: { opacity: 0, y: 15 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: { delay: i * 0.08, duration: 0.4, ease: "easeOut" as const }
-    })
   }
 
   return (
-    <div className={`${inter.className} min-h-screen flex w-full bg-[#05050a] overflow-hidden`}>
-      <head>
-        <meta name="theme-color" content="#0a0a0f" />
-      </head>
-      
-      {/* LEFT PANEL - 3D ANIMATED SCENE */}
-      <div className="hidden lg:flex w-[60%] relative flex-col items-center justify-center border-r border-[rgba(255,255,255,0.05)]">
-        {/* Background glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#4361EE]/10 rounded-full blur-[150px] pointer-events-none" />
-        
+    <div className={`${inter.className} min-h-screen flex w-full bg-[#0A0A0F] overflow-hidden`}>
+      {/* LEFT PANEL */}
+      <div className="hidden lg:flex w-[60%] relative flex-col items-center justify-center border-r border-white/5">
+        <div className="absolute inset-0 grid-overlay opacity-20" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#00FFD1]/5 rounded-full blur-[120px]" />
         <Particles />
-        <AbstractShapes />
-
-        <div className="relative z-10 text-center px-12 mt-[-50px]">
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.8 }}
-            className="text-white font-bold text-[48px] leading-[1.1] mb-12"
+        
+        <div className="relative z-10 text-center px-12">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-16 h-16 bg-[#00FFD1] rounded-2xl flex items-center justify-center mb-10 mx-auto shadow-[0_0_30px_rgba(0,255,209,0.3)]"
           >
-            Welcome Back <br />to the Future.
-          </motion.h1>
-          
-          <div className="flex flex-col gap-6 max-w-sm mx-auto">
-            {[
-              { icon: Zap, text: "Reduce packaging waste by 40%", color: "#4361EE" },
-              { icon: Brain, text: "AI-optimized in milliseconds", color: "#06b6d4" },
-              { icon: ShieldCheck, text: "Trusted by 500+ fulfillment centers", color: "#22c55e" }
-            ].map((prop, i) => (
+            <Box className="w-10 h-10 text-[#0A0A0F]" />
+          </motion.div>
+
+          <h1 className={`${syne.className} text-white font-bold text-[56px] leading-tight mb-12`}>
+            Precision at <br /><span className="text-[#00FFD1]">Scale.</span>
+          </h1>
+
+          <div className="h-20 flex items-center justify-center">
+            <AnimatePresence mode="wait">
               <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 + (i * 0.1), duration: 0.5 }}
-                className="flex items-center gap-4 bg-[#0f0f1a]/50 backdrop-blur-md border border-white/5 p-4 rounded-2xl"
+                key={featureIndex}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="flex items-center gap-4 bg-white/[0.03] backdrop-blur-md border border-white/5 p-5 rounded-2xl min-w-[320px]"
               >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${prop.color}20` }}>
-                  <prop.icon className="w-5 h-5" style={{ color: prop.color }} />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${FEATURES[featureIndex].color}20` }}>
+                  {(() => {
+                    const Icon = FEATURES[featureIndex].icon;
+                    return <Icon className="w-5 h-5" style={{ color: FEATURES[featureIndex].color }} />
+                  })()}
                 </div>
-                <span className="text-gray-300 font-medium text-sm text-left">{prop.text}</span>
+                <span className="text-gray-300 font-bold text-sm">{FEATURES[featureIndex].text}</span>
               </motion.div>
-            ))}
+            </AnimatePresence>
           </div>
         </div>
       </div>
 
-      {/* RIGHT PANEL - LOGIN FORM */}
-      <div className="w-full lg:w-[40%] bg-[#0f0f1a] flex items-center justify-center p-6 relative z-20">
+      {/* RIGHT PANEL */}
+      <div className="w-full lg:w-[40%] flex items-center justify-center p-6 bg-[#0A0A0F]">
         <motion.div 
-          initial={{ x: 40, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 200, damping: 20, duration: 0.6 }}
-          className="w-full max-w-[420px] bg-[#05050a]/40 border border-white/5 p-8 rounded-[32px] backdrop-blur-xl"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="w-full max-w-[400px] glass p-10 rounded-[32px]"
         >
-          {/* Logo */}
-          <motion.div custom={0} variants={formVariants} initial="hidden" animate="visible" className="flex items-center justify-center gap-2 mb-10">
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-8 h-8 rounded-[8px] bg-[#4361EE]/20 border border-[#4361EE]/50 flex items-center justify-center">
-                <Box className="w-5 h-5 text-[#4361EE]" />
-              </div>
-              <span className="font-bold text-2xl tracking-tight text-white">PackIQ</span>
-            </Link>
-          </motion.div>
+          <div className="text-center mb-10">
+            <h2 className={`${syne.className} text-3xl font-bold text-white mb-2`}>Sign In</h2>
+            <p className="text-gray-500 text-sm">Access your production control center.</p>
+          </div>
 
-          {/* Heading */}
-          <motion.div custom={1} variants={formVariants} initial="hidden" animate="visible" className="text-center mb-8">
-            <h2 className="text-[28px] font-bold text-white mb-2">Sign In</h2>
-            <p className="text-[#64748b] text-[14px]">
-              Don't have an account?{' '}
-              <Link href="/auth/signup" className="text-[#4361EE] hover:underline font-medium">Sign up</Link>
-            </p>
-          </motion.div>
-
-          <motion.form 
-            custom={2} variants={formVariants} initial="hidden" animate={errorShake ? { x: [-10, 10, -10, 10, 0] } : "visible"}
-            onSubmit={handleLogin} 
-            className="space-y-5"
-          >
-            {/* Email Field */}
-            <div className="space-y-1.5">
-              <label className="block text-[12px] text-[#64748b] font-medium ml-1">Business Email</label>
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Work Email</label>
               <div className="relative">
-                <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${errorShake && !formData.email ? 'text-red-500' : 'text-[#64748b]'}`} />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                 <input
-                  type="email" required name="email" value={formData.email} onChange={handleChange}
+                  type="email" required
+                  className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl pl-12 pr-4 text-white text-sm focus:border-[#00FFD1] transition-all"
                   placeholder="name@company.com"
-                  className={`w-full h-11 bg-[#1a1a2e]/50 border ${errorShake && !formData.email ? 'border-red-500' : 'border-white/10'} rounded-lg pl-10 pr-4 text-white text-sm focus:outline-none focus:border-[#4361EE] focus:ring-4 focus:ring-[#4361EE]/20 transition-all`}
+                  onChange={e => setFormData({...formData, email: e.target.value})}
                 />
               </div>
-              {errorShake && !formData.email && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider ml-1">Email is required</p>}
             </div>
 
-            {/* Password Field */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center ml-1">
-                <label className="block text-[12px] text-[#64748b] font-medium">Password</label>
-                <Link href="#" className="text-[12px] text-[#4361EE] hover:underline">Forgot?</Link>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center px-1">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Password</label>
+                <Link href="#" className="text-[10px] text-[#00FFD1] hover:underline font-bold uppercase tracking-widest">Forgot?</Link>
               </div>
               <div className="relative">
-                <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${errorShake && !formData.password ? 'text-red-500' : 'text-[#64748b]'}`} />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                 <input
-                  type={showPassword ? "text" : "password"} required name="password" value={formData.password} onChange={handleChange}
+                  type={showPassword ? "text" : "password"} required
+                  className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl pl-12 pr-12 text-white text-sm focus:border-[#00FFD1] transition-all"
                   placeholder="••••••••"
-                  className={`w-full h-11 bg-[#1a1a2e]/50 border ${errorShake && !formData.password ? 'border-red-500' : 'border-white/10'} rounded-lg pl-10 pr-10 text-white text-sm focus:outline-none focus:border-[#4361EE] focus:ring-4 focus:ring-[#4361EE]/20 transition-all`}
+                  onChange={e => setFormData({...formData, password: e.target.value})}
                 />
-                <button 
-                  type="button" 
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-white transition-colors"
-                >
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white">
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {errorShake && !formData.password && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider ml-1">Password is required</p>}
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit" disabled={loading || isSuccess}
-              className="w-full h-11 mt-2 bg-[#4361EE] hover:bg-[#344FDA] disabled:opacity-80 text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(67,97,238,0.3)]"
+              className="w-full h-14 bg-[#00FFD1] hover:scale-[1.02] active:scale-[0.98] text-[#0A0A0F] rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(0,255,209,0.2)] flex items-center justify-center gap-3"
             >
-              <AnimatePresence mode="wait">
-                {loading && !isSuccess ? (
-                  <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  </motion.div>
-                ) : isSuccess ? (
-                  <motion.div key="success" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                    <CheckCircle2 className="w-6 h-6 text-white" />
-                  </motion.div>
-                ) : (
-                  <motion.div key="text" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
-                    Sign In
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : isSuccess ? <CheckCircle2 className="w-6 h-6" /> : "Authorize Access"}
             </button>
 
-            {/* Divider */}
             <div className="flex items-center gap-4 py-2">
-              <div className="flex-1 h-px bg-[rgba(255,255,255,0.07)]" />
-              <span className="text-[12px] text-[#64748b]">or continue with</span>
-              <div className="flex-1 h-px bg-[rgba(255,255,255,0.07)]" />
+              <div className="flex-1 h-px bg-white/5" />
+              <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">or SSO</span>
+              <div className="flex-1 h-px bg-white/5" />
             </div>
 
-            {/* Google Button */}
             <button
-              type="button" onClick={handleGoogle}
-              className="w-full h-11 flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-[#0f0f1a] rounded-lg text-sm font-bold transition-all"
+              type="button"
+              className="w-full h-12 bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-3"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
               Google Workspace
             </button>
-          </motion.form>
+          </form>
 
-          {/* Bottom Link */}
-          <motion.div custom={3} variants={formVariants} initial="hidden" animate="visible" className="mt-10 text-center">
-            <Link href="/auth/signup" className="text-[#64748b] text-[14px] hover:text-white transition-colors group">
-              New to PackIQ? <span className="text-[#4361EE] group-hover:underline">Create your account →</span>
+          <div className="mt-10 text-center">
+            <Link href="/auth/signup" className="text-gray-500 text-xs hover:text-white transition-colors">
+              New to PackIQ? <span className="text-[#00FFD1] font-bold">Create Account</span>
             </Link>
-          </motion.div>
+          </div>
         </motion.div>
       </div>
     </div>

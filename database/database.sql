@@ -1,274 +1,161 @@
 -- ============================================================
 -- PackIQ — Supabase Database Schema
--- Run this in Supabase SQL Editor (project > SQL Editor > New Query)
 -- ============================================================
 
--- ─────────────────────────────────────────────
 -- EXTENSIONS
--- ─────────────────────────────────────────────
 create extension if not exists "uuid-ossp";
 
--- ─────────────────────────────────────────────
--- 1. PROFILES (mirrors auth.users)
--- ─────────────────────────────────────────────
+-- 1. PROFILES
 create table if not exists public.profiles (
   id            uuid primary key references auth.users(id) on delete cascade,
   email         text not null,
   full_name     text,
   avatar_url    text,
   company       text,
-  company_domain text,
-  employee_count int,
+  industry      text,
+  line_speed_range text,
+  current_qa_method text,
+  phone         text,
   onboarding_completed boolean not null default false,
   plan          text not null default 'free' check (plan in ('free', 'pro', 'enterprise')),
-  stripe_customer_id      text unique,
-  stripe_subscription_id  text unique,
-  optimizations_used      int not null default 0,
-  optimizations_limit     int not null default 10,
-  api_key       text unique default encode(gen_random_bytes(16), 'hex'),
-  notification_prefs jsonb default '{"email_optimization": true, "weekly_report": false, "system_alerts": true}'::jsonb,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
 
--- Safely add columns if table already exists
-DO $$ 
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='company_domain') THEN
-    ALTER TABLE public.profiles ADD COLUMN company_domain text;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='employee_count') THEN
-    ALTER TABLE public.profiles ADD COLUMN employee_count int;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='onboarding_completed') THEN
-    ALTER TABLE public.profiles ADD COLUMN onboarding_completed boolean not null default false;
-  END IF;
-END $$;
-
--- ─────────────────────────────────────────────
--- 2. PRODUCTS
--- ─────────────────────────────────────────────
-create table if not exists public.products (
+-- 2. PRODUCTION LINES
+create table if not exists public.production_lines (
   id              uuid primary key default uuid_generate_v4(),
-  user_id         uuid not null references public.profiles(id) on delete cascade,
+  owner_id        uuid references public.profiles(id) on delete cascade,
   name            text not null,
-  sku             text,
-  weight_kg       numeric(10, 3),
-  length_cm       numeric(10, 2),
-  width_cm        numeric(10, 2),
-  height_cm       numeric(10, 2),
-  current_box_size text,
-  current_cost_usd numeric(10, 4),
-  fragile         boolean not null default false,
-  category        text,
-  notes           text,
-  created_at      timestamptz not null default now(),
-  updated_at      timestamptz not null default now()
+  location        text,
+  product_type    text,
+  target_speed_per_min integer,
+  is_active       boolean default true,
+  created_at      timestamptz default now()
 );
 
--- ─────────────────────────────────────────────
--- 3. BOX CATALOG
--- ─────────────────────────────────────────────
-create table if not exists public.box_catalog (
+-- 3. INSPECTIONS
+create table if not exists public.inspections (
   id              uuid primary key default uuid_generate_v4(),
-  name            text not null,
-  supplier        text,
-  sku             text unique,
-  length_cm       numeric(10, 2) not null,
-  width_cm        numeric(10, 2) not null,
-  height_cm       numeric(10, 2) not null,
-  max_weight_kg   numeric(10, 3),
-  cost_usd        numeric(10, 4),
-  material        text,
-  eco_certified   boolean not null default false,
-  in_stock        boolean not null default true,
-  created_at      timestamptz not null default now()
+  line_id         uuid references public.production_lines(id) on delete cascade,
+  unit_id         text not null,
+  defect_type     text, -- null if passed
+  confidence_score float check (confidence_score >= 0 and confidence_score <= 1),
+  status          text check (status in ('passed', 'rejected', 'flagged')),
+  image_url       text,
+  model_version   text,
+  timestamp       timestamptz default now(),
+  created_at      timestamptz default now()
 );
 
--- ─────────────────────────────────────────────
--- 4. OPTIMIZATIONS
--- ─────────────────────────────────────────────
-create table if not exists public.optimizations (
+-- 4. REVIEW QUEUE
+create table if not exists public.review_queue (
   id              uuid primary key default uuid_generate_v4(),
-  user_id         uuid not null references public.profiles(id) on delete cascade,
-  product_id      uuid references public.products(id) on delete set null,
-  box_id          uuid references public.box_catalog(id) on delete set null,
-  status          text not null default 'pending' check (status in ('pending', 'processing', 'completed', 'failed')),
-  -- AI inputs snapshot
-  product_snapshot  jsonb,
-  -- AI full response
-  ai_response       jsonb,
-  -- Parsed key metrics
-  recommended_box   text,
-  efficiency_score  numeric(5, 2),   -- 0–100
-  space_utilization numeric(5, 2),   -- 0–100 %
-  cost_savings_usd  numeric(10, 4),
-  co2_savings_kg    numeric(10, 4),
-  -- Model used
-  ai_model          text default 'anthropic/claude-3.5-sonnet',
-  error_message     text,
-  created_at      timestamptz not null default now(),
-  completed_at    timestamptz
+  inspection_id   uuid references public.inspections(id) on delete cascade,
+  line_id         uuid references public.production_lines(id) on delete cascade,
+  reason          text,
+  reviewed_by     uuid references public.profiles(id),
+  review_decision text check (review_decision in ('confirmed_defect', 'false_positive', 'pending')),
+  reviewed_at     timestamptz,
+  created_at      timestamptz default now()
 );
 
--- ─────────────────────────────────────────────
--- 5. ORDERS
--- ─────────────────────────────────────────────
-create table if not exists public.orders (
+-- 5. AI ANALYSES
+create table if not exists public.ai_analyses (
   id              uuid primary key default uuid_generate_v4(),
-  user_id         uuid not null references public.profiles(id) on delete cascade,
-  product_id      uuid references public.products(id) on delete set null,
-  optimization_id uuid references public.optimizations(id) on delete set null,
-  box_id          uuid references public.box_catalog(id) on delete set null,
-  status          text not null default 'pending' check (status in ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
-  tracking_number text,
-  carrier         text,
-  quantity        int not null default 1,
-  total_cost_usd  numeric(10, 4),
-  destination     jsonb,   -- { address, city, country, zip }
-  shipped_at      timestamptz,
-  delivered_at    timestamptz,
-  created_at      timestamptz not null default now(),
-  updated_at      timestamptz not null default now()
+  line_id         uuid references public.production_lines(id) on delete cascade,
+  model_used      text check (model_used in ('claude', 'openai')),
+  period_from     timestamptz,
+  period_to       timestamptz,
+  summary         text,
+  anomalies       jsonb,
+  recommendations jsonb,
+  health_score    integer check (health_score >= 0 and health_score <= 100),
+  raw_response    jsonb,
+  latency_ms      integer,
+  created_at      timestamptz default now()
 );
 
--- ─────────────────────────────────────────────
+-- 6. ALERT CONFIGS
+create table if not exists public.alert_configs (
+  id              uuid primary key default uuid_generate_v4(),
+  line_id         uuid references public.production_lines(id) on delete cascade,
+  rejection_rate_threshold float default 0.03,
+  confidence_threshold float default 0.70,
+  alert_email     text,
+  alert_webhook_url text,
+  is_active       boolean default true,
+  created_at      timestamptz default now()
+);
+
+-- 7. ALERT HISTORY
+create table if not exists public.alert_history (
+  id              uuid primary key default uuid_generate_v4(),
+  line_id         uuid references public.production_lines(id) on delete cascade,
+  alert_type      text,
+  message         text,
+  triggered_at    timestamptz default now(),
+  acknowledged    boolean default false,
+  acknowledged_by uuid references public.profiles(id),
+  created_at      timestamptz default now()
+);
+
 -- INDEXES
--- ─────────────────────────────────────────────
-create index if not exists idx_products_user_id        on public.products(user_id);
-create index if not exists idx_optimizations_user_id   on public.optimizations(user_id);
-create index if not exists idx_optimizations_product   on public.optimizations(product_id);
-create index if not exists idx_orders_user_id          on public.orders(user_id);
-create index if not exists idx_orders_status           on public.orders(status);
-create index if not exists idx_profiles_stripe_cust    on public.profiles(stripe_customer_id);
+create index if not exists idx_inspections_line_timestamp on public.inspections(line_id, timestamp desc);
+create index if not exists idx_inspections_status on public.inspections(status);
 
--- ─────────────────────────────────────────────
--- TRIGGERS — updated_at
--- ─────────────────────────────────────────────
-create or replace function public.handle_updated_at()
-returns trigger language plpgsql as $$
+-- RLS
+alter table public.profiles enable row level security;
+alter table public.production_lines enable row level security;
+alter table public.inspections enable row level security;
+alter table public.review_queue enable row level security;
+alter table public.ai_analyses enable row level security;
+
+drop policy if exists "Users can view own profile"     on public.profiles;
+drop policy if exists "Users can update own profile"   on public.profiles;
+drop policy if exists "Users can view own lines"        on public.production_lines;
+drop policy if exists "Users can view own inspections"  on public.inspections;
+drop policy if exists "Users can view own analyses"     on public.ai_analyses;
+
+create policy "Users can view own profile"     on public.profiles      for select using (auth.uid() = id);
+create policy "Users can update own profile"   on public.profiles      for update using (auth.uid() = id);
+create policy "Users can view own lines"        on public.production_lines for select using (auth.uid() = owner_id);
+create policy "Users can view own inspections"  on public.inspections   for select using (
+  exists (select 1 from public.production_lines where id = line_id and owner_id = auth.uid())
+);
+create policy "Users can view own analyses"     on public.ai_analyses   for select using (
+  exists (select 1 from public.production_lines where id = line_id and owner_id = auth.uid())
+);
+
+-- RPC: Get Line Summary
+create or replace function get_line_summary(p_line_id uuid, p_from timestamptz, p_to timestamptz)
+returns json as $$
+declare
+  result json;
 begin
-  new.updated_at = now();
+  select json_build_object(
+    'total_units', count(*),
+    'total_defects', count(*) filter (where status = 'rejected'),
+    'defect_rate', count(*) filter (where status = 'rejected')::float / nullif(count(*), 0),
+    'avg_confidence', avg(confidence_score)
+  ) into result
+  from public.inspections
+  where line_id = p_line_id and timestamp between p_from and p_to;
+  return result;
+end;
+$$ language plpgsql security definer;
+
+-- Trigger: On new inspection
+-- (Simplified for demo)
+create or replace function notify_inspection() returns trigger as $$
+begin
+  perform pg_notify('inspections', row_to_json(new)::text);
   return new;
 end;
-$$;
+$$ language plpgsql;
 
-drop trigger if exists trg_profiles_updated_at on public.profiles;
-create trigger trg_profiles_updated_at
-  before update on public.profiles
-  for each row execute procedure public.handle_updated_at();
+drop trigger if exists trg_notify_inspection on public.inspections;
 
-drop trigger if exists trg_products_updated_at on public.products;
-create trigger trg_products_updated_at
-  before update on public.products
-  for each row execute procedure public.handle_updated_at();
-
-drop trigger if exists trg_orders_updated_at on public.orders;
-create trigger trg_orders_updated_at
-  before update on public.orders
-  for each row execute procedure public.handle_updated_at();
-
--- ─────────────────────────────────────────────
--- TRIGGER — auto-create profile on signup
--- ─────────────────────────────────────────────
-create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer set search_path = public as $$
-begin
-  insert into public.profiles (id, email, full_name, avatar_url, company, plan)
-  values (
-    new.id,
-    new.email,
-    new.raw_user_meta_data ->> 'full_name',
-    new.raw_user_meta_data ->> 'avatar_url',
-    new.raw_user_meta_data ->> 'company_name',
-    'free'
-  )
-  on conflict (id) do nothing;
-  return new;
-end;
-$$;
-
-drop trigger if exists trg_on_auth_user_created on auth.users;
-create trigger trg_on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
-
--- ─────────────────────────────────────────────
--- ROW-LEVEL SECURITY
--- ─────────────────────────────────────────────
-alter table public.profiles       enable row level security;
-alter table public.products       enable row level security;
-alter table public.optimizations  enable row level security;
-alter table public.orders         enable row level security;
-alter table public.box_catalog    enable row level security;
-
--- PROFILES
-drop policy if exists "Users can view own profile" on public.profiles;
-create policy "Users can view own profile"
-  on public.profiles for select using (auth.uid() = id);
-
-drop policy if exists "Users can update own profile" on public.profiles;
-create policy "Users can update own profile"
-  on public.profiles for update using (auth.uid() = id);
-
--- PRODUCTS
-drop policy if exists "Users can view own products" on public.products;
-create policy "Users can view own products"
-  on public.products for select using (auth.uid() = user_id);
-
-drop policy if exists "Users can insert own products" on public.products;
-create policy "Users can insert own products"
-  on public.products for insert with check (auth.uid() = user_id);
-
-drop policy if exists "Users can update own products" on public.products;
-create policy "Users can update own products"
-  on public.products for update using (auth.uid() = user_id);
-
-drop policy if exists "Users can delete own products" on public.products;
-create policy "Users can delete own products"
-  on public.products for delete using (auth.uid() = user_id);
-
--- OPTIMIZATIONS
-drop policy if exists "Users can view own optimizations" on public.optimizations;
-create policy "Users can view own optimizations"
-  on public.optimizations for select using (auth.uid() = user_id);
-
-drop policy if exists "Users can insert own optimizations" on public.optimizations;
-create policy "Users can insert own optimizations"
-  on public.optimizations for insert with check (auth.uid() = user_id);
-
--- ORDERS
-drop policy if exists "Users can view own orders" on public.orders;
-create policy "Users can view own orders"
-  on public.orders for select using (auth.uid() = user_id);
-
-drop policy if exists "Users can insert own orders" on public.orders;
-create policy "Users can insert own orders"
-  on public.orders for insert with check (auth.uid() = user_id);
-
-drop policy if exists "Users can update own orders" on public.orders;
-create policy "Users can update own orders"
-  on public.orders for update using (auth.uid() = user_id);
-
--- BOX CATALOG (public read, admin write)
-drop policy if exists "Anyone can view box catalog" on public.box_catalog;
-create policy "Anyone can view box catalog"
-  on public.box_catalog for select using (true);
-
--- ─────────────────────────────────────────────
--- SEED: Box Catalog
--- ─────────────────────────────────────────────
-insert into public.box_catalog (name, supplier, sku, length_cm, width_cm, height_cm, max_weight_kg, cost_usd, material, eco_certified) values
-  ('Micro Box S1',    'BoxCo',    'BC-S1',  15, 10,  8,  2,    0.35, 'corrugated', false),
-  ('Small Box S2',    'BoxCo',    'BC-S2',  20, 15, 10,  5,    0.55, 'corrugated', false),
-  ('Medium Box M1',   'EcoPack',  'EP-M1',  30, 20, 15, 10,    0.85, 'recycled',   true),
-  ('Medium Box M2',   'EcoPack',  'EP-M2',  35, 25, 20, 15,    1.10, 'recycled',   true),
-  ('Large Box L1',    'ShipSafe', 'SS-L1',  45, 35, 25, 20,    1.45, 'corrugated', false),
-  ('Amazon A1',       'Amazon',   'AMZ-A1', 15.2, 10.2, 10.2, 3,  0.45, 'premium-corrugated', false),
-  ('Amazon A2',       'Amazon',   'AMZ-A2', 20.3, 15.2, 10.2, 5,  0.65, 'premium-corrugated', false),
-  ('Amazon B1',       'Amazon',   'AMZ-B1', 30.5, 25.4, 20.3, 10, 0.95, 'premium-corrugated', false),
-  ('Flipkart F1',     'Flipkart', 'FK-F1',  17, 13, 5,  2,    0.30, 'recycled-kraft', true),
-  ('Flipkart F2',     'Flipkart', 'FK-F2',  24, 16, 7,  4,    0.50, 'recycled-kraft', true),
-  ('Flipkart F3',     'Flipkart', 'FK-F3',  30, 22, 10, 8,    0.75, 'recycled-kraft', true),
-  ('Mailer M1',       'MailPro',  'MP-M1',  30, 22,  5,  2,    0.40, 'poly-mailer',false)
-on conflict (sku) do nothing;
+create trigger trg_notify_inspection
+after insert on public.inspections
+for each row execute function notify_inspection();

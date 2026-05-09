@@ -1,270 +1,220 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { DollarSign, Package, Zap, Percent, TrendingUp, TrendingDown, ArrowRight, Clock, CheckCircle2, AlertCircle, Box, UploadCloud } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Package, Zap, TrendingUp, ArrowRight, CheckCircle2, AlertCircle, Box, Brain, Sparkles, Activity } from 'lucide-react'
 import Link from 'next/link'
-import { motion, animate } from 'framer-motion'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import { useOptimizationStore } from '@/lib/store/optimizationStore'
-
-// Animated Counter
-function CountUp({ value, prefix = '', suffix = '', decimals = 0 }: { value: number, prefix?: string, suffix?: string, decimals?: number }) {
-  const [displayValue, setDisplayValue] = useState(0)
-  
-  useEffect(() => {
-    const controls = animate(0, value, {
-      duration: 1.2,
-      ease: "easeOut",
-      onUpdate: (v) => setDisplayValue(v)
-    })
-    return controls.stop
-  }, [value])
-  
-  return (
-    <span>
-      {prefix}
-      {displayValue.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}
-      {suffix}
-    </span>
-  )
-}
+import { motion, AnimatePresence } from 'framer-motion'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
+import { useInspectionFeed } from '@/lib/hooks/useInspectionFeed'
+import { StaggerContainer, StaggerItem, CountUpNumber } from '@/components/animations'
 
 export default function DashboardClient() {
-  const { results: optResults, totalSaved: optTotalSaved, itemsProcessed: optItemsProcessed, lastRun: optLastRun } = useOptimizationStore()
+  const { inspections, loading: feedLoading } = useInspectionFeed()
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [lastAnalysis, setLastAnalysis] = useState<any>(null)
 
-  // Generate dynamic shipment data from store
-  const shipmentData = useMemo(() => {
-    if (optResults.length === 0) return []
-    return [
-      { date: 'W1', volume: Math.floor(optItemsProcessed * 0.1) },
-      { date: 'W2', volume: Math.floor(optItemsProcessed * 0.25) },
-      { date: 'W3', volume: Math.floor(optItemsProcessed * 0.3) },
-      { date: 'W4', volume: Math.floor(optItemsProcessed * 0.35) },
-    ]
-  }, [optResults, optItemsProcessed])
-
-  // Generate dynamic cost breakdown based on total cost before vs after
-  const costData = useMemo(() => {
-    if (optResults.length === 0) return []
-    const totalCostAfter = optResults.reduce((sum, r) => sum + (r.cost_after || 0), 0) || 1000 // Fallback if no cost data
+  const stats = useMemo(() => {
+    const total = inspections.length
+    const defects = inspections.filter(i => i.status === 'rejected').length
+    const rate = total > 0 ? (defects / total) * 100 : 0
+    const avgConf = total > 0 ? inspections.reduce((acc, i) => acc + (i.confidence_score || 0), 0) / total : 0
     
-    return [
-      { name: 'Carrier Fees', value: totalCostAfter * 0.6, color: '#4361EE' },
-      { name: 'Materials', value: totalCostAfter * 0.25, color: '#06b6d4' },
-      { name: 'Labor', value: totalCostAfter * 0.10, color: '#22c55e' },
-      { name: 'Void Fill', value: totalCostAfter * 0.05, color: '#f59e0b' },
-    ]
-  }, [optResults])
+    return { total, defects, rate, avgConf }
+  }, [inspections])
 
-  const activities = useMemo(() => {
-    if (optResults.length === 0) return []
-    return optResults.slice(-4).reverse().map((r, i) => ({
-      id: `OPT-${r.product_id || 1000 + i}`,
-      action: `Optimized: ${r.product_name.substring(0, 20)}`,
-      time: 'Just now',
-      status: r.status === 'success' ? 'Completed' : 'Failed',
-      icon: r.status === 'success' ? CheckCircle2 : AlertCircle,
-      color: r.status === 'success' ? 'text-green-500' : 'text-red-500',
-      bg: r.status === 'success' ? 'bg-green-500/10' : 'bg-red-500/10'
+  const chartData = useMemo(() => {
+    return inspections.slice().reverse().map((i, idx) => ({
+      name: idx,
+      confidence: i.confidence_score * 100
     }))
-  }, [optResults])
+  }, [inspections])
 
-  const avgVoidReduction = useMemo(() => {
-    if (optResults.length === 0) return 0
-    const sum = optResults.reduce((acc, r) => acc + (r.void_reduction || 0), 0)
-    return sum / optResults.length
-  }, [optResults])
-
-  const kpis = [
-    { label: 'Total Items Optimized', value: optItemsProcessed || 0, icon: Package, color: '#4361EE', trend: optItemsProcessed > 0 ? '+12%' : '0%', isPositive: true },
-    { label: 'Total Cost Saved', value: optTotalSaved || 0, icon: DollarSign, color: '#22c55e', trend: optTotalSaved > 0 ? '+8.4%' : '0%', isPositive: true, prefix: '$' },
-    { label: 'Avg Void Reduction', value: avgVoidReduction, icon: Zap, color: '#06b6d4', trend: avgVoidReduction > 0 ? '+2.1%' : '0%', isPositive: true, suffix: '%', decimals: 1 },
-    { label: 'Items Processed', value: optItemsProcessed || 0, icon: Box, color: '#f59e0b', trend: '0%', isPositive: true }
-  ]
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  const runAIAnalysis = async () => {
+    setIsAnalyzing(true)
+    try {
+      const res = await fetch('/api/ai/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          line_id: inspections[0]?.line_id || 'demo-line',
+          data_sample: inspections.slice(0, 10)
+        })
+      })
+      const data = await res.json()
+      setLastAnalysis(data)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' as const } }
-  }
-
-  // --- EMPTY STATE REMOVED AS PER USER REQUEST ---
-  // Dashboard now shows nil data instead of a placeholder screen
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-10">
+    <div className="max-w-7xl mx-auto space-y-6 pb-10">
       
-      {/* KPIs Row */}
-      <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpis.map((kpi, i) => (
-          <motion.div 
-            key={i} variants={itemVariants}
-            className="relative bg-[#0f0f1a] border border-white/[0.06] rounded-[20px] p-6 overflow-hidden group hover:-translate-y-1 transition-all duration-300"
-            style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            
-            <div className="flex justify-between items-start mb-4 relative z-10">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg" style={{ backgroundColor: `${kpi.color}15`, border: `1px solid ${kpi.color}30` }}>
-                <kpi.icon className="w-6 h-6" style={{ color: kpi.color }} />
-              </div>
-              <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg ${kpi.isPositive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                {kpi.isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                {kpi.trend}
+      {/* KPI Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Units Inspected', value: stats.total, icon: Package, color: '#00FFD1' },
+          { label: 'Defects Caught', value: stats.defects, icon: AlertCircle, color: '#FF4444' },
+          { label: 'Yield Rate', value: 100 - stats.rate, suffix: '%', icon: TrendingUp, color: '#22c55e' },
+          { label: 'Avg Confidence', value: stats.avgConf * 100, suffix: '%', icon: Brain, color: '#4361EE' }
+        ].map((kpi, i) => (
+          <div key={i} className="glass p-6 rounded-2xl border-l-4" style={{ borderLeftColor: kpi.color }}>
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${kpi.color}15` }}>
+                <kpi.icon className="w-5 h-5" style={{ color: kpi.color }} />
               </div>
             </div>
-            
-            <div className="relative z-10">
-              <p className="text-sm font-medium text-gray-400 mb-1">{kpi.label}</p>
-              <h3 className="text-3xl font-black text-white tracking-tight">
-                <CountUp value={kpi.value} prefix={kpi.prefix} suffix={kpi.suffix} decimals={kpi.decimals} />
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{kpi.label}</p>
+            <h3 className="text-2xl font-bold text-white font-mono">
+              <CountUpNumber value={kpi.value} suffix={kpi.suffix} decimals={kpi.value % 1 !== 0 ? 1 : 0} />
+            </h3>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        
+        {/* Main Feed & Chart */}
+        <div className="lg:col-span-8 space-y-6">
+          <div className="glass p-6 rounded-3xl h-[400px]">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                <Activity className="w-4 h-4 text-[#00FFD1]" /> Live Confidence Stream
               </h3>
             </div>
-          </motion.div>
-        ))}
-      </motion.div>
+            <div className="h-full w-full pb-10">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="colorConf" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00FFD1" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#00FFD1" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                  <XAxis hide />
+                  <YAxis domain={[0, 100]} stroke="rgba(255,255,255,0.2)" fontSize={10} />
+                  <Area type="monotone" dataKey="confidence" stroke="#00FFD1" fillOpacity={1} fill="url(#colorConf)" strokeWidth={2} isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
 
-      {/* Charts Row */}
-      <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid lg:grid-cols-12 gap-8">
-        
-        {/* Line Chart */}
-        <motion.div variants={itemVariants} className="lg:col-span-7 bg-[#0f0f1a] border border-white/[0.06] rounded-[24px] p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h3 className="text-lg font-bold text-white">Cumulative Optimization</h3>
-              <p className="text-sm text-gray-500">Based on processed dataset</p>
+          <div className="glass rounded-3xl overflow-hidden">
+            <div className="p-6 border-b border-white/5 flex justify-between items-center">
+              <h3 className="text-sm font-black text-white uppercase tracking-widest">Real-time Inspection Log</h3>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest">Live</span>
+              </div>
+            </div>
+            <div className="max-h-[400px] overflow-y-auto no-scrollbar">
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 bg-[#0A0A0F] z-10">
+                  <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5">
+                    <th className="px-6 py-4">Unit ID</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4">Confidence</th>
+                    <th className="px-6 py-4">Time</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  <AnimatePresence initial={false}>
+                    {inspections.map((item) => (
+                      <motion.tr 
+                        key={item.id} 
+                        initial={{ opacity: 0, x: -10 }} 
+                        animate={{ opacity: 1, x: 0 }}
+                        className="hover:bg-white/[0.02] transition-colors"
+                      >
+                        <td className="px-6 py-4 font-mono font-bold text-gray-300">{item.unit_id}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                            item.status === 'passed' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 font-mono text-[#00FFD1]">{(item.confidence_score * 100).toFixed(1)}%</td>
+                        <td className="px-6 py-4 text-xs text-gray-500">{new Date(item.timestamp).toLocaleTimeString()}</td>
+                      </motion.tr>
+                    ))}
+                  </AnimatePresence>
+                </tbody>
+              </table>
+              {inspections.length === 0 && (
+                <div className="p-20 text-center text-gray-600 italic">Waiting for incoming data stream...</div>
+              )}
             </div>
           </div>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={shipmentData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4361EE" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#4361EE" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="date" stroke="rgba(255,255,255,0.2)" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="rgba(255,255,255,0.2)" fontSize={12} tickLine={false} axisLine={false} />
-                <RechartsTooltip 
-                  contentStyle={{ backgroundColor: '#0f0f1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                  itemStyle={{ color: '#fff' }}
-                />
-                <Area type="monotone" dataKey="volume" stroke="#4361EE" strokeWidth={3} fillOpacity={1} fill="url(#colorVolume)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-
-        {/* Donut Chart */}
-        <motion.div variants={itemVariants} className="lg:col-span-5 bg-[#0f0f1a] border border-white/[0.06] rounded-[24px] p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h3 className="text-lg font-bold text-white">Estimated Cost Breakdown</h3>
-              <p className="text-sm text-gray-500">Post-optimization</p>
-            </div>
-          </div>
-          <div className="h-[300px] w-full flex flex-col items-center">
-            <ResponsiveContainer width="100%" height="80%">
-              <PieChart>
-                <Pie data={costData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                  {costData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <RechartsTooltip 
-                  contentStyle={{ backgroundColor: '#0f0f1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                  itemStyle={{ color: '#fff' }}
-                  formatter={(value: any) => `$${Number(value || 0).toFixed(2)}`}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            
-            <div className="w-full grid grid-cols-2 gap-4 mt-2">
-              {costData.map((item, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                  <span className="text-xs text-gray-400 truncate">{item.name}</span>
-                  <span className="text-xs font-bold text-white ml-auto">${item.value.toLocaleString(undefined, {maximumFractionDigits:0})}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      </motion.div>
-
-      {/* Latest Optimization Run Widget */}
-      {optLastRun && (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-          className="bg-gradient-to-r from-[#4361EE]/10 to-[#3B82F6]/10 border border-[#4361EE]/20 rounded-[24px] p-6 flex flex-col md:flex-row items-center justify-between gap-6"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-[#4361EE] rounded-2xl flex items-center justify-center shadow-lg shadow-[#4361EE]/40">
-              <Zap className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-white">Latest Optimization Run</h3>
-              <p className="text-sm text-gray-400">Completed {new Date(optLastRun).toLocaleTimeString()}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-8">
-            <div className="text-center">
-              <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Items</p>
-              <p className="text-xl font-black text-white">{optItemsProcessed}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Savings</p>
-              <p className="text-xl font-black text-green-400">${optTotalSaved.toFixed(2)}</p>
-            </div>
-            <Link href="/dashboard/optimization" className="bg-white/10 hover:bg-white/20 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all border border-white/10">
-              View Full Report
-            </Link>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Activity Feed */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.5 }}
-        className="bg-[#0f0f1a] border border-white/[0.06] rounded-[24px] p-6"
-      >
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-white">Recent Activity</h3>
-          <Link href="/dashboard/optimization" className="text-sm font-medium text-[#4361EE] hover:text-[#344FDA] transition-colors flex items-center gap-1">
-            Run More Optimizations <ArrowRight className="w-4 h-4" />
-          </Link>
         </div>
-        
-        <div className="space-y-4">
-          {activities.map((activity, i) => (
-            <div key={i} className="flex items-center justify-between p-4 rounded-2xl hover:bg-white/[0.02] transition-colors border border-transparent hover:border-white/[0.05]">
-              <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-xl ${activity.bg} flex items-center justify-center shrink-0`}>
-                  <activity.icon className={`w-5 h-5 ${activity.color}`} />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white mb-1">{activity.id}</h4>
-                  <p className="text-xs text-gray-400">{activity.action}</p>
-                </div>
+
+        {/* AI Sidebar */}
+        <div className="lg:col-span-4 space-y-6">
+          <div className="bg-gradient-to-br from-[#185FA5]/20 to-[#00FFD1]/20 border border-[#00FFD1]/20 rounded-3xl p-8 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Brain className="w-20 h-20 text-[#00FFD1]" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#00FFD1]" /> Claude AI Insights
+            </h3>
+            <p className="text-xs text-gray-400 mb-8 leading-relaxed">Run a deep analysis on the last 500 units to identify hidden patterns.</p>
+            
+            <button 
+              onClick={runAIAnalysis}
+              disabled={isAnalyzing || inspections.length === 0}
+              className="w-full py-4 bg-[#00FFD1] text-[#0A0A0F] rounded-xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] transition-all disabled:opacity-50"
+            >
+              {isAnalyzing ? "Processing Data..." : "Generate Analysis"}
+            </button>
+
+            <AnimatePresence>
+              {lastAnalysis && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-8 space-y-6">
+                  <div className="p-4 bg-[#0A0A0F]/50 rounded-2xl border border-white/5">
+                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Summary</div>
+                    <p className="text-xs text-gray-300 leading-relaxed">{lastAnalysis.summary}</p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Recommendations</div>
+                    {lastAnalysis.recommendations?.map((r: string, i: number) => (
+                      <div key={i} className="flex gap-2 text-xs text-gray-400">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#00FFD1] shrink-0 mt-1" />
+                        {r}
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="glass p-8 rounded-3xl">
+            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6">System Health</h3>
+            <div className="space-y-6">
+              <div className="flex justify-between items-end">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Model Latency</span>
+                <span className="text-sm font-bold text-white">18ms</span>
+              </div>
+              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full w-[85%] bg-[#00FFD1]" />
               </div>
               
-              <div className="flex flex-col items-end gap-2">
-                <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${activity.bg} ${activity.color}`}>
-                  {activity.status}
-                </div>
-                <span className="text-xs text-gray-500">{activity.time}</span>
+              <div className="flex justify-between items-end">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Edge Uptime</span>
+                <span className="text-sm font-bold text-white">99.98%</span>
+              </div>
+              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full w-[99%] bg-[#00FFD1]" />
               </div>
             </div>
-          ))}
+          </div>
         </div>
-      </motion.div>
-      
+
+      </div>
     </div>
   )
 }
