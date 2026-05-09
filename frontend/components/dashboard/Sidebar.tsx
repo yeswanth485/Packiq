@@ -25,7 +25,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 const navItems = [
   { href: '/dashboard',             label: 'Dashboard',         icon: LayoutDashboard },
   { href: '/dashboard/optimization',label: 'Optimization',      icon: Zap },
-  { href: '/dashboard/orders',      label: 'Shipments',         icon: ShoppingCart },
+  { href: '/dashboard/orders',      label: 'Orders',            icon: ShoppingCart },
   { href: '/dashboard/analytics',   label: 'Analytics',         icon: TrendingUp },
   { href: '/dashboard/catalog',     label: 'Box Catalog',       icon: Box },
   { href: '/dashboard/subscription',label: 'Subscription',      icon: CreditCard },

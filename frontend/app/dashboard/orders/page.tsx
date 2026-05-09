@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
 import Box3DViewer from '@/components/dashboard/Box3DViewer'
 
-export default function ShipmentsPage() {
+export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null)
   const { results: optResults } = useOptimizationStore()
@@ -26,11 +26,11 @@ export default function ShipmentsPage() {
       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-1">Shipments</h1>
-          <p className="text-gray-500 text-sm font-medium">Manage logistics and verify packing accuracy.</p>
+          <h1 className="text-3xl font-bold text-white mb-1">Orders</h1>
+          <p className="text-gray-500 text-sm font-medium">Manage order logistics and verify packing accuracy.</p>
         </div>
         <button className="bg-[#00FFD1] text-[#0A0A0F] px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-[0_0_20px_rgba(0,255,209,0.2)] flex items-center gap-2 hover:scale-105 transition-all">
-          <Plus className="w-4 h-4" /> New Shipment
+          <Plus className="w-4 h-4" /> New Order
         </button>
       </div>
 
