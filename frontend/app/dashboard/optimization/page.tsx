@@ -28,56 +28,6 @@ export default function OptimizationPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { setResults, setRunning } = useOptimizationStore()
 
-  const simulateOptimization = (data: any[]): OptimizationResult[] => {
-    return data.map((row) => {
-      const productPrice = parseFloat(row.price || row['Product Price'] || row['price'] || '100')
-      const weight = parseFloat(row.weight || row['Product Weight'] || row['weight'] || '1.5')
-      const dimsStr = row.dims || row['Product Dimensions'] || row['dimensions'] || '10x10x10'
-      const dims = dimsStr.split('x').map(Number)
-      
-      const l = dims[0] || 10, w = dims[1] || 10, h = dims[2] || 10
-      const volume = l * w * h
-      
-      // Better logic: find the SMALLEST box that fits all dimensions (considering rotation)
-      const fits = (box: any, pl: number, pw: number, ph: number) => {
-        const p = [pl, pw, ph].sort((a, b) => a - b)
-        const b = [box.l, box.w, box.h].sort((a, b) => a - b)
-        return p[0] <= b[0] && p[1] <= b[1] && p[2] <= b[2]
-      }
-
-      // Find original box (randomly pick a larger one to simulate waste)
-      const originalBox = ECOMMERCE_BOXES[Math.min(ECOMMERCE_BOXES.length - 1, 4)]
-      
-      // Find the best fit (cheapest that fits)
-      let optimizedBox = ECOMMERCE_BOXES
-        .filter(box => fits(box, l, w, h))
-        .sort((a, b) => a.cost - b.cost)[0]
-
-      if (!optimizedBox) optimizedBox = ECOMMERCE_BOXES[ECOMMERCE_BOXES.length - 1] // Fallback to largest
-      
-      const originalBoxCost = originalBox.cost
-      const optimizedBoxCost = optimizedBox.cost
-      const savings = originalBoxCost - optimizedBoxCost
-      
-      return {
-        product_id: row.sku || row['SKU'] || row['sku'] || `SKU-${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
-        product_name: row.name || row['Product Name'] || row['name'] || 'Generic Product',
-        product_price: productPrice,
-        product_dims: `${l}x${w}x${h}`,
-        product_weight: weight,
-        original_box: originalBox.name,
-        original_box_cost: originalBoxCost,
-        optimized_box: optimizedBox.name,
-        optimized_box_cost: optimizedBoxCost,
-        cost_before: productPrice + originalBoxCost + (weight * 2.5), 
-        cost_after: productPrice + optimizedBoxCost + (weight * 2.5),
-        savings: Math.max(0, savings),
-        void_reduction: Math.floor(((originalBox.l * originalBox.w * originalBox.h - volume) / (originalBox.l * originalBox.w * originalBox.h)) * 100),
-        status: 'success'
-      }
-    })
-  }
-
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -122,20 +72,63 @@ export default function OptimizationPage() {
     setIsOptimizing(true)
     setRunning()
     
-    // Step-by-step processing animation
-    for (let i = 0; i < steps.length; i++) {
+    // Simulate initial steps for UX
+    for (let i = 0; i < 3; i++) {
       setProcessingStep(i)
-      await new Promise(r => setTimeout(r, 800))
+      await new Promise(r => setTimeout(r, 600))
     }
     
-    const results = simulateOptimization(data)
-    setResults(results, [])
-    setIsOptimizing(false)
-    toast.success('Optimization complete! Redirecting to Orders...')
-    
-    setTimeout(() => {
-      router.push('/dashboard/orders')
-    }, 1500)
+    try {
+      const response = await fetch('/api/optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products: data })
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+
+      setProcessingStep(3)
+      const resData = await response.json()
+      
+      setProcessingStep(4)
+      await new Promise(r => setTimeout(r, 600))
+
+      if (resData.results && resData.results.length > 0) {
+        // Map API results to the format the store expects
+        const mappedResults: OptimizationResult[] = resData.results.map((r: any) => ({
+          product_id: r.product_id,
+          product_name: r.product_name,
+          product_price: r.cost_before,
+          product_dims: data.find((d: any) => d.sku === r.product_id || d['SKU'] === r.product_id)?.dims || 'N/A',
+          product_weight: parseFloat(data.find((d: any) => d.sku === r.product_id || d['SKU'] === r.product_id)?.weight || '0'),
+          original_box: r.original_box || 'Unknown',
+          original_box_cost: 0,
+          optimized_box: r.optimized_box,
+          optimized_box_cost: 0,
+          cost_before: r.cost_before,
+          cost_after: r.cost_after,
+          savings: r.savings,
+          void_reduction: r.space_utilization || 0,
+          status: 'success'
+        }))
+        
+        setResults(mappedResults, resData.failed || [])
+        toast.success(`Optimized ${resData.results.length} items! Redirecting to Orders...`)
+        
+        setTimeout(() => {
+          router.push('/dashboard/orders')
+        }, 1500)
+      } else {
+        toast.error('No products were successfully optimized.')
+        setIsOptimizing(false)
+      }
+    } catch (err: any) {
+      console.error('Optimization failed:', err)
+      toast.error(err.message || 'Optimization failed')
+      setIsOptimizing(false)
+    }
   }
 
   return (

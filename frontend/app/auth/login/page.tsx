@@ -13,9 +13,9 @@ const inter = Inter({ subsets: ['latin'] })
 const syne = Syne({ subsets: ['latin'] })
 
 const FEATURES = [
-  { icon: Zap, text: "99.3% defect detection accuracy", color: "#00FFD1" },
-  { icon: Brain, text: "AI training in under 72 hours", color: "#4361EE" },
-  { icon: ShieldCheck, text: "BIS & ISO compliance ready", color: "#22c55e" }
+  { icon: Zap, text: "Save up to 32% on DIM weight", color: "#00FFD1" },
+  { icon: Boxes, text: "AI FFD Spatial Optimization", color: "#4361EE" },
+  { icon: ShieldCheck, text: "Automated Box Selection", color: "#22c55e" }
 ]
 
 const FloatingElements = () => {
@@ -116,7 +116,7 @@ export default function LoginPage() {
           </motion.div>
 
           <h1 className={`${syne.className} text-white font-bold text-[56px] leading-tight mb-12`}>
-            Pack<span className="text-[#00FFD1]">AI.</span>
+            Pack<span className="text-[#00FFD1]">IQ.</span>
           </h1>
 
           <div className="h-20 flex items-center justify-center">
@@ -150,7 +150,7 @@ export default function LoginPage() {
         >
           <div className="text-center mb-10">
             <h2 className={`${syne.className} text-4xl font-bold text-white mb-3`}>Sign In</h2>
-            <p className="text-gray-400 text-base">Access your production control center.</p>
+            <p className="text-gray-400 text-base">Access your optimization center.</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
