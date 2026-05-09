@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Loader2, Mail, Lock, ArrowRight, CheckCircle2, Eye, EyeOff, Box, Zap, Brain, ShieldCheck } from 'lucide-react'
+import { Loader2, Mail, Lock, ArrowRight, CheckCircle2, Eye, EyeOff, Box, Zap, Brain, ShieldCheck, Boxes } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -112,11 +112,11 @@ export default function LoginPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="w-16 h-16 bg-[#00FFD1] rounded-2xl flex items-center justify-center mb-10 mx-auto shadow-[0_0_30px_rgba(0,255,209,0.3)]"
           >
-            <Box className="w-10 h-10 text-[#0A0A0F]" />
+            <Boxes className="w-10 h-10 text-[#0A0A0F]" />
           </motion.div>
 
           <h1 className={`${syne.className} text-white font-bold text-[56px] leading-tight mb-12`}>
-            Precision at <br /><span className="text-[#00FFD1]">Scale.</span>
+            Pack<span className="text-[#00FFD1]">AI.</span>
           </h1>
 
           <div className="h-20 flex items-center justify-center">

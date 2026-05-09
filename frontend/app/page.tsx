@@ -12,7 +12,7 @@ import { TestimonialsSection } from '@/components/landing/TestimonialsSection'
 import { FinalCTASection, Footer } from '@/components/landing/FinalCTASection'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Box, Menu, X } from 'lucide-react'
+import { Box, Menu, X, Boxes } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function LandingPage() {
@@ -34,22 +34,23 @@ export default function LandingPage() {
       }`}>
         <div className="max-w-[1200px] mx-auto px-6 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 z-50 group">
-            <div className="w-10 h-10 rounded-xl bg-[#00FFD1] flex items-center justify-center group-hover:rotate-12 transition-transform">
-              <Box className="w-6 h-6 text-[#0A0A0F]" />
+            <div className="w-10 h-10 rounded-xl bg-[#00FFD1] flex items-center justify-center group-hover:rotate-12 transition-transform shadow-[0_0_20px_rgba(0,255,209,0.4)]">
+              <Boxes className="w-6 h-6 text-[#0A0A0F]" />
             </div>
-            <span className="font-bold text-3xl font-syne text-white tracking-tighter">PackIQ</span>
+            <span className="font-bold text-3xl font-syne text-white tracking-tighter">PackAI</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-12 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+            <a href="#features" className="hover:text-[#00FFD1] transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-[#00FFD1] transition-colors">How it works</a>
-            <a href="#roi" className="hover:text-[#00FFD1] transition-colors">ROI Calculator</a>
-            <a href="#tech" className="hover:text-[#00FFD1] transition-colors">Technology</a>
+            <a href="#suppliers" className="hover:text-[#00FFD1] transition-colors">Suppliers</a>
+            <a href="#pricing" className="hover:text-[#00FFD1] transition-colors">Pricing</a>
             <Link href="/auth/login" className="hover:text-white transition-colors">Sign In</Link>
             <Link 
               href="/auth/signup" 
-              className="bg-white text-[#0A0A0F] px-8 py-4 rounded-xl hover:bg-[#00FFD1] transition-all font-black"
+              className="bg-[#00FFD1] text-[#0A0A0F] px-8 py-4 rounded-xl hover:scale-105 transition-all font-black"
             >
-              Start Pilot
+              Get Started
             </Link>
           </div>
 
@@ -82,18 +83,30 @@ export default function LandingPage() {
 
       <main>
         <HeroSection />
+        <MetricsShowcase />
         <ProblemSection />
         <HowItWorksSection />
-        <MetricsShowcase />
-        <MarketChart />
-        <div id="roi">
-          <ROICalculator />
-        </div>
-        <IndustryCards />
-        <div id="tech">
-          <TechStackSection />
-        </div>
-        <TestimonialsSection />
+        
+        {/* Trusted Suppliers Section */}
+        <section id="suppliers" className="py-32 px-6 bg-[#0A0A0F] relative overflow-hidden">
+          <div className="max-w-[1200px] mx-auto text-center">
+            <div className="text-[10px] font-black text-[#00FFD1] uppercase tracking-[0.4em] mb-4">Suppliers</div>
+            <h2 className="text-4xl md:text-7xl font-bold font-syne mb-8 tracking-tighter leading-tight">
+              Trusted <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">packaging suppliers</span>
+            </h2>
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-16 leading-relaxed">
+              Connect directly with top packaging suppliers. Tap to call instantly.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 opacity-40">
+              {["FEDEX", "BLUE DART", "UPS", "DHL", "AMAZON", "ECOMM", "SHIPROCKET", "DELHIVERY"].map(name => (
+                <div key={name} className="h-24 bg-white/[0.02] border border-white/5 rounded-2xl flex items-center justify-center font-syne font-black text-white/20 tracking-widest uppercase text-xs">
+                  {name}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <FinalCTASection />
       </main>
 

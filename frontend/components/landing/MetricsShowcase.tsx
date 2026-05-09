@@ -1,27 +1,23 @@
-'use client'
-
 import { CountUpNumber } from '@/components/animations'
 
 const METRICS = [
-  { label: "Detection Accuracy", value: 99.3, suffix: "%" },
-  { label: "Throughput", value: 1200, suffix: "/min" },
-  { label: "False Positive Rate", value: 0.4, suffix: "%" },
-  { label: "Inference Time", value: 18, suffix: "ms" },
-  { label: "Uptime SLA", value: 99.8, suffix: "%" },
-  { label: "Defect Classes", value: 24, suffix: "" }
+  { label: "Brands Trust PackAI", value: 10000, suffix: "+" },
+  { label: "Labels Generated", value: 50, suffix: "M+" },
+  { label: "Platform Uptime", value: 99.9, suffix: "%" },
+  { label: "Avg. Generation Time", value: 2, prefix: "< ", suffix: "s" }
 ]
 
 export function MetricsShowcase() {
   return (
-    <section className="py-24 px-6 bg-[#0A0A0F]">
+    <section className="py-32 px-6 bg-[#0A0A0F] border-y border-white/5">
       <div className="max-w-[1200px] mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {METRICS.map((metric, i) => (
-            <div key={i} className="glass p-6 rounded-2xl flex flex-col items-center text-center group hover:border-[#00FFD1]/30 transition-all">
-              <div className="text-2xl md:text-3xl font-bold font-mono text-[#00FFD1] mb-2">
-                <CountUpNumber value={metric.value} suffix={metric.suffix} decimals={metric.value % 1 !== 0 ? 1 : 0} />
+            <div key={i} className="flex flex-col items-center text-center group">
+              <div className="text-4xl md:text-6xl font-bold font-syne text-[#00FFD1] mb-4 tracking-tighter group-hover:scale-110 transition-transform duration-500">
+                {metric.prefix}<CountUpNumber value={metric.value} suffix={metric.suffix} />
               </div>
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-tight">{metric.label}</p>
+              <p className="text-sm font-bold text-gray-500 uppercase tracking-[0.2em]">{metric.label}</p>
             </div>
           ))}
         </div>

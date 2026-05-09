@@ -1,51 +1,56 @@
-'use client'
-
-import { motion } from 'framer-motion'
-import { AlertTriangle, TrendingDown, ShieldAlert } from 'lucide-react'
+import { Box, Zap, Eye, Boxes } from 'lucide-react'
 import { StaggerContainer, StaggerItem } from '@/components/animations'
 
-const PAIN_POINTS = [
+const FEATURES = [
   {
-    icon: AlertTriangle,
-    title: "Manual Inaccuracy",
-    desc: "Manual inspection catches only 60–65% of defects, leading to massive downstream failures.",
-    stat: "60-65%"
+    icon: Boxes,
+    title: "AI Smart Sizing",
+    desc: "FFD bin-packing engine finds the smallest box that fits, reducing DIM weight and shipping costs automatically.",
+    color: "#00FFD1"
   },
   {
-    icon: ShieldAlert,
-    title: "Compliance Risk",
-    desc: "BIS raids and standard violations can lead to seizure of thousands of items in a single sweep.",
-    stat: "3,376+"
+    icon: Zap,
+    title: "Bulk Optimization",
+    desc: "Upload CSV with thousands of SKUs and get optimized results in seconds with Claude AI powering every decision.",
+    color: "#4361EE"
   },
   {
-    icon: TrendingDown,
-    title: "Financial Loss",
-    desc: "Defective packaging costs India ₹890Cr+ annually in returns, recalls, and brand damage.",
-    stat: "₹890Cr+"
+    icon: Eye,
+    title: "3D Visualization",
+    desc: "Interactive 3D box viewer lets you inspect the optimized packaging from every angle before shipping.",
+    color: "#F59E0B"
   }
 ]
 
 export function ProblemSection() {
   return (
-    <section className="py-24 px-6 bg-[#0A0A0F]">
-      <div className="max-w-[1200px] mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-5xl font-bold font-syne mb-6">
-            BIS Raids. Customer Returns. Recalls. <br />
-            <span className="text-red-500">The Cost of Manual QA.</span>
+    <section id="features" className="py-32 px-6 bg-[#0A0A0F] relative overflow-hidden">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] bg-[#185FA5]/5 rounded-full blur-[150px] pointer-events-none" />
+      
+      <div className="max-w-[1200px] mx-auto relative z-10">
+        <div className="text-center mb-20">
+          <div className="text-[10px] font-black text-[#00FFD1] uppercase tracking-[0.4em] mb-4">Features</div>
+          <h2 className="text-4xl md:text-7xl font-bold font-syne mb-8 leading-tight tracking-tighter">
+            Everything you need to <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">optimize packaging</span>
           </h2>
+          <p className="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
+            From AI-powered box sizing to real-time shipment tracking — PackAI covers your entire packaging workflow.
+          </p>
         </div>
 
         <StaggerContainer className="grid md:grid-cols-3 gap-8">
-          {PAIN_POINTS.map((point, i) => (
+          {FEATURES.map((feature, i) => (
             <StaggerItem key={i}>
-              <div className="p-8 bg-white/[0.02] border border-white/5 rounded-2xl group hover:border-red-500/30 transition-all">
-                <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center mb-6 border border-red-500/20">
-                  <point.icon className="w-6 h-6 text-red-500" />
+              <div className="group p-10 bg-white/[0.02] border border-white/5 rounded-[40px] hover:bg-white/[0.04] hover:border-white/10 transition-all duration-500 h-full flex flex-col items-start text-left">
+                <div 
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-8 border border-white/5 group-hover:scale-110 transition-transform duration-500"
+                  style={{ backgroundColor: `${feature.color}15` }}
+                >
+                  <feature.icon className="w-8 h-8" style={{ color: feature.color }} />
                 </div>
-                <div className="text-2xl font-bold font-mono text-red-500 mb-4">{point.stat}</div>
-                <h3 className="text-lg font-bold text-white mb-2">{point.title}</h3>
-                <p className="text-sm text-gray-400 leading-relaxed">{point.desc}</p>
+                <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-[#00FFD1] transition-colors">{feature.title}</h3>
+                <p className="text-base text-gray-400 leading-relaxed">{feature.desc}</p>
               </div>
             </StaggerItem>
           ))}
