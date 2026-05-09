@@ -1,23 +1,25 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { 
-  ShoppingCart, Search, ChevronRight, Package, Zap, Filter, MoreHorizontal, X, Eye, Printer, Plus, Activity
+  Search, Package, Zap, Filter, Eye, Printer, Plus, X
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
 import Box3DViewer from '@/components/dashboard/Box3DViewer'
 
-const MOCK_ORDERS = [
-  { id: 'ORD-8439', customer: 'Acme Corp', items: 3, carrier: 'FedEx', status: 'pending', cost: 145.20, timestamp: '2026-05-08T10:00:00Z' },
-  { id: 'ORD-8440', customer: 'Stark Industries', items: 1, carrier: 'UPS', status: 'shipped', cost: 89.00, timestamp: '2026-05-08T11:30:00Z' },
-  { id: 'ORD-8441', customer: 'Wayne Ent.', items: 5, carrier: 'DHL', status: 'delivered', cost: 230.50, timestamp: '2026-05-08T12:15:00Z' }
-]
-
 export default function ShipmentsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null)
   const { results: optResults } = useOptimizationStore()
+
+  // Use optimization results as our source of truth for "Orders/Shipments"
+  const orders = optResults.length > 0 ? optResults : []
+
+  const filteredOrders = orders.filter(order => 
+    order.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    order.product_id.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
@@ -34,10 +36,10 @@ export default function ShipmentsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: 'Pending', count: 12, color: '#F59E0B' },
-          { label: 'In Transit', count: 48, color: '#3B82F6' },
-          { label: 'Delivered', count: 124, color: '#22c55e' },
-          { label: 'Anomalies', count: 2, color: '#FF4444' }
+          { label: 'Pending', count: orders.length, color: '#F59E0B' },
+          { label: 'Optimized', count: orders.filter(o => o.savings > 0).length, color: '#00FFD1' },
+          { label: 'Revenue Impact', count: `$${orders.reduce((acc, o) => acc + o.savings, 0).toFixed(2)}`, color: '#22c55e' },
+          { label: 'Anomalies', count: 0, color: '#FF4444' }
         ].map((s, i) => (
           <div key={i} className="glass p-4 flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -55,7 +57,7 @@ export default function ShipmentsPage() {
             <Search className="w-4 h-4 text-gray-600 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#00FFD1] transition-colors" />
             <input 
               type="text" 
-              placeholder="Search by Order ID or Customer..." 
+              placeholder="Search by SKU or Product Name..." 
               className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all"
               onChange={e => setSearchQuery(e.target.value)}
             />
@@ -71,31 +73,33 @@ export default function ShipmentsPage() {
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-[#0A0A0F] sticky top-0 z-10">
               <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5">
-                <th className="px-8 py-4">Shipment ID</th>
-                <th className="px-8 py-4">Customer</th>
-                <th className="px-8 py-4">Carrier</th>
-                <th className="px-8 py-4">Status</th>
-                <th className="px-8 py-4">Yield Impact</th>
+                <th className="px-8 py-4">Product / SKU</th>
+                <th className="px-8 py-4">Recommended Box</th>
+                <th className="px-8 py-4">Prod. Price</th>
+                <th className="px-8 py-4">Recalculated</th>
+                <th className="px-8 py-4">Savings</th>
                 <th className="px-8 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {MOCK_ORDERS.map((order) => (
-                <tr key={order.id} onClick={() => setSelectedOrder(order)} className="hover:bg-white/[0.02] transition-colors cursor-pointer group">
-                  <td className="px-8 py-5 font-mono font-bold text-gray-300">{order.id}</td>
-                  <td className="px-8 py-5 font-bold text-white">{order.customer}</td>
-                  <td className="px-8 py-5 text-gray-400">{order.carrier}</td>
+              {filteredOrders.length > 0 ? filteredOrders.map((order) => (
+                <tr key={order.product_id} onClick={() => setSelectedOrder(order)} className="hover:bg-white/[0.02] transition-colors cursor-pointer group">
                   <td className="px-8 py-5">
-                    <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                      order.status === 'delivered' ? 'bg-green-500/10 text-green-400' : 
-                      order.status === 'shipped' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'
-                    }`}>
-                      {order.status}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-white">{order.product_name}</span>
+                      <span className="text-[10px] font-mono text-gray-500">{order.product_id}</span>
+                    </div>
                   </td>
                   <td className="px-8 py-5">
+                    <span className="px-2 py-1 rounded-full bg-[#00FFD1]/10 text-[#00FFD1] text-[9px] font-black uppercase tracking-widest">
+                      {order.optimized_box}
+                    </span>
+                  </td>
+                  <td className="px-8 py-5 text-gray-400 font-mono text-xs">${order.product_price.toFixed(2)}</td>
+                  <td className="px-8 py-5 font-bold text-white font-mono text-xs">${order.cost_after.toFixed(2)}</td>
+                  <td className="px-8 py-5">
                     <div className="flex items-center gap-1 text-[#00FFD1] font-mono text-xs font-bold">
-                      <Zap className="w-3 h-3" /> +14.2%
+                      <Zap className="w-3 h-3" /> +${order.savings.toFixed(2)}
                     </div>
                   </td>
                   <td className="px-8 py-5 text-right">
@@ -104,7 +108,15 @@ export default function ShipmentsPage() {
                     </button>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                   <td colSpan={6} className="px-8 py-20 text-center text-gray-500">
+                      <Package className="w-10 h-10 mx-auto mb-4 opacity-20" />
+                      <p className="text-xs uppercase tracking-widest font-black">No shipments processed yet</p>
+                      <p className="text-[10px] mt-1">Upload a bulk file in Optimization to see results.</p>
+                   </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -122,25 +134,30 @@ export default function ShipmentsPage() {
 
               <div className="space-y-8 flex-1 overflow-y-auto no-scrollbar">
                 <div className="h-64 bg-black/40 rounded-[32px] border border-white/5 overflow-hidden">
-                  <Box3DViewer l={20} w={15} h={10} />
+                   {/* 360 Dynamic View of the Optimized Box */}
+                   <Box3DViewer 
+                    l={parseInt(selectedOrder.product_dims.split('x')[0]) + 2} 
+                    w={parseInt(selectedOrder.product_dims.split('x')[1]) + 2} 
+                    h={parseInt(selectedOrder.product_dims.split('x')[2]) + 2} 
+                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                    <div className="glass p-4">
-                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1">Carrier</p>
-                     <p className="text-sm font-bold text-white">{selectedOrder.carrier}</p>
+                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1">Recommended Box</p>
+                     <p className="text-sm font-bold text-white">{selectedOrder.optimized_box}</p>
                    </div>
                    <div className="glass p-4">
-                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1">Weight</p>
-                     <p className="text-sm font-bold text-white">4.2 kg</p>
+                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1">Recalculated Price</p>
+                     <p className="text-sm font-bold text-[#00FFD1]">${selectedOrder.cost_after.toFixed(2)}</p>
                    </div>
                 </div>
 
                 <div className="space-y-4">
-                  <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Optimization Insight</h4>
+                  <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">AI Spatial Intelligence</h4>
                   <div className="p-6 bg-[#00FFD1]/5 border border-[#00FFD1]/20 rounded-3xl">
                     <p className="text-xs text-gray-300 leading-relaxed">
-                      AI identified a <span className="text-[#00FFD1] font-bold">14.2%</span> reduction in volumetric weight by re-orienting the secondary item 90° on the X-axis.
+                      AI identified a <span className="text-[#00FFD1] font-bold">{selectedOrder.void_reduction}%</span> reduction in void fill by migrating to the <span className="text-white font-bold">{selectedOrder.optimized_box}</span> standard.
                     </p>
                   </div>
                 </div>
@@ -162,3 +179,4 @@ export default function ShipmentsPage() {
     </div>
   )
 }
+

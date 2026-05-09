@@ -61,6 +61,8 @@ export default function Box3DViewer({ l, w, h, color = '#4361EE' }: { l: number,
             enablePan={false} 
             minDistance={4}
             maxDistance={12}
+            autoRotate={true}
+            autoRotateSpeed={2.0}
           />
         </Canvas>
       </Suspense>

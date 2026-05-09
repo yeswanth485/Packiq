@@ -15,6 +15,7 @@ const BOX_TEMPLATES = [
   { id: 'amz-a1', name: 'Amazon Standard A1', length: 15, width: 10, height: 8, material: 'Corrugated', category: 'Standard', supplier: 'Amazon', cost: 0.45, inStock: true, usage: 1240 },
   { id: 'amz-a3', name: 'Amazon Large A3', length: 30, width: 22, height: 12, material: 'Corrugated', category: 'Heavy Duty', supplier: 'Amazon', cost: 0.85, inStock: true, usage: 650 },
   { id: 'fli-f1', name: 'Flipkart Small F1', length: 18, width: 12, height: 12, material: 'Recycled', category: 'Standard', supplier: 'Flipkart', cost: 0.35, inStock: true, usage: 1100 },
+  { id: 'zep-gro', name: 'Zepto Grocery Cube', length: 25, width: 15, height: 20, material: 'Sustainable', category: 'Grocery', supplier: 'Zepto', cost: 0.50, inStock: true, usage: 3200 },
   { id: 'eco-m1', name: 'EcoPack Medium', length: 25, width: 20, height: 15, material: 'Sustainable', category: 'Eco', supplier: 'EcoPack', cost: 0.55, inStock: true, usage: 2300 }
 ]
 

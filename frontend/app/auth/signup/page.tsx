@@ -15,6 +15,41 @@ const syne = Syne({ subsets: ['latin'] })
 const INDUSTRIES = ["Food & Beverage", "Pharma", "FMCG", "Textiles", "Electronics", "Auto Parts", "Logistics", "Manufacturing"]
 const LINE_SPEEDS = ["<100 units/min", "100-500 units/min", "500-1000 units/min", ">1000 units/min"]
 
+const FloatingElements = () => {
+  const [elements, setElements] = useState<any[]>([])
+  useEffect(() => {
+    const newElements = Array.from({ length: 12 }).map((_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 40 + 20,
+      duration: Math.random() * 10 + 15,
+      delay: Math.random() * 5
+    }))
+    setElements(newElements)
+  }, [])
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      {elements.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute border border-[#00FFD1]/10 bg-[#00FFD1]/5 backdrop-blur-[2px] rounded-lg flex items-center justify-center"
+          style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size }}
+          animate={{ 
+            y: [0, -120, 0], 
+            rotateX: [0, 360], 
+            rotateY: [0, 360],
+            opacity: [0.05, 0.15, 0.05] 
+          }}
+          transition={{ duration: p.duration, repeat: Infinity, delay: p.delay, ease: 'easeInOut' }}
+        >
+           <Box className="w-1/2 h-1/2 text-[#00FFD1]/20" />
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
 export default function SignupPage() {
   const supabase = createClient()
   const router = useRouter()
@@ -62,12 +97,15 @@ export default function SignupPage() {
       <div className="hidden lg:flex w-[50%] relative flex-col items-center justify-center border-r border-white/5">
         <div className="absolute inset-0 grid-overlay opacity-20" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#00FFD1]/5 rounded-full blur-[120px]" />
+        <FloatingElements />
         
         <div className="relative z-10 text-center px-12">
-          <h1 className={`${syne.className} text-white font-bold text-[56px] leading-tight mb-8`}>
-            Build the <br /><span className="text-[#00FFD1]">Perfect Line.</span>
-          </h1>
-          <p className="text-gray-400 max-w-md mx-auto mb-12">Join 500+ manufacturers using PackIQ to eliminate defects and optimize yield.</p>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <h1 className={`${syne.className} text-white font-bold text-[56px] leading-tight mb-8`}>
+              Build the <br /><span className="text-[#00FFD1]">Perfect Line.</span>
+            </h1>
+            <p className="text-gray-400 max-w-md mx-auto mb-12">Join 500+ manufacturers using PackIQ to eliminate defects and optimize yield.</p>
+          </motion.div>
           
           <div className="space-y-6 max-w-sm mx-auto">
             {["48-hour deployment guarantee", "Dedicated account manager", "24/7 technical support"].map((item, i) => (

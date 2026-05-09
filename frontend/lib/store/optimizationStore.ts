@@ -4,8 +4,13 @@ import { persist } from 'zustand/middleware'
 export interface OptimizationResult {
   product_id: string
   product_name: string
+  product_price: number
+  product_dims: string
+  product_weight: number
   original_box: string
+  original_box_cost: number
   optimized_box: string
+  optimized_box_cost: number
   cost_before: number
   cost_after: number
   savings: number

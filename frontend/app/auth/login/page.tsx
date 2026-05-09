@@ -18,29 +18,36 @@ const FEATURES = [
   { icon: ShieldCheck, text: "BIS & ISO compliance ready", color: "#22c55e" }
 ]
 
-const Particles = () => {
-  const [particles, setParticles] = useState<any[]>([])
+const FloatingElements = () => {
+  const [elements, setElements] = useState<any[]>([])
   useEffect(() => {
-    const newParticles = Array.from({ length: 40 }).map((_, i) => ({
+    const newElements = Array.from({ length: 15 }).map((_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
-      size: Math.random() * 2 + 1,
-      duration: Math.random() * 15 + 10,
+      size: Math.random() * 40 + 20,
+      duration: Math.random() * 10 + 10,
       delay: Math.random() * 5
     }))
-    setParticles(newParticles)
+    setElements(newElements)
   }, [])
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      {particles.map((p) => (
+      {elements.map((p) => (
         <motion.div
           key={p.id}
-          className="absolute rounded-full bg-[#00FFD1] opacity-10"
+          className="absolute border border-[#00FFD1]/10 bg-[#00FFD1]/5 backdrop-blur-[2px] rounded-lg flex items-center justify-center"
           style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size }}
-          animate={{ y: ['0%', '-300%'], opacity: [0, 0.4, 0] }}
-          transition={{ duration: p.duration, repeat: Infinity, delay: p.delay, ease: 'linear' }}
-        />
+          animate={{ 
+            y: [0, -100, 0], 
+            rotateX: [0, 360], 
+            rotateY: [0, 360],
+            opacity: [0.05, 0.2, 0.05] 
+          }}
+          transition={{ duration: p.duration, repeat: Infinity, delay: p.delay, ease: 'easeInOut' }}
+        >
+           <Box className="w-1/2 h-1/2 text-[#00FFD1]/20" />
+        </motion.div>
       ))}
     </div>
   )
@@ -83,7 +90,7 @@ export default function LoginPage() {
       <div className="hidden lg:flex w-[60%] relative flex-col items-center justify-center border-r border-white/5">
         <div className="absolute inset-0 grid-overlay opacity-20" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#00FFD1]/5 rounded-full blur-[120px]" />
-        <Particles />
+        <FloatingElements />
         
         <div className="relative z-10 text-center px-12">
           <motion.div

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowRight, Play } from 'lucide-react'
+import { ArrowRight, Play, Box } from 'lucide-react'
 import { StaggerContainer, StaggerItem, CountUpNumber } from '@/components/animations'
 
 const INDUSTRIES = [
@@ -11,6 +11,33 @@ const INDUSTRIES = [
   "E-Commerce", "Auto Parts", "Logistics", "Manufacturing", 
   "Retail", "Healthcare", "Aerospace"
 ]
+
+const FloatingBox = ({ delay = 0, x = '10%', y = '10%', size = 40 }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 0 }}
+    animate={{ 
+      opacity: [0.1, 0.3, 0.1],
+      y: [-20, 20, -20],
+      rotateX: [0, 360],
+      rotateY: [0, 360]
+    }}
+    transition={{ 
+      duration: 10,
+      repeat: Infinity,
+      delay,
+      ease: "easeInOut"
+    }}
+    style={{ left: x, top: y, perspective: 1000 }}
+    className="absolute pointer-events-none"
+  >
+    <div 
+      className="relative border border-[#00FFD1]/20 bg-[#00FFD1]/5 backdrop-blur-sm flex items-center justify-center rounded-lg"
+      style={{ width: size, height: size }}
+    >
+      <Box className="w-1/2 h-1/2 text-[#00FFD1]/30" />
+    </div>
+  </motion.div>
+)
 
 export function HeroSection() {
   const [mounted, setMounted] = useState(false)
@@ -28,6 +55,15 @@ export function HeroSection() {
     <section className="relative min-h-screen flex flex-col items-center justify-center pt-20 overflow-hidden grid-overlay">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0A0A0F]/50 to-[#0A0A0F] pointer-events-none" />
       
+      {/* Floating Elements */}
+      <FloatingBox x="10%" y="20%" size={60} delay={0} />
+      <FloatingBox x="80%" y="15%" size={80} delay={2} />
+      <FloatingBox x="75%" y="70%" size={50} delay={4} />
+      <FloatingBox x="15%" y="75%" size={70} delay={6} />
+      
+      {/* Background Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#00FFD1]/5 rounded-full blur-[120px] pointer-events-none" />
+
       <div className="max-w-[1200px] mx-auto px-6 relative z-10 text-center">
         <StaggerContainer>
           <h1 className="text-5xl md:text-7xl font-bold font-syne tracking-tight mb-6 flex flex-wrap justify-center gap-x-4">
