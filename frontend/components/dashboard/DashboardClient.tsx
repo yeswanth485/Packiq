@@ -159,7 +159,7 @@ export default function DashboardClient() {
             
             <button 
               onClick={runAIAnalysis}
-              disabled={isAnalyzing || inspections.length === 0}
+              disabled={isAnalyzing || optResults.length === 0}
               className="w-full py-4 bg-[#00FFD1] text-[#0A0A0F] rounded-xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] transition-all disabled:opacity-50"
             >
               {isAnalyzing ? "Processing Data..." : "Generate Analysis"}
