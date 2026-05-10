@@ -28,8 +28,6 @@ function checkRateLimit(userId: string): { allowed: boolean; remaining: number; 
   entry.count++
   return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count, resetIn: RATE_LIMIT_WINDOW_MS - (now - entry.windowStart) }
 }
-}
-
 // ─── Dimension validation ────────────────────────────────────────────────────
 function validateDimensions(l: number, w: number, h: number): string | null {
   if (!isFinite(l) || !isFinite(w) || !isFinite(h)) return 'Non-finite dimension value'
