@@ -144,9 +144,9 @@ export default function OrdersPage() {
                 <div className="h-64 bg-black/40 rounded-[32px] border border-white/5 overflow-hidden">
                    {/* 360 Dynamic View of the Optimized Box */}
                    <Box3DViewer 
-                    l={parseInt(selectedOrder.optimized_box_dims?.split('x')[0]) || 20} 
-                    w={parseInt(selectedOrder.optimized_box_dims?.split('x')[1]) || 15} 
-                    h={parseInt(selectedOrder.optimized_box_dims?.split('x')[2]) || 10} 
+                    l={parseFloat(selectedOrder.optimized_box_dims?.split(/[xX]/)[0]) || 20} 
+                    w={parseFloat(selectedOrder.optimized_box_dims?.split(/[xX]/)[1]) || 15} 
+                    h={parseFloat(selectedOrder.optimized_box_dims?.split(/[xX]/)[2]) || 10} 
                    />
                 </div>
 

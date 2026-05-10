@@ -19,11 +19,11 @@ function BoxModel({ l, w, h, color = '#00FFD1' }: { l: number, w: number, h: num
       <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.2}>
         <Box ref={meshRef} args={[sl, sh, sw]}>
           <meshStandardMaterial 
-            color="#2a2a3a" 
-            roughness={0.4}
-            metalness={0.2}
-            emissive="#1a1a2e"
-            emissiveIntensity={0.5}
+            color="#3a3a4a" 
+            roughness={0.3}
+            metalness={0.8}
+            emissive={color}
+            emissiveIntensity={0.2}
           />
           <Edges 
             linewidth={3} 
