@@ -115,24 +115,23 @@ export default function OptimizationPage() {
             status: 'success'
           }))
           
-          // Use addBatchResults to show real-time updates in the store
           useOptimizationStore.getState().addBatchResults(mappedResults)
         }
         
-        // Update progress percentage or step
         setProcessingStep(Math.min(3, 2 + Math.floor((i / data.length) * 2)))
       }
 
       setProcessingStep(4) // "Synchronizing..."
       await new Promise(r => setTimeout(r, 800))
       
-      toast.success(`Successfully optimized all items!`)
+      toast.success(`Successfully optimized ${data.length} items!`)
       router.push('/dashboard/orders')
       
     } catch (err: any) {
       console.error('Optimization failed:', err)
       toast.error(err.message || 'Optimization failed')
-      setIsOptimizing(false)
+    } finally {
+      setIsOptimizing(false) // Always dismiss modal
     }
   }
 

@@ -183,7 +183,7 @@ export function HeroSection() {
               <iframe 
                 width="100%" 
                 height="100%" 
-                src="https://www.youtube.com/embed/7VpSclDndl0?autoplay=1" 
+                src="https://www.youtube.com/embed/zO_Vp5vV_2o?autoplay=1" 
                 title="PackIQ AI Workflow Demo" 
                 frameBorder="0" 
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
