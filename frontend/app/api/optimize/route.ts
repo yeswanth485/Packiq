@@ -190,15 +190,40 @@ export async function POST(req: Request) {
         }
 
         try {
-          aiResult = await runOptimization(optInput, LIGHTWEIGHT_MODEL)
-        } catch (e1) {
-          console.warn('[optimize] Claude failed, falling back to free model:', (e1 as Error).message)
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('AI Request Timed Out')), 25000)
+          );
+
           try {
-            aiResult = await runOptimization(optInput, FREE_MODEL)
-            modelUsed = FREE_MODEL
-          } catch (e2) {
-            throw new Error(`All AI models failed: ${(e2 as Error).message}`)
+            aiResult = await Promise.race([
+              runOptimization(optInput, LIGHTWEIGHT_MODEL),
+              timeoutPromise
+            ]);
+          } catch (e1) {
+            console.warn('[optimize] Claude/Timeout failed, falling back to free model:', (e1 as Error).message);
+            aiResult = await Promise.race([
+              runOptimization(optInput, FREE_MODEL),
+              timeoutPromise
+            ]);
+            modelUsed = FREE_MODEL;
           }
+        } catch (e2) {
+          console.warn(`[optimize] All AI models failed or timed out: ${(e2 as Error).message}. Using fallback result.`);
+          // FALLBACK RESULT: Ensure the pipeline never breaks
+          aiResult = {
+            recommendedBoxId: 'fallback-id',
+            recommendedBoxName: boxDimStr || 'Standard Fallback Box',
+            recommendedBoxDims: boxDimStr || '20x15x10',
+            efficiencyScore: 50,
+            spaceUtilization: 50,
+            productPriceUsd: productPrice,
+            boxPriceUsd: originalBoxPrice,
+            costSavingsUsd: 0,
+            co2SavingsKg: 0,
+            reasoning: 'System overloaded. Using fallback dimensions to ensure processing continuity.',
+            packingTips: ['Standard packing recommended.']
+          };
+          modelUsed = 'fallback';
         }
 
         // 3. Persist result
