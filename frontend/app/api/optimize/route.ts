@@ -131,11 +131,21 @@ export async function POST(req: Request) {
         if (!aiResult) throw new Error('No result')
 
         // 3. Persist
-        await supabase.from('optimizations').insert({
-          user_id: user.id, status: 'completed', product_snapshot: p, ai_response: aiResult,
-          recommended_box: aiResult.recommendedBoxName, cost_savings_usd: aiResult.costSavingsUsd,
-          efficiency_score: aiResult.efficiencyScore, space_utilization: aiResult.spaceUtilization, ai_model: modelUsed,
-        } as any).catch(e => console.warn('DB error', e))
+        try {
+          await supabase.from('optimizations').insert({
+            user_id: user.id, 
+            status: 'completed', 
+            product_snapshot: p, 
+            ai_response: aiResult,
+            recommended_box: aiResult.recommendedBoxName, 
+            cost_savings_usd: aiResult.costSavingsUsd,
+            efficiency_score: aiResult.efficiencyScore, 
+            space_utilization: aiResult.spaceUtilization, 
+            ai_model: modelUsed,
+          } as any)
+        } catch (e) {
+          console.warn('DB error', e)
+        }
 
         return {
           product_id: productId, product_name: productName, product_price: productPrice, box_price: aiResult.boxPriceUsd,
