@@ -18,15 +18,24 @@ export default function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('30d')
   const { results: optResults, totalSaved, itemsProcessed } = useOptimizationStore()
 
-  const chartData = useMemo(() => [
-    { name: 'Mon', value: 400 },
-    { name: 'Tue', value: 300 },
-    { name: 'Wed', value: 600 },
-    { name: 'Thu', value: 800 },
-    { name: 'Fri', value: 500 },
-    { name: 'Sat', value: 900 },
-    { name: 'Sun', value: 1100 },
-  ], [])
+  const chartData = useMemo(() => {
+    if (!optResults || optResults.length === 0) {
+      return [
+        { name: 'Mon', value: 0 },
+        { name: 'Tue', value: 0 },
+        { name: 'Wed', value: 0 },
+        { name: 'Thu', value: 0 },
+        { name: 'Fri', value: 0 },
+        { name: 'Sat', value: 0 },
+        { name: 'Sun', value: 0 },
+      ]
+    }
+    // Show the last 15 items' savings trend
+    return optResults.slice(-15).map((r, i) => ({
+      name: r.product_name.substring(0, 6) + '...',
+      value: Number(r.savings.toFixed(2))
+    }))
+  }, [optResults])
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-20">

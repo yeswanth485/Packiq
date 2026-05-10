@@ -1,33 +1,33 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Package, Zap, TrendingUp, ArrowRight, CheckCircle2, AlertCircle, Box, Brain, Sparkles, Activity } from 'lucide-react'
+import { Package, Zap, TrendingUp, ArrowRight, CheckCircle2, AlertCircle, Box, Brain, Sparkles, Activity, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
-import { useInspectionFeed } from '@/lib/hooks/useInspectionFeed'
+import { useOptimizationStore } from '@/lib/store/optimizationStore'
 import { StaggerContainer, StaggerItem, CountUpNumber } from '@/components/animations'
 
 export default function DashboardClient() {
-  const { inspections, loading: feedLoading } = useInspectionFeed()
+  const { results: optResults, totalSaved } = useOptimizationStore()
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [lastAnalysis, setLastAnalysis] = useState<any>(null)
 
   const stats = useMemo(() => {
-    const total = inspections.length
-    const defects = inspections.filter(i => i.status === 'rejected').length
-    const rate = total > 0 ? (defects / total) * 100 : 0
-    const avgConf = total > 0 ? inspections.reduce((acc, i) => acc + (i.confidence_score || 0), 0) / total : 0
+    const total = optResults.length
+    const successful = optResults.filter(i => i.status === 'success').length
+    const avgEfficiency = total > 0 ? optResults.reduce((acc, i) => acc + (i.void_reduction || 0), 0) / total : 0
     
-    return { total, defects, rate, avgConf }
-  }, [inspections])
+    return { total, successful, totalSaved, avgEfficiency }
+  }, [optResults, totalSaved])
 
   const chartData = useMemo(() => {
-    return inspections.slice().reverse().map((i, idx) => ({
-      name: idx,
-      confidence: i.confidence_score * 100
+    if (optResults.length === 0) return []
+    return optResults.slice(-20).map((r, idx) => ({
+      name: r.product_name.substring(0, 8),
+      savings: Number(r.savings.toFixed(2))
     }))
-  }, [inspections])
+  }, [optResults])
 
   const runAIAnalysis = async () => {
     setIsAnalyzing(true)
@@ -36,8 +36,8 @@ export default function DashboardClient() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          line_id: inspections[0]?.line_id || 'demo-line',
-          data_sample: inspections.slice(0, 10)
+          line_id: 'optimization-history',
+          data_sample: optResults.slice(0, 10)
         })
       })
       const data = await res.json()
@@ -55,10 +55,10 @@ export default function DashboardClient() {
       {/* KPI Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Units Inspected', value: stats.total, icon: Package, color: '#00FFD1' },
-          { label: 'Defects Caught', value: stats.defects, icon: AlertCircle, color: '#FF4444' },
-          { label: 'Yield Rate', value: 100 - stats.rate, suffix: '%', icon: TrendingUp, color: '#22c55e' },
-          { label: 'Avg Confidence', value: stats.avgConf * 100, suffix: '%', icon: Brain, color: '#4361EE' }
+          { label: 'Units Optimized', value: stats.total, icon: Package, color: '#00FFD1' },
+          { label: 'Total Saved ($)', value: stats.totalSaved, icon: DollarSign, color: '#22c55e' },
+          { label: 'Success Rate', value: stats.total > 0 ? (stats.successful / stats.total) * 100 : 0, suffix: '%', icon: TrendingUp, color: '#4361EE' },
+          { label: 'Avg Efficiency', value: stats.avgEfficiency, suffix: '%', icon: Brain, color: '#F59E0B' }
         ].map((kpi, i) => (
           <div key={i} className="glass p-6 rounded-2xl border-l-4" style={{ borderLeftColor: kpi.color }}>
             <div className="flex justify-between items-start mb-4">
@@ -81,7 +81,7 @@ export default function DashboardClient() {
           <div className="glass p-6 rounded-3xl h-[400px]">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-                <Activity className="w-4 h-4 text-[#00FFD1]" /> Live Confidence Stream
+                <Activity className="w-4 h-4 text-[#00FFD1]" /> AI Cost Savings Trend
               </h3>
             </div>
             <div className="h-full w-full pb-10">
@@ -94,9 +94,10 @@ export default function DashboardClient() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                  <XAxis hide />
-                  <YAxis domain={[0, 100]} stroke="rgba(255,255,255,0.2)" fontSize={10} />
-                  <Area type="monotone" dataKey="confidence" stroke="#00FFD1" fillOpacity={1} fill="url(#colorConf)" strokeWidth={2} isAnimationActive={false} />
+                  <XAxis dataKey="name" hide />
+                  <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} />
+                  <Area type="monotone" dataKey="savings" stroke="#00FFD1" fillOpacity={1} fill="url(#colorConf)" strokeWidth={2} isAnimationActive={false} />
+                  <RechartsTooltip contentStyle={{backgroundColor: '#0A0A0F', borderColor: 'rgba(255,255,255,0.1)'}} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -104,7 +105,7 @@ export default function DashboardClient() {
 
           <div className="glass rounded-3xl overflow-hidden">
             <div className="p-6 border-b border-white/5 flex justify-between items-center">
-              <h3 className="text-sm font-black text-white uppercase tracking-widest">Real-time Inspection Log</h3>
+              <h3 className="text-sm font-black text-white uppercase tracking-widest">Recent Optimizations</h3>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest">Live</span>
@@ -114,38 +115,32 @@ export default function DashboardClient() {
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 bg-[#0A0A0F] z-10">
                   <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5">
-                    <th className="px-6 py-4">Unit ID</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4">Confidence</th>
-                    <th className="px-6 py-4">Time</th>
+                    <th className="px-6 py-4">Product</th>
+                    <th className="px-6 py-4">Old Box</th>
+                    <th className="px-6 py-4">AI Box</th>
+                    <th className="px-6 py-4">Savings</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   <AnimatePresence initial={false}>
-                    {inspections.map((item) => (
+                    {optResults.slice(-50).reverse().map((item, idx) => (
                       <motion.tr 
-                        key={item.id} 
+                        key={item.product_id + idx} 
                         initial={{ opacity: 0, x: -10 }} 
                         animate={{ opacity: 1, x: 0 }}
                         className="hover:bg-white/[0.02] transition-colors"
                       >
-                        <td className="px-6 py-4 font-mono font-bold text-gray-300">{item.unit_id}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                            item.status === 'passed' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
-                          }`}>
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-[#00FFD1]">{(item.confidence_score * 100).toFixed(1)}%</td>
-                        <td className="px-6 py-4 text-xs text-gray-500">{new Date(item.timestamp).toLocaleTimeString()}</td>
+                        <td className="px-6 py-4 font-mono font-bold text-gray-300">{item.product_name}</td>
+                        <td className="px-6 py-4 text-gray-500 text-xs">{item.original_box}</td>
+                        <td className="px-6 py-4 font-mono text-[#00FFD1] text-xs">{item.optimized_box}</td>
+                        <td className="px-6 py-4 text-green-400 font-bold">+${item.savings.toFixed(2)}</td>
                       </motion.tr>
                     ))}
                   </AnimatePresence>
                 </tbody>
               </table>
-              {inspections.length === 0 && (
-                <div className="p-20 text-center text-gray-600 italic">Waiting for incoming data stream...</div>
+              {optResults.length === 0 && (
+                <div className="p-20 text-center text-gray-600 italic">No optimizations processed yet. Run batch to see data.</div>
               )}
             </div>
           </div>

@@ -78,7 +78,7 @@ export default function OptimizationPage() {
     // Reset store for fresh run
     setResults([], [])
 
-    const BATCH_SIZE = 1 // Process one by one for maximum visual satisfaction and stability
+    const BATCH_SIZE = 50 // Process up to 50 items simultaneously for maximum speed
     const totalBatches = Math.ceil(data.length / BATCH_SIZE)
     
     setProcessingStep(1) // "Analyzing Volumetric Yield..."
@@ -86,7 +86,6 @@ export default function OptimizationPage() {
     
     try {
       for (let i = 0; i < data.length; i += BATCH_SIZE) {
-        const startTime = Date.now()
         const batch = data.slice(i, i + BATCH_SIZE)
         const batchIndex = Math.floor(i / BATCH_SIZE) + 1
         
@@ -142,12 +141,6 @@ export default function OptimizationPage() {
             console.error('Batch error:', fetchErr)
             toast.error(`Batch ${batchIndex} error. Skipping to next.`)
           }
-        }
-        
-        // Enforce minimum 2.5 seconds per item for satisfying "industrial processing" rhythm
-        const elapsed = Date.now() - startTime
-        if (elapsed < 2500) {
-          await new Promise(r => setTimeout(r, 2500 - elapsed))
         }
       }
 
