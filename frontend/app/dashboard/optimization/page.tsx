@@ -76,7 +76,7 @@ export default function OptimizationPage() {
     // Reset store for fresh run
     setResults([], [])
 
-    const BATCH_SIZE = 5
+    const BATCH_SIZE = 1 // Process one by one for maximum reliability and real-time updates
     const totalBatches = Math.ceil(data.length / BATCH_SIZE)
     
     try {
@@ -86,36 +86,54 @@ export default function OptimizationPage() {
         
         setProcessingStep(2) // "Claude AI Optimizing..."
         
-        const response = await fetch('/api/optimize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ products: batch })
-        })
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 45000) // 45s timeout for AI
 
-        if (!response.ok) throw new Error(`Batch ${batchIndex} failed`)
+        try {
+          const response = await fetch('/api/optimize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ products: batch }),
+            signal: controller.signal
+          })
 
-        const resData = await response.json()
-        
-        if (resData.results && resData.results.length > 0) {
-          const mappedResults: OptimizationResult[] = resData.results.map((r: any) => ({
-            product_id: r.product_id,
-            product_name: r.product_name,
-            product_price: r.product_price,
-            product_dims: batch.find((d: any) => d.sku === r.product_id || d['SKU'] === r.product_id || d['product_id'] === r.product_id)?.dims || r.original_box || 'N/A',
-            product_weight: parseFloat(batch.find((d: any) => d.sku === r.product_id || d['SKU'] === r.product_id || d['product_id'] === r.product_id)?.weight || '0.5'),
-            original_box: r.original_box || 'Unknown',
-            original_box_cost: r.original_box_price || 0,
-            optimized_box: r.optimized_box,
-            optimized_box_cost: r.box_price || 0,
-            optimized_box_dims: r.optimized_box_dims || '20x15x10',
-            cost_before: r.original_box_price || 0,
-            cost_after: r.box_price || 0,
-            savings: r.savings,
-            void_reduction: r.efficiency_score || 0,
-            status: 'success'
-          }))
+          clearTimeout(timeoutId)
+
+          if (!response.ok) {
+            const errBody = await response.json().catch(() => ({}))
+            throw new Error(errBody.error || `Batch ${batchIndex} failed (HTTP ${response.status})`)
+          }
+
+          const resData = await response.json()
           
-          useOptimizationStore.getState().addBatchResults(mappedResults)
+          if (resData.results && resData.results.length > 0) {
+            const mappedResults: OptimizationResult[] = resData.results.map((r: any) => ({
+              product_id: r.product_id,
+              product_name: r.product_name,
+              product_price: r.product_price,
+              product_dims: r.product_dims || 'N/A',
+              product_weight: r.product_weight || 0.5,
+              original_box: r.original_box || 'Unknown',
+              original_box_cost: r.original_box_price || 0,
+              optimized_box: r.optimized_box,
+              optimized_box_cost: r.box_price || 0,
+              optimized_box_dims: r.optimized_box_dims || '20x15x10',
+              cost_before: r.original_box_price || 0,
+              cost_after: r.box_price || 0,
+              savings: r.savings,
+              void_reduction: r.efficiency_score || 0,
+              status: 'success'
+            }))
+            
+            useOptimizationStore.getState().addBatchResults(mappedResults)
+          }
+        } catch (fetchErr: any) {
+          if (fetchErr.name === 'AbortError') {
+            console.error('Batch timed out')
+            toast.error(`Batch ${batchIndex} timed out. AI might be overloaded.`)
+          } else {
+            throw fetchErr
+          }
         }
         
         setProcessingStep(Math.min(3, 2 + Math.floor((i / data.length) * 2)))

@@ -3,10 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 import { parseDimensions } from '@/lib/utils/parser'
 import { runOptimization, LIGHTWEIGHT_MODEL, FREE_MODEL } from '@/lib/openrouter'
 
+export const maxDuration = 60 // Max 60 seconds for Pro plan on Vercel
+
 // ─── In-memory rate limiter ─────────────────────────────────────────────────
 // Map<userId, { count: number; windowStart: number }>
 const rateLimitMap = new Map<string, { count: number; windowStart: number }>()
-const RATE_LIMIT_MAX = 10          // max requests
+const RATE_LIMIT_MAX = 50          // increased for batching
 const RATE_LIMIT_WINDOW_MS = 60_000 // per 60 seconds
 
 function checkRateLimit(userId: string): { allowed: boolean; remaining: number; resetIn: number } {
@@ -25,6 +27,7 @@ function checkRateLimit(userId: string): { allowed: boolean; remaining: number; 
 
   entry.count++
   return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count, resetIn: RATE_LIMIT_WINDOW_MS - (now - entry.windowStart) }
+}
 }
 
 // ─── Dimension validation ────────────────────────────────────────────────────
