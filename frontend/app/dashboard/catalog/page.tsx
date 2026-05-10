@@ -20,7 +20,7 @@ const FALLBACK_BOXES = [
 ]
 
 export default function CatalogPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [activeTab, setActiveTab] = useState('Box Sizes')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [searchQuery, setSearchQuery] = useState('')
@@ -40,7 +40,7 @@ export default function CatalogPage() {
       setLoading(false)
     }
     fetchBoxes()
-  }, [])
+  }, [supabase])
 
   const filteredItems = useMemo(() => {
     return boxes.filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
