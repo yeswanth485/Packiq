@@ -60,6 +60,7 @@ export default function OptimizationPage() {
   }
 
   const [processingStep, setProcessingStep] = useState(0)
+  const [totalItems, setTotalItems] = useState(0)
   const router = useRouter()
   const steps = [
     "Reading Inventory Data...",
@@ -71,12 +72,13 @@ export default function OptimizationPage() {
 
   const processData = async (data: any[]) => {
     setIsOptimizing(true)
+    setTotalItems(data.length)
     setRunning()
     
     // Reset store for fresh run
     setResults([], [])
 
-    const BATCH_SIZE = 10 // Increased batch size for faster processing (10 at a time)
+    const BATCH_SIZE = 1 // Process one by one for maximum visual satisfaction and stability
     const totalBatches = Math.ceil(data.length / BATCH_SIZE)
     
     setProcessingStep(1) // "Analyzing Volumetric Yield..."
@@ -84,10 +86,11 @@ export default function OptimizationPage() {
     
     try {
       for (let i = 0; i < data.length; i += BATCH_SIZE) {
+        const startTime = Date.now()
         const batch = data.slice(i, i + BATCH_SIZE)
         const batchIndex = Math.floor(i / BATCH_SIZE) + 1
         
-        // Toggle between AI Optimizing and 3D Packing Steps for visual feedback
+        // Cycle steps 2 and 3 for visual effect
         setProcessingStep(batchIndex % 2 === 1 ? 2 : 3) 
         
         const controller = new AbortController()
@@ -139,6 +142,12 @@ export default function OptimizationPage() {
             console.error('Batch error:', fetchErr)
             toast.error(`Batch ${batchIndex} error. Skipping to next.`)
           }
+        }
+        
+        // Enforce minimum 2.5 seconds per item for satisfying "industrial processing" rhythm
+        const elapsed = Date.now() - startTime
+        if (elapsed < 2500) {
+          await new Promise(r => setTimeout(r, 2500 - elapsed))
         }
       }
 
@@ -298,7 +307,7 @@ export default function OptimizationPage() {
               <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden mb-8">
                 <motion.div 
                   initial={{ width: 0 }}
-                  animate={{ width: `${((processingStep + 1) / steps.length) * 100}%` }}
+                  animate={{ width: `${totalItems > 0 ? (results.length / totalItems) * 100 : 0}%` }}
                   className="h-full bg-[#00FFD1] shadow-[0_0_20px_#00FFD1]"
                 />
               </div>
