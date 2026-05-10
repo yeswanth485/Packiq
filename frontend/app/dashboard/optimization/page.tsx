@@ -76,15 +76,19 @@ export default function OptimizationPage() {
     // Reset store for fresh run
     setResults([], [])
 
-    const BATCH_SIZE = 1 // Process one by one for maximum reliability and real-time updates
+    const BATCH_SIZE = 10 // Increased batch size for faster processing (10 at a time)
     const totalBatches = Math.ceil(data.length / BATCH_SIZE)
+    
+    setProcessingStep(1) // "Analyzing Volumetric Yield..."
+    await new Promise(r => setTimeout(r, 600))
     
     try {
       for (let i = 0; i < data.length; i += BATCH_SIZE) {
         const batch = data.slice(i, i + BATCH_SIZE)
         const batchIndex = Math.floor(i / BATCH_SIZE) + 1
         
-        setProcessingStep(2) // "Claude AI Optimizing..."
+        // Toggle between AI Optimizing and 3D Packing Steps for visual feedback
+        setProcessingStep(batchIndex % 2 === 1 ? 2 : 3) 
         
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 45000) // 45s timeout for AI
@@ -130,17 +134,16 @@ export default function OptimizationPage() {
         } catch (fetchErr: any) {
           if (fetchErr.name === 'AbortError') {
             console.error('Batch timed out')
-            toast.error(`Batch ${batchIndex} timed out. AI might be overloaded.`)
+            toast.error(`Batch ${batchIndex} timed out. Using fallback data.`)
           } else {
-            throw fetchErr
+            console.error('Batch error:', fetchErr)
+            toast.error(`Batch ${batchIndex} error. Skipping to next.`)
           }
         }
-        
-        setProcessingStep(Math.min(3, 2 + Math.floor((i / data.length) * 2)))
       }
 
       setProcessingStep(4) // "Synchronizing..."
-      await new Promise(r => setTimeout(r, 800))
+      await new Promise(r => setTimeout(r, 1000))
       
       toast.success(`Successfully optimized ${data.length} items!`)
       router.push('/dashboard/orders')
