@@ -11,6 +11,7 @@ export interface OptimizationResult {
   original_box_cost: number
   optimized_box: string
   optimized_box_cost: number
+  optimized_box_dims: string
   cost_before: number
   cost_after: number
   savings: number

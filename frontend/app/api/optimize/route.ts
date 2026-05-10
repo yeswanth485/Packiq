@@ -37,19 +37,31 @@ function validateDimensions(l: number, w: number, h: number): string | null {
 
 // ─── Default box catalog ─────────────────────────────────────────────────────
 const DEFAULT_CATALOG = [
-  { id: 'amz-a1', name: 'Amazon A1',           sku: 'AMZ-A1', lengthCm: 15.2, widthCm: 10.1, heightCm:  8.5, maxWeightKg:  5, costUsd: 0.45, material: 'Corrugated',    ecoCertified: true },
-  { id: 'amz-a3', name: 'Amazon A3',           sku: 'AMZ-A3', lengthCm: 22.8, widthCm: 15.2, heightCm: 10.1, maxWeightKg:  8, costUsd: 0.65, material: 'Corrugated',    ecoCertified: true },
-  { id: 'amz-a4', name: 'Amazon A4',           sku: 'AMZ-A4', lengthCm: 30.4, widthCm: 22.8, heightCm: 12.7, maxWeightKg: 10, costUsd: 0.85, material: 'Corrugated',    ecoCertified: true },
-  { id: 'amz-m1', name: 'Amazon Mailer M1',    sku: 'AMZ-M1', lengthCm: 25.4, widthCm: 15.2, heightCm:  2.5, maxWeightKg:  2, costUsd: 0.25, material: 'Kraft Bubble',  ecoCertified: true },
-  { id: 'flp-f1', name: 'Flipkart F1',         sku: 'FLP-F1', lengthCm: 18.0, widthCm: 12.0, heightCm: 12.0, maxWeightKg:  5, costUsd: 0.85, material: 'Double Wall',   ecoCertified: true },
-  { id: 'flp-f2', name: 'Flipkart F2',         sku: 'FLP-F2', lengthCm: 25.0, widthCm: 20.0, heightCm: 15.0, maxWeightKg: 10, costUsd: 1.20, material: 'Double Wall',   ecoCertified: true },
-  { id: 'flp-s1', name: 'Flipkart S1',         sku: 'FLP-S1', lengthCm: 10.0, widthCm: 10.0, heightCm: 10.0, maxWeightKg:  3, costUsd: 0.35, material: 'Corrugated',    ecoCertified: true },
-  { id: 'zep-b1', name: 'Zepto Grocery Bag',   sku: 'ZEP-B1', lengthCm: 35.0, widthCm: 20.0, heightCm: 15.0, maxWeightKg:  5, costUsd: 0.15, material: 'Recycled Paper',ecoCertified: true },
-  { id: 'zep-b2', name: 'Zepto Large Bag',     sku: 'ZEP-B2', lengthCm: 45.0, widthCm: 25.0, heightCm: 20.0, maxWeightKg: 10, costUsd: 0.25, material: 'Recycled Paper',ecoCertified: true },
-  { id: 'bli-b1', name: 'Blinkit Paper Bag',   sku: 'BLI-B1', lengthCm: 30.0, widthCm: 18.0, heightCm: 12.0, maxWeightKg:  5, costUsd: 0.12, material: 'Kraft Paper',   ecoCertified: true },
-  { id: 'bli-b2', name: 'Blinkit Cold Bag',    sku: 'BLI-B2', lengthCm: 25.0, widthCm: 20.0, heightCm: 15.0, maxWeightKg:  5, costUsd: 0.55, material: 'Insulated Foil',ecoCertified: true },
-  { id: 'fdx-s',  name: 'FedEx Small',         sku: 'FDX-S',  lengthCm: 31.0, widthCm: 27.6, heightCm:  3.8, maxWeightKg:  3, costUsd: 0.50, material: 'Recycled',      ecoCertified: true },
-  { id: 'ups-m',  name: 'UPS Medium',          sku: 'UPS-M',  lengthCm: 30.0, widthCm: 20.0, heightCm: 20.0, maxWeightKg: 10, costUsd: 1.10, material: 'Corrugated',    ecoCertified: true },
+  // Amazon Standards
+  { id: 'amz-a1', name: 'Amazon A1 (Extra Small)',   sku: 'AMZ-A1', lengthCm: 15.0, widthCm: 10.0, heightCm:  5.0, maxWeightKg:  2, costUsd: 0.35, material: 'Corrugated',    ecoCertified: true },
+  { id: 'amz-a2', name: 'Amazon A2 (Small)',         sku: 'AMZ-A2', lengthCm: 20.0, widthCm: 15.0, heightCm: 10.0, maxWeightKg:  5, costUsd: 0.55, material: 'Corrugated',    ecoCertified: true },
+  { id: 'amz-a3', name: 'Amazon A3 (Medium)',        sku: 'AMZ-A3', lengthCm: 25.0, widthCm: 20.0, heightCm: 15.0, maxWeightKg:  8, costUsd: 0.75, material: 'Corrugated',    ecoCertified: true },
+  { id: 'amz-a4', name: 'Amazon A4 (Large)',         sku: 'AMZ-A4', lengthCm: 35.0, widthCm: 25.0, heightCm: 20.0, maxWeightKg: 12, costUsd: 0.95, material: 'Corrugated',    ecoCertified: true },
+  { id: 'amz-m1', name: 'Amazon Mailer S1',          sku: 'AMZ-M1', lengthCm: 20.0, widthCm: 12.0, heightCm:  2.0, maxWeightKg:  1, costUsd: 0.20, material: 'Kraft Paper',   ecoCertified: true },
+
+  // Flipkart Standards
+  { id: 'flp-s1', name: 'Flipkart Small (S1)',       sku: 'FLP-S1', lengthCm: 18.0, widthCm: 12.0, heightCm:  8.0, maxWeightKg:  3, costUsd: 0.40, material: 'Double Wall',   ecoCertified: true },
+  { id: 'flp-m1', name: 'Flipkart Medium (M1)',      sku: 'FLP-M1', lengthCm: 28.0, widthCm: 18.0, heightCm: 12.0, maxWeightKg:  7, costUsd: 0.70, material: 'Double Wall',   ecoCertified: true },
+  { id: 'flp-l1', name: 'Flipkart Large (L1)',       sku: 'FLP-L1', lengthCm: 40.0, widthCm: 30.0, heightCm: 25.0, maxWeightKg: 15, costUsd: 1.10, material: 'Double Wall',   ecoCertified: true },
+
+  // Zepto/Blinkit (Quick Commerce)
+  { id: 'zep-b1', name: 'Zepto Eco Bag (S)',         sku: 'ZEP-B1', lengthCm: 30.0, widthCm: 20.0, heightCm: 10.0, maxWeightKg:  4, costUsd: 0.12, material: 'Recycled Paper',ecoCertified: true },
+  { id: 'zep-b2', name: 'Zepto Cargo Bag (M)',       sku: 'ZEP-B2', lengthCm: 45.0, widthCm: 30.0, heightCm: 15.0, maxWeightKg:  8, costUsd: 0.22, material: 'Recycled Paper',ecoCertified: true },
+  { id: 'bli-c1', name: 'Blinkit Chill Bag',         sku: 'BLI-C1', lengthCm: 25.0, widthCm: 20.0, heightCm: 20.0, maxWeightKg:  6, costUsd: 0.65, material: 'Thermal Foil',  ecoCertified: true },
+
+  // Global Shippers
+  { id: 'fdx-s1', name: 'FedEx Small Box',           sku: 'FDX-S1', lengthCm: 31.4, widthCm: 23.8, heightCm:  3.0, maxWeightKg:  5, costUsd: 0.85, material: 'Cardboard',     ecoCertified: true },
+  { id: 'ups-m1', name: 'UPS Medium Box',            sku: 'UPS-M1', lengthCm: 40.0, widthCm: 30.0, heightCm: 30.0, maxWeightKg: 15, costUsd: 1.45, material: 'Heavy Duty',    ecoCertified: true },
+  { id: 'dhl-j1', name: 'DHL Jumbo Box',             sku: 'DHL-J1', lengthCm: 60.0, widthCm: 50.0, heightCm: 40.0, maxWeightKg: 30, costUsd: 2.80, material: 'Triple Wall',   ecoCertified: true },
+
+  // Generic / Custom
+  { id: 'gen-c1', name: 'Generic Cube (Small)',      sku: 'GEN-C1', lengthCm: 10.0, widthCm: 10.0, heightCm: 10.0, maxWeightKg:  2, costUsd: 0.30, material: 'Corrugated',    ecoCertified: true },
+  { id: 'gen-p1', name: 'Poster Tube (L)',           sku: 'GEN-P1', lengthCm: 60.0, widthCm:  8.0, heightCm:  8.0, maxWeightKg:  3, costUsd: 1.20, material: 'Fiberboard',    ecoCertified: true },
 ]
 
 // ─── Route handler ────────────────────────────────────────────────────────────
@@ -109,7 +121,8 @@ export async function POST(req: Request) {
     const processProduct = async (p: any) => {
       const prodDimStr: string = p['product L*W*H'] || p['product_l*w*h'] || ''
       const boxDimStr: string  = p['box L*W*H']     || p['box_l*w*h']     || ''
-      const price = parseFloat(p['price'] || p['box_price'] || '0')
+      const productPrice = parseFloat(p['price'] || p['product_price'] || p['product price'] || '0')
+      const originalBoxPrice = parseFloat(p['box_price'] || p['box price'] || '0')
       const productName: string = p['product_name'] || p['product name'] || 'Unknown Product'
       const productId: string   = p['product_id']   || p['product id']   || `auto-${Date.now()}`
 
@@ -120,7 +133,7 @@ export async function POST(req: Request) {
         const dimErr = validateDimensions(prodDim.l, prodDim.w, prodDim.h)
         if (dimErr) throw new Error(dimErr)
 
-        if (isNaN(price) || price < 0) throw new Error('Invalid price value')
+        if (isNaN(productPrice)) throw new Error('Invalid product price value')
 
         // 1. Cache lookup
         const { data: cached } = await supabase
@@ -132,38 +145,48 @@ export async function POST(req: Request) {
           .single() as any
 
         if (cached?.ai_response) {
+          const aiRes = cached.ai_response
           return {
             product_id: productId,
             product_name: productName,
+            product_price: productPrice,
+            box_price: aiRes.boxPriceUsd || 0,
             original_box: boxDimStr,
+            original_box_price: originalBoxPrice,
             optimized_box: cached.recommended_box,
-            cost_before: price,
-            cost_after: Math.max(0, price - (cached.cost_savings_usd ?? 0)),
-            savings: cached.cost_savings_usd ?? 0,
+            optimized_box_dims: aiRes.recommendedBoxDims || '20x15x10',
+            optimized_box_cost: aiRes.boxPriceUsd || 0,
+            cost_before: originalBoxPrice, // Assuming cost refers to shipping/box cost
+            cost_after: aiRes.boxPriceUsd || 0,
+            savings: Math.max(0, originalBoxPrice - (aiRes.boxPriceUsd || 0)),
             efficiency_score: cached.efficiency_score ?? null,
             space_utilization: cached.space_utilization ?? null,
-            confidence: cached.ai_response?.confidence ?? null,
             model: cached.ai_model,
-            reasoning: cached.ai_response?.reasoning ?? '',
+            reasoning: aiRes.reasoning ?? '',
             cached: true,
           }
         }
 
-        // 2. AI optimization — try lightweight Claude first, fall back to free model
+        // 2. AI optimization
         let aiResult: any
         let modelUsed = LIGHTWEIGHT_MODEL
+        const optInput = { 
+          productName, 
+          productPriceUsd: productPrice,
+          weightKg: 0, 
+          lengthCm: prodDim.l, 
+          widthCm: prodDim.w, 
+          heightCm: prodDim.h, 
+          fragile: false, 
+          availableBoxes: boxCatalog 
+        }
+
         try {
-          aiResult = await runOptimization(
-            { productName, weightKg: 0, lengthCm: prodDim.l, widthCm: prodDim.w, heightCm: prodDim.h, fragile: false, availableBoxes: boxCatalog },
-            LIGHTWEIGHT_MODEL
-          )
+          aiResult = await runOptimization(optInput, LIGHTWEIGHT_MODEL)
         } catch (e1) {
           console.warn('[optimize] Claude failed, falling back to free model:', (e1 as Error).message)
           try {
-            aiResult = await runOptimization(
-              { productName, weightKg: 0, lengthCm: prodDim.l, widthCm: prodDim.w, heightCm: prodDim.h, fragile: false, availableBoxes: boxCatalog },
-              FREE_MODEL
-            )
+            aiResult = await runOptimization(optInput, FREE_MODEL)
             modelUsed = FREE_MODEL
           } catch (e2) {
             throw new Error(`All AI models failed: ${(e2 as Error).message}`)
@@ -180,7 +203,7 @@ export async function POST(req: Request) {
               product_snapshot: p,
               ai_response: aiResult,
               recommended_box: aiResult.recommendedBoxName,
-              cost_savings_usd: aiResult.costSavingsUsd,
+              cost_savings_usd: Math.max(0, originalBoxPrice - (aiResult.boxPriceUsd || 0)),
               efficiency_score: aiResult.efficiencyScore,
               space_utilization: aiResult.spaceUtilization,
               ai_model: modelUsed,
@@ -192,14 +215,18 @@ export async function POST(req: Request) {
         return {
           product_id: productId,
           product_name: productName,
+          product_price: productPrice,
+          box_price: aiResult.boxPriceUsd || 0,
           original_box: boxDimStr,
+          original_box_price: originalBoxPrice,
           optimized_box: aiResult.recommendedBoxName,
-          cost_before: price,
-          cost_after: Math.max(0, price - aiResult.costSavingsUsd),
-          savings: aiResult.costSavingsUsd,
+          optimized_box_dims: aiResult.recommendedBoxDims || '20x15x10',
+          optimized_box_cost: aiResult.boxPriceUsd || 0,
+          cost_before: originalBoxPrice,
+          cost_after: aiResult.boxPriceUsd || 0,
+          savings: Math.max(0, originalBoxPrice - (aiResult.boxPriceUsd || 0)),
           efficiency_score: aiResult.efficiencyScore ?? null,
           space_utilization: aiResult.spaceUtilization ?? null,
-          confidence: aiResult.confidence ?? null,
           model: modelUsed,
           reasoning: aiResult.reasoning ?? '',
           cached: false,

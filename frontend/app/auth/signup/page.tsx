@@ -96,24 +96,24 @@ export default function SignupPage() {
       {/* LEFT PANEL */}
       <div className="hidden lg:flex w-[50%] relative flex-col items-center justify-center border-r border-white/5">
         <div className="absolute inset-0 grid-overlay opacity-20" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#00FFD1]/5 rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#00FFD1]/5 rounded-full blur-[140px]" />
         <FloatingElements />
         
         <div className="relative z-10 text-center px-12">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <h1 className={`${syne.className} text-white font-bold text-[56px] leading-tight mb-8`}>
-              Build the <br /><span className="text-[#00FFD1]">Perfect Line.</span>
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <h1 className={`${syne.className} text-white font-bold text-[64px] tracking-tighter leading-[0.9] mb-10`}>
+              Build the <br /><span className="text-[#00FFD1]">Next Grid.</span>
             </h1>
-            <p className="text-gray-400 max-w-md mx-auto mb-12">Join 500+ manufacturers using PackIQ to eliminate defects and optimize yield.</p>
+            <p className="text-xl text-gray-500 max-w-md mx-auto mb-16 font-medium">Join 500+ global brands using PackIQ to eliminate logistics waste.</p>
           </motion.div>
           
           <div className="space-y-6 max-w-sm mx-auto">
-            {["48-hour deployment guarantee", "Dedicated account manager", "24/7 technical support"].map((item, i) => (
-              <div key={i} className="flex items-center gap-4 bg-white/[0.03] p-4 rounded-2xl border border-white/5">
-                <div className="w-8 h-8 rounded-lg bg-[#00FFD1]/20 flex items-center justify-center">
-                  <CheckCircle2 className="w-4 h-4 text-[#00FFD1]" />
+            {["Real-time 3D Spatial Analysis", "AI-Powered Box Selection", "Global Logistics Integration"].map((item, i) => (
+              <div key={i} className="flex items-center gap-5 bg-white/[0.03] p-5 rounded-[24px] border border-white/10 backdrop-blur-md">
+                <div className="w-10 h-10 rounded-xl bg-[#00FFD1]/10 flex items-center justify-center shadow-lg">
+                  <CheckCircle2 className="w-5 h-5 text-[#00FFD1]" />
                 </div>
-                <span className="text-sm font-medium text-gray-300">{item}</span>
+                <span className="text-base font-bold text-gray-300 tracking-tight">{item}</span>
               </div>
             ))}
           </div>
@@ -121,103 +121,103 @@ export default function SignupPage() {
       </div>
 
       {/* RIGHT PANEL */}
-      <div className="w-full lg:w-[50%] flex items-center justify-center p-6 bg-[#0A0A0F]">
+      <div className="w-full lg:w-[50%] flex items-center justify-center p-8 bg-[#0A0A0F]">
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-[480px] glass p-10 rounded-[32px]"
+          className="w-full max-w-[520px] glass p-12 rounded-[48px] shadow-[0_40px_100px_rgba(0,0,0,0.5)]"
         >
-          <div className="flex justify-between items-center mb-10">
+          <div className="flex justify-between items-center mb-12">
             <div>
-              <h2 className={`${syne.className} text-3xl font-bold text-white mb-1`}>Sign Up</h2>
-              <p className="text-gray-500 text-sm">Step {step} of 2</p>
+              <h2 className={`${syne.className} text-4xl font-bold text-white mb-2 tracking-tighter`}>Sign Up</h2>
+              <p className="text-gray-500 text-base font-medium">Step {step} of 2</p>
             </div>
-            <div className="flex gap-2">
-              <div className={`w-12 h-1.5 rounded-full ${step >= 1 ? 'bg-[#00FFD1]' : 'bg-white/5'}`} />
-              <div className={`w-12 h-1.5 rounded-full ${step >= 2 ? 'bg-[#00FFD1]' : 'bg-white/5'}`} />
+            <div className="flex gap-3">
+              <div className={`w-14 h-2 rounded-full transition-all duration-500 ${step >= 1 ? 'bg-[#00FFD1]' : 'bg-white/5'}`} />
+              <div className={`w-14 h-2 rounded-full transition-all duration-500 ${step >= 2 ? 'bg-[#00FFD1]' : 'bg-white/5'}`} />
             </div>
           </div>
 
-          <form onSubmit={step === 1 ? (e) => { e.preventDefault(); setStep(2) } : handleSignup} className="space-y-6">
+          <form onSubmit={step === 1 ? (e) => { e.preventDefault(); setStep(2) } : handleSignup} className="space-y-8">
             <AnimatePresence mode="wait">
               {step === 1 ? (
-                <motion.div key="s1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Full Name</label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
-                      <input type="text" required placeholder="John Doe" className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl pl-12 text-white text-sm focus:border-[#00FFD1]" onChange={e => setFormData({...formData, fullName: e.target.value})} />
+                <motion.div key="s1" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 30 }} className="space-y-8">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-1">Full Name</label>
+                    <div className="relative group">
+                      <User className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-700 group-focus-within:text-[#00FFD1] transition-colors" />
+                      <input type="text" required placeholder="John Doe" className="w-full h-14 bg-white/[0.02] border border-white/10 rounded-2xl pl-14 text-white text-sm focus:border-[#00FFD1] outline-none" onChange={e => setFormData({...formData, fullName: e.target.value})} />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Company Name</label>
-                    <div className="relative">
-                      <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
-                      <input type="text" required placeholder="Acme Inc." className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl pl-12 text-white text-sm focus:border-[#00FFD1]" onChange={e => setFormData({...formData, companyName: e.target.value})} />
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-1">Company Name</label>
+                    <div className="relative group">
+                      <Building className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-700 group-focus-within:text-[#00FFD1] transition-colors" />
+                      <input type="text" required placeholder="Acme Global" className="w-full h-14 bg-white/[0.02] border border-white/10 rounded-2xl pl-14 text-white text-sm focus:border-[#00FFD1] outline-none" onChange={e => setFormData({...formData, companyName: e.target.value})} />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Work Email</label>
-                    <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
-                      <input type="email" required placeholder="name@company.com" className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl pl-12 text-white text-sm focus:border-[#00FFD1]" onChange={e => setFormData({...formData, email: e.target.value})} />
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-1">Work Email</label>
+                    <div className="relative group">
+                      <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-700 group-focus-within:text-[#00FFD1] transition-colors" />
+                      <input type="email" required placeholder="name@company.com" className="w-full h-14 bg-white/[0.02] border border-white/10 rounded-2xl pl-14 text-white text-sm focus:border-[#00FFD1] outline-none" onChange={e => setFormData({...formData, email: e.target.value})} />
                     </div>
                   </div>
                 </motion.div>
               ) : (
-                <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Industry</label>
-                      <select required className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl px-4 text-white text-sm focus:border-[#00FFD1]" onChange={e => setFormData({...formData, industry: e.target.value})}>
+                <motion.div key="s2" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-8">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-1">Industry</label>
+                      <select required className="w-full h-14 bg-white/[0.02] border border-white/10 rounded-2xl px-5 text-white text-sm focus:border-[#00FFD1] outline-none" onChange={e => setFormData({...formData, industry: e.target.value})}>
                         <option value="">Select...</option>
                         {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
                       </select>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Line Speed</label>
-                      <select required className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl px-4 text-white text-sm focus:border-[#00FFD1]" onChange={e => setFormData({...formData, lineSpeed: e.target.value})}>
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-1">Line Speed</label>
+                      <select required className="w-full h-14 bg-white/[0.02] border border-white/10 rounded-2xl px-5 text-white text-sm focus:border-[#00FFD1] outline-none" onChange={e => setFormData({...formData, lineSpeed: e.target.value})}>
                         <option value="">Select...</option>
                         {LINE_SPEEDS.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Mobile Number</label>
-                    <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
-                      <input type="tel" required placeholder="+91 98765 43210" className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl pl-12 text-white text-sm focus:border-[#00FFD1]" onChange={e => setFormData({...formData, phone: e.target.value})} />
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-1">Mobile Number</label>
+                    <div className="relative group">
+                      <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-700 group-focus-within:text-[#00FFD1] transition-colors" />
+                      <input type="tel" required placeholder="+91 98765 43210" className="w-full h-14 bg-white/[0.02] border border-white/10 rounded-2xl pl-14 text-white text-sm focus:border-[#00FFD1] outline-none" onChange={e => setFormData({...formData, phone: e.target.value})} />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
-                      <input type="password" required placeholder="••••••••" className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl pl-12 text-white text-sm focus:border-[#00FFD1]" onChange={e => setFormData({...formData, password: e.target.value})} />
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-1">Password</label>
+                    <div className="relative group">
+                      <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-700 group-focus-within:text-[#00FFD1] transition-colors" />
+                      <input type="password" required placeholder="••••••••" className="w-full h-14 bg-white/[0.02] border border-white/10 rounded-2xl pl-14 text-white text-sm focus:border-[#00FFD1] outline-none" onChange={e => setFormData({...formData, password: e.target.value})} />
                     </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-5 pt-6">
               {step === 2 && (
-                <button type="button" onClick={() => setStep(1)} className="h-14 px-6 border border-white/10 rounded-xl hover:bg-white/5 transition-all">
-                  <ArrowLeft className="w-5 h-5" />
+                <button type="button" onClick={() => setStep(1)} className="h-16 px-8 border border-white/10 rounded-2xl hover:bg-white/5 transition-all">
+                  <ArrowLeft className="w-6 h-6" />
                 </button>
               )}
               <button
                 type="submit" disabled={loading}
-                className="flex-1 h-14 bg-[#00FFD1] text-[#0A0A0F] rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3"
+                className="flex-1 h-16 bg-[#00FFD1] text-[#0A0A0F] rounded-2xl font-black text-xs uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4 shadow-[0_0_40px_rgba(0,255,209,0.25)]"
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : step === 1 ? <>Next Step <ArrowRight className="w-4 h-4" /></> : "Create Account"}
+                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : step === 1 ? <>Next Phase <ArrowRight className="w-5 h-5" /></> : "Establish Account"}
               </button>
             </div>
           </form>
 
-          <div className="mt-8 text-center">
-            <Link href="/auth/login" className="text-gray-500 text-xs hover:text-white transition-colors">
-              Already have an account? <span className="text-[#00FFD1] font-bold">Sign In</span>
+          <div className="mt-12 text-center">
+            <Link href="/auth/login" className="text-gray-600 text-xs hover:text-white transition-colors font-medium">
+              Already have an account? <span className="text-[#00FFD1] font-black uppercase tracking-widest ml-1">Sign In</span>
             </Link>
           </div>
         </motion.div>

@@ -1,68 +1,66 @@
 'use client'
 
-import { Suspense } from 'react'
-import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Box, MeshDistortMaterial } from '@react-three/drei'
-import { useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
-import type { Mesh } from 'three'
+import { Suspense, useRef } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { OrbitControls, Box, Edges, Float, ContactShadows } from '@react-three/drei'
+import * as THREE from 'three'
 
 function RotatingBox() {
-  const meshRef = useRef<Mesh>(null)
-  useFrame((_, delta) => {
+  const meshRef = useRef<THREE.Mesh>(null)
+  
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime()
     if (meshRef.current) {
-      meshRef.current.rotation.x += delta * 0.3
-      meshRef.current.rotation.y += delta * 0.5
+      meshRef.current.rotation.x = Math.cos(t / 4) * 0.2
+      meshRef.current.rotation.y = Math.sin(t / 2) * 0.4
     }
   })
-  return (
-    <Box ref={meshRef} args={[2.2, 1.8, 1.6]} castShadow>
-      <MeshDistortMaterial
-        color="#6366f1"
-        emissive="#4f46e5"
-        emissiveIntensity={0.4}
-        metalness={0.6}
-        roughness={0.2}
-        distort={0.05}
-        speed={1.5}
-      />
-    </Box>
-  )
-}
 
-function BoxEdges() {
-  const meshRef = useRef<Mesh>(null)
-  useFrame((_, delta) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.x += delta * 0.3
-      meshRef.current.rotation.y += delta * 0.5
-    }
-  })
   return (
-    <mesh ref={meshRef}>
-      <boxGeometry args={[2.21, 1.81, 1.61]} />
-      <meshBasicMaterial color="#818cf8" wireframe />
-    </mesh>
+    <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+      <Box ref={meshRef} args={[3, 2.2, 2]} castShadow>
+        <meshStandardMaterial 
+          color="#1a1a2e" 
+          roughness={0.3}
+          metalness={0.8}
+          emissive="#00FFD1"
+          emissiveIntensity={0.1}
+        />
+        <Edges 
+          linewidth={4} 
+          threshold={15} 
+          color="#00FFD1" 
+        />
+      </Box>
+    </Float>
   )
 }
 
 export default function BoxPreview({
-  width = 400,
-  height = 400,
+  width = 580,
+  height = 580,
 }: {
   width?: number
   height?: number
 }) {
   return (
-    <div style={{ width, height }} className="rounded-2xl overflow-hidden">
-      <Suspense fallback={<div className="w-full h-full bg-gray-900 animate-pulse rounded-2xl" />}>
-        <Canvas camera={{ position: [0, 0, 5], fov: 45 }} shadows>
-          <ambientLight intensity={0.5} />
-          <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={2} castShadow />
-          <pointLight position={[-10, -10, -10]} color="#8b5cf6" intensity={1} />
+    <div style={{ width, height }} className="relative">
+      <Suspense fallback={<div className="w-full h-full bg-[#0A0A0F]/50 animate-pulse rounded-[80px]" />}>
+        <Canvas dpr={[1, 2]} shadows camera={{ position: [5, 5, 5], fov: 40 }}>
+          <ambientLight intensity={1} />
+          <spotLight position={[10, 15, 10]} angle={0.3} penumbra={1} intensity={2} castShadow />
+          <pointLight position={[-10, -10, -10]} color="#00FFD1" intensity={1} />
+          
           <RotatingBox />
-          <BoxEdges />
-          <OrbitControls enableZoom={false} enablePan={false} />
+          
+          <ContactShadows position={[0, -2.5, 0]} opacity={0.4} scale={10} blur={2.5} far={4.5} />
+          
+          <OrbitControls 
+            enableZoom={false} 
+            enablePan={false} 
+            autoRotate={true}
+            autoRotateSpeed={0.5}
+          />
         </Canvas>
       </Suspense>
     </div>

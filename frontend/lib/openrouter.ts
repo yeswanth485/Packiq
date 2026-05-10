@@ -15,6 +15,7 @@ export const FREE_MODEL = 'google/gemini-2.0-flash-lite-preview-02-05:free'
 
 export interface OptimizeInput {
   productName: string
+  productPriceUsd?: number
   weightKg: number
   lengthCm: number
   widthCm: number
@@ -39,8 +40,11 @@ export interface OptimizeInput {
 export interface OptimizeOutput {
   recommendedBoxId: string
   recommendedBoxName: string
+  recommendedBoxDims: string
   efficiencyScore: number      // 0–100
   spaceUtilization: number     // 0–100 %
+  productPriceUsd: number      // Added field
+  boxPriceUsd: number          // Added field
   costSavingsUsd: number
   co2SavingsKg: number
   reasoning: string
@@ -111,6 +115,7 @@ Respond ONLY in valid, minified JSON matching the requested schema. No markdown,
   const userPrompt = `
 Optimize packaging for this product:
 - Name: ${input.productName}
+- Unit Price: $${input.productPriceUsd ?? 0}
 - Weight: ${input.weightKg} kg
 - Dimensions: ${input.lengthCm} × ${input.widthCm} × ${input.heightCm} cm (L×W×H)
 - Fragile: ${input.fragile}
@@ -124,8 +129,11 @@ Respond ONLY with this JSON schema:
 {
   "recommendedBoxId": "uuid string",
   "recommendedBoxName": "string",
+  "recommendedBoxDims": "20x15x10",
   "efficiencyScore": 85,
   "spaceUtilization": 72.5,
+  "productPriceUsd": ${input.productPriceUsd ?? 0},
+  "boxPriceUsd": 2.50, 
   "costSavingsUsd": 0.35,
   "co2SavingsKg": 0.12,
   "reasoning": "string",

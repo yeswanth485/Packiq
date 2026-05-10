@@ -75,8 +75,8 @@ export default function OrdersPage() {
               <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5">
                 <th className="px-8 py-4">Product / SKU</th>
                 <th className="px-8 py-4">Recommended Box</th>
-                <th className="px-8 py-4">Prod. Price</th>
-                <th className="px-8 py-4">Recalculated</th>
+                <th className="px-8 py-4">Product Price</th>
+                <th className="px-8 py-4">Box Price</th>
                 <th className="px-8 py-4">Savings</th>
                 <th className="px-8 py-4 text-right">Actions</th>
               </tr>
@@ -96,7 +96,7 @@ export default function OrdersPage() {
                     </span>
                   </td>
                   <td className="px-8 py-5 text-gray-400 font-mono text-xs">${order.product_price.toFixed(2)}</td>
-                  <td className="px-8 py-5 font-bold text-white font-mono text-xs">${order.cost_after.toFixed(2)}</td>
+                  <td className="px-8 py-5 font-bold text-white font-mono text-xs">${order.optimized_box_cost.toFixed(2)}</td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-1 text-[#00FFD1] font-mono text-xs font-bold">
                       <Zap className="w-3 h-3" /> +${order.savings.toFixed(2)}
@@ -136,20 +136,20 @@ export default function OrdersPage() {
                 <div className="h-64 bg-black/40 rounded-[32px] border border-white/5 overflow-hidden">
                    {/* 360 Dynamic View of the Optimized Box */}
                    <Box3DViewer 
-                    l={parseInt(selectedOrder.product_dims.split('x')[0]) + 2} 
-                    w={parseInt(selectedOrder.product_dims.split('x')[1]) + 2} 
-                    h={parseInt(selectedOrder.product_dims.split('x')[2]) + 2} 
+                    l={parseInt(selectedOrder.optimized_box_dims?.split('x')[0]) || 20} 
+                    w={parseInt(selectedOrder.optimized_box_dims?.split('x')[1]) || 15} 
+                    h={parseInt(selectedOrder.optimized_box_dims?.split('x')[2]) || 10} 
                    />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                    <div className="glass p-4">
-                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1">Recommended Box</p>
-                     <p className="text-sm font-bold text-white">{selectedOrder.optimized_box}</p>
+                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1">Product Price</p>
+                     <p className="text-sm font-bold text-white">${selectedOrder.product_price.toFixed(2)}</p>
                    </div>
                    <div className="glass p-4">
-                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1">Recalculated Price</p>
-                     <p className="text-sm font-bold text-[#00FFD1]">${selectedOrder.cost_after.toFixed(2)}</p>
+                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1">Box Price</p>
+                     <p className="text-sm font-bold text-[#00FFD1]">${selectedOrder.optimized_box_cost.toFixed(2)}</p>
                    </div>
                 </div>
 

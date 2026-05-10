@@ -13,13 +13,14 @@ import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 
 const ECOMMERCE_BOXES = [
-  { name: 'Micro Box', l: 10, w: 10, h: 5, cost: 0.25 },
-  { name: 'Standard A1', l: 15, w: 10, h: 8, cost: 0.45 },
-  { name: 'Standard A2', l: 20, w: 15, h: 10, cost: 0.65 },
-  { name: 'Large A3', l: 30, w: 22, h: 12, cost: 0.85 },
-  { name: 'Cube C1', l: 25, w: 15, h: 20, cost: 0.50 },
-  { name: 'Slim S1', l: 35, w: 25, h: 5, cost: 0.70 },
-  { name: 'Mega M1', l: 50, w: 40, h: 30, cost: 1.50 }
+  { name: 'Amazon A1 (XS)', l: 15, w: 10, h: 5, cost: 0.35 },
+  { name: 'Amazon A2 (S)',  l: 20, w: 15, h: 10, cost: 0.55 },
+  { name: 'Amazon A3 (M)',  l: 25, w: 20, h: 15, cost: 0.75 },
+  { name: 'Flipkart S1',    l: 18, w: 12, h: 8, cost: 0.40 },
+  { name: 'Flipkart M1',    l: 28, w: 18, h: 12, cost: 0.70 },
+  { name: 'Zepto Eco (S)',  l: 30, w: 20, h: 10, cost: 0.12 },
+  { name: 'FedEx Small',    l: 31, w: 24, h: 3, cost: 0.85 },
+  { name: 'Generic Cube',   l: 10, w: 10, h: 10, cost: 0.30 }
 ]
 
 export default function OptimizationPage() {
@@ -100,17 +101,18 @@ export default function OptimizationPage() {
         const mappedResults: OptimizationResult[] = resData.results.map((r: any) => ({
           product_id: r.product_id,
           product_name: r.product_name,
-          product_price: r.cost_before,
-          product_dims: data.find((d: any) => d.sku === r.product_id || d['SKU'] === r.product_id)?.dims || 'N/A',
-          product_weight: parseFloat(data.find((d: any) => d.sku === r.product_id || d['SKU'] === r.product_id)?.weight || '0'),
+          product_price: r.product_price,
+          product_dims: data.find((d: any) => d.sku === r.product_id || d['SKU'] === r.product_id || d['product_id'] === r.product_id)?.dims || 'N/A',
+          product_weight: parseFloat(data.find((d: any) => d.sku === r.product_id || d['SKU'] === r.product_id || d['product_id'] === r.product_id)?.weight || '0'),
           original_box: r.original_box || 'Unknown',
-          original_box_cost: 0,
+          original_box_cost: r.original_box_price || 0,
           optimized_box: r.optimized_box,
-          optimized_box_cost: 0,
-          cost_before: r.cost_before,
-          cost_after: r.cost_after,
+          optimized_box_cost: r.box_price || 0,
+          optimized_box_dims: r.optimized_box_dims || '20x15x10',
+          cost_before: r.original_box_price || 0,
+          cost_after: r.box_price || 0,
           savings: r.savings,
-          void_reduction: r.space_utilization || 0,
+          void_reduction: r.efficiency_score || 0,
           status: 'success'
         }))
         
