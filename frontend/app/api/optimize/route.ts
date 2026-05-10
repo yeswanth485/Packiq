@@ -38,39 +38,85 @@ const DEFAULT_CATALOG = [
   { id: 'fk-m1',  name: 'Flipkart M1',             sku: 'FK-M1',  lengthCm: 28.0, widthCm: 18.0, heightCm: 12.0, maxWeightKg:  8, costUsd: 0.70, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
 ]
 
+// ─── Flexible column value finder ────────────────────────────────────────
+// Searches for a value in a row object by trying multiple key variants.
+// This makes the system resilient to different CSV column naming styles.
+function findValue(p: any, ...keys: string[]): string {
+  // First try exact matches
+  for (const k of keys) {
+    if (p[k] !== undefined && p[k] !== null && p[k] !== '') return String(p[k])
+  }
+  // Then try case-insensitive + normalized matching against all row keys
+  const normalizedKeys = keys.map(k => k.toLowerCase().replace(/[\s_\-]+/g, ''))
+  for (const rowKey of Object.keys(p)) {
+    const normalized = rowKey.toLowerCase().replace(/[\s_\-]+/g, '')
+    for (const target of normalizedKeys) {
+      // Match if normalized key contains or equals the target
+      if (normalized === target || normalized.startsWith(target) || normalized.includes(target)) {
+        if (p[rowKey] !== undefined && p[rowKey] !== null && p[rowKey] !== '') return String(p[rowKey])
+      }
+    }
+  }
+  return ''
+}
+
 // ─── Map raw product row → engine input ──────────────────────────────────
 function mapProductToEngineInput(p: any, boxCatalog: typeof DEFAULT_CATALOG) {
-  const prodDimStr = (p['product L*W*H'] || p['product_dims'] || p['product_l*w*h'] || '').toString()
+  // Product dimensions — supports: "product L*W*H", "product_L*W*H_cm", "product_dims", etc.
+  const prodDimStr = findValue(p, 'product L*W*H', 'product_L*W*H', 'product_L*W*H_cm', 'product_dims', 'product_l*w*h', 'dimensions', 'dims', 'lwh')
   const prodDim = parseDimensions(prodDimStr) || { l: 0, w: 0, h: 0 }
 
+  // Fragility mapping
   const fragMap: Record<string, FragilityLevel> = {
     low: 'low', medium: 'medium', high: 'high', extreme: 'extreme',
     '1': 'low', '2': 'medium', '3': 'high', '4': 'extreme',
   }
-  const rawFragility = (p['fragility'] || p['fragile'] || 'low').toString().toLowerCase()
-  const fragility: FragilityLevel = fragMap[rawFragility] || 'low'
+  const rawFragility = findValue(p, 'fragility', 'fragile') || 'low'
+  const fragility: FragilityLevel = fragMap[rawFragility.toLowerCase()] || 'low'
 
+  // Shipping method — includes "surface" mapped to "standard"
   const shipMap: Record<string, ShippingMethod> = {
     standard: 'standard', express: 'express', 'same-day': 'same-day', sameday: 'same-day',
+    surface: 'standard', ground: 'standard', economy: 'standard',
   }
-  const rawShip = (p['shipping_method'] || p['shipping'] || 'standard').toString().toLowerCase()
-  const shippingMethod: ShippingMethod = shipMap[rawShip] || 'standard'
+  const rawShip = findValue(p, 'shipping_method', 'shipping') || 'standard'
+  const shippingMethod: ShippingMethod = shipMap[rawShip.toLowerCase()] || 'standard'
+
+  // Zone — supports numeric (1-6) AND text-based regions (South, North, East, West)
+  const zoneTextMap: Record<string, number> = {
+    local: 1, south: 2, west: 3, north: 4, east: 5, international: 6,
+    zone1: 1, zone2: 2, zone3: 3, zone4: 4, zone5: 5, zone6: 6,
+  }
+  const rawZone = findValue(p, 'zone', 'destination_zone') || '2'
+  const parsedZone = parseInt(rawZone, 10)
+  const destinationZone = !isNaN(parsedZone)
+    ? Math.min(6, Math.max(1, parsedZone))
+    : (zoneTextMap[rawZone.toLowerCase()] || 2)
+
+  // Price — supports price, price_inr, price_usd
+  const rawPrice = findValue(p, 'price', 'price_inr', 'price_usd', 'mrp') || '0'
+
+  // Box dimensions — supports: "box L*W*H", "box_L*W*H_cm", "box_dims", etc.
+  const boxDimStr = findValue(p, 'box L*W*H', 'box_L*W*H', 'box_L*W*H_cm', 'box_dims', 'current_box', 'current_box_dims')
+
+  // Box price — supports: "box_price", "box price", "box_price_inr"
+  const rawBoxPrice = findValue(p, 'box_price', 'box price', 'box_price_inr', 'box_price_usd', 'box_cost') || '0'
 
   return {
-    productName:        p['product_name'] || p['name'] || 'Unknown',
-    productId:          p['product_id'] || p['sku'] || `id-${Date.now()}`,
-    productPriceUsd:    parseFloat(p['price'] || '0'),
+    productName:        findValue(p, 'product_name', 'name') || 'Unknown',
+    productId:          findValue(p, 'product_id', 'sku') || `id-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    productPriceUsd:    parseFloat(rawPrice) || 0,
     lengthCm:           prodDim.l,
     widthCm:            prodDim.w,
     heightCm:           prodDim.h,
-    weightKg:           parseFloat(p['weight_kg'] || p['weight'] || '0.5'),
+    weightKg:           parseFloat(findValue(p, 'weight_kg', 'weight') || '0.5'),
     fragility,
-    quantity:           parseInt(p['quantity'] || '1', 10),
-    category:           p['category'] || 'general',
-    destinationZone:    Math.min(6, Math.max(1, parseInt(p['zone'] || p['destination_zone'] || '2', 10))),
+    quantity:           parseInt(findValue(p, 'quantity', 'qty') || '1', 10),
+    category:           findValue(p, 'category', 'product_category') || 'general',
+    destinationZone,
     shippingMethod,
-    currentBoxName:     p['box L*W*H'] || p['box_dims'] || p['current_box'] || undefined,
-    currentBoxCostUsd:  parseFloat(p['box_price'] || p['box price'] || '0') || undefined,
+    currentBoxName:     boxDimStr || undefined,
+    currentBoxCostUsd:  parseFloat(rawBoxPrice) || undefined,
     availableBoxes:     boxCatalog,
   }
 }
