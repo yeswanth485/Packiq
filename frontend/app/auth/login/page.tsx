@@ -84,7 +84,7 @@ export default function LoginPage() {
         .from('profiles')
         .select('onboarding_completed, company')
         .eq('id', data.user.id)
-        .single()
+        .single() as any
 
       // If company name was provided in login and is missing in profile, update it
       if (formData.companyName && profile && !profile.company) {

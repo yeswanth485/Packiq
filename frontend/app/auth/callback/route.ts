@@ -22,7 +22,7 @@ export async function GET(request: Request) {
         .select('onboarding_completed')
         .single()
 
-      if (profile?.onboarding_completed) {
+      if (profile && (profile as any).onboarding_completed) {
         return NextResponse.redirect(`${origin}/dashboard`)
       } else {
         return NextResponse.redirect(`${origin}/onboarding`)
