@@ -80,15 +80,23 @@ export default function LoginPage() {
       if (error) throw error
 
       // Check onboarding status
-      const { data: profile } = await supabase
-        .from('profiles')
+      let { data: profile } = await (supabase.from('profiles') as any)
         .select('onboarding_completed, company')
         .eq('id', data.user.id)
-        .single() as any
+        .single()
 
-      // If company name was provided in login and is missing in profile, update it
-      if (formData.companyName && profile && !profile.company) {
-        await supabase.from('profiles').update({ company: formData.companyName }).eq('id', data.user.id)
+      // If profile is missing (trigger failure), create it
+      if (!profile) {
+        const { data: newProfile, error: createError } = await (supabase.from('profiles') as any).insert({
+          id: data.user.id,
+          email: data.user.email,
+          company: formData.companyName,
+          onboarding_completed: false
+        }).select().single()
+        profile = newProfile
+      } else if (formData.companyName && !profile.company) {
+        // If company name was provided in login and is missing in profile, update it
+        await (supabase.from('profiles') as any).update({ company: formData.companyName }).eq('id', data.user.id)
       }
 
       setIsSuccess(true)

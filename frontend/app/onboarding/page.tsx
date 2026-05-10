@@ -112,11 +112,10 @@ export default function OnboardingWizard() {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (user) {
-      const { error } = await (supabase as any).from('profiles').upsert({
+      const { error } = await (supabase.from('profiles') as any).upsert({
         id: user.id,
         email: user.email,
         company: data.companyName,
-        company_domain: data.websiteUrl,
         onboarding_completed: true
       })
 
