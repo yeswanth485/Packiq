@@ -1,33 +1,81 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+// ─── Full Optimization Result (matches engine output) ──────────────────────
+
 export interface OptimizationResult {
+  // Identity
   product_id: string
   product_name: string
   product_price: number
   product_dims: string
   product_weight: number
+
+  // Box selection
   original_box: string
   original_box_cost: number
   optimized_box: string
   optimized_box_cost: number
   optimized_box_dims: string
-  cost_before: number
-  cost_after: number
+  optimized_box_sku: string
+
+  // Material
+  packaging_material: string
+  fill_material: string
+
+  // Three-layer cost breakdown
+  packaging_cost: number    // box + tape + filler + labor
+  shipping_cost: number     // courier + dim weight + zone
+  total_cost: number        // packaging + shipping
+  baseline_cost: number     // what they were paying
+  cost_before: number       // alias for baseline_cost (legacy)
+  cost_after: number        // alias for total_cost (legacy)
+
+  // Savings
   savings: number
-  void_reduction: number
+  savings_percent: number
+
+  // Risk & quality
+  damage_risk: 'Low' | 'Medium' | 'High'
+  space_utilization: number  // 0–100 %
+  confidence_score: number   // 0–100 %
+  void_reduction: number     // alias for space_utilization (legacy)
+
+  // Component scores
+  fit_score: number
+  void_score: number
+  cost_score: number
+  sustainability_score: number
+  final_score: number
+
+  // Alternatives
+  alternative_box_name?: string
+  alternative_box_dims?: string
+
+  // Explanation
+  reasoning: string
+  packing_tips: string[]
+  candidates_evaluated: number
+
+  // Status
   status: 'success' | 'warning' | 'error'
   error_message?: string
+  model: string
+  data_quality: 'complete' | 'partial' | 'estimated'
 }
+
+// ─── Store State ──────────────────────────────────────────────────────────
 
 interface OptimizationState {
   lastRun: string | null
   results: OptimizationResult[]
   totalSaved: number
+  totalShippingSaved: number
+  avgConfidence: number
   itemsProcessed: number
   status: 'idle' | 'running' | 'completed' | 'error'
   skippedItems: any[]
-  
+
   // Actions
   setRunning: () => void
   setResults: (results: OptimizationResult[], skipped: any[]) => void
@@ -36,49 +84,71 @@ interface OptimizationState {
   reset: () => void
 }
 
+function computeStats(results: OptimizationResult[]) {
+  const totalSaved = results.reduce((acc, r) => acc + (r.savings || 0), 0)
+  const totalShippingSaved = results.reduce((acc, r) => acc + Math.max(0, (r.baseline_cost || 0) - (r.shipping_cost || 0)), 0)
+  const avgConfidence = results.length > 0
+    ? results.reduce((acc, r) => acc + (r.confidence_score || 0), 0) / results.length
+    : 0
+  return { totalSaved, totalShippingSaved, avgConfidence: Math.round(avgConfidence) }
+}
+
 export const useOptimizationStore = create<OptimizationState>()(
   persist(
     (set) => ({
       lastRun: null,
       results: [],
       totalSaved: 0,
+      totalShippingSaved: 0,
+      avgConfidence: 0,
       itemsProcessed: 0,
       status: 'idle',
       skippedItems: [],
 
-      setRunning: () => set({ status: 'running', results: [], totalSaved: 0, itemsProcessed: 0, skippedItems: [] }),
-      
+      setRunning: () => set({
+        status: 'running',
+        results: [],
+        totalSaved: 0,
+        totalShippingSaved: 0,
+        avgConfidence: 0,
+        itemsProcessed: 0,
+        skippedItems: [],
+      }),
+
       setResults: (results, skipped) => {
-        const totalSaved = results.reduce((acc, curr) => acc + curr.savings, 0)
-        set({ 
-          results, 
+        const stats = computeStats(results)
+        set({
+          results,
           skippedItems: skipped,
-          totalSaved, 
-          itemsProcessed: results.length, 
+          ...stats,
+          itemsProcessed: results.length,
           status: 'completed',
-          lastRun: new Date().toISOString()
+          lastRun: new Date().toISOString(),
         })
       },
 
       addBatchResults: (batchResults) => set((state) => {
         const newResults = [...state.results, ...batchResults]
-        const newTotalSaved = newResults.reduce((acc, curr) => acc + curr.savings, 0)
+        const stats = computeStats(newResults)
         return {
           results: newResults,
-          totalSaved: newTotalSaved,
-          itemsProcessed: newResults.length
+          ...stats,
+          itemsProcessed: newResults.length,
+          status: 'running',
         }
       }),
 
-      setError: (error) => set({ status: 'error' }),
-      
+      setError: () => set({ status: 'error' }),
+
       reset: () => set({
         results: [],
         totalSaved: 0,
+        totalShippingSaved: 0,
+        avgConfidence: 0,
         itemsProcessed: 0,
         status: 'idle',
-        skippedItems: []
-      })
+        skippedItems: [],
+      }),
     }),
     {
       name: 'optimization-storage',

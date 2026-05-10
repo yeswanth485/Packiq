@@ -3,7 +3,8 @@
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Zap, Plus, Trash2, ArrowRight, UploadCloud, Brain, Package, FileSpreadsheet, Download
+  Zap, Plus, Trash2, ArrowRight, UploadCloud, Brain, Package, FileSpreadsheet, Download,
+  CheckCircle2, AlertTriangle, ShieldCheck, TrendingDown, Info
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useOptimizationStore, OptimizationResult } from '@/lib/store/optimizationStore'
@@ -12,46 +13,115 @@ import Box3DViewer from '@/components/dashboard/Box3DViewer'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 
-const ECOMMERCE_BOXES = [
-  { name: 'Amazon A1 (XS)', l: 15, w: 10, h: 5, cost: 0.35 },
-  { name: 'Amazon A2 (S)',  l: 20, w: 15, h: 10, cost: 0.55 },
-  { name: 'Amazon A3 (M)',  l: 25, w: 20, h: 15, cost: 0.75 },
-  { name: 'Flipkart S1',    l: 18, w: 12, h: 8, cost: 0.40 },
-  { name: 'Flipkart M1',    l: 28, w: 18, h: 12, cost: 0.70 },
-  { name: 'Zepto Eco (S)',  l: 30, w: 20, h: 10, cost: 0.12 },
-  { name: 'FedEx Small',    l: 31, w: 24, h: 3, cost: 0.85 },
-  { name: 'Generic Cube',   l: 10, w: 10, h: 10, cost: 0.30 }
-]
-
 export default function OptimizationPage() {
   const [activeTab, setActiveTab] = useState<'manual' | 'bulk'>('manual')
   const [isOptimizing, setIsOptimizing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { results, setResults, setRunning } = useOptimizationStore()
+  const { results, setResults, setRunning, addBatchResults } = useOptimizationStore()
+  const router = useRouter()
+
+  // Manual Entry State
+  const [manualInput, setManualInput] = useState({
+    productName: '',
+    sku: '',
+    category: 'general',
+    l: '', w: '', h: '',
+    weight: '0.5',
+    fragility: 'low',
+    quantity: '1',
+    zone: '2',
+    shippingMethod: 'standard',
+    currentBox: '',
+    currentBoxCost: ''
+  })
+  const [manualResult, setManualResult] = useState<OptimizationResult | null>(null)
+
+  const [processingStep, setProcessingStep] = useState(0)
+  const [totalItems, setTotalItems] = useState(0)
+
+  const steps = [
+    "Validating product dimensions...",
+    "Generating box candidates...",
+    "Scoring fit, cost, and risk...",
+    "Selecting optimal box...",
+    "Calculating savings vs. baseline..."
+  ]
+
+  const handleManualOptimize = async () => {
+    if (!manualInput.productName || !manualInput.l || !manualInput.w || !manualInput.h) {
+      toast.error('Please fill in product name and dimensions.')
+      return
+    }
+
+    setIsOptimizing(true)
+    setTotalItems(1)
+    setRunning()
+    setManualResult(null)
+
+    // Simulate steps for UI
+    for (let i = 0; i < 4; i++) {
+      setProcessingStep(i)
+      await new Promise(r => setTimeout(r, 600))
+    }
+
+    try {
+      const payload = [{
+        product_name: manualInput.productName,
+        sku: manualInput.sku,
+        category: manualInput.category,
+        'product L*W*H': `${manualInput.l}x${manualInput.w}x${manualInput.h}`,
+        weight_kg: parseFloat(manualInput.weight),
+        fragility: manualInput.fragility,
+        quantity: parseInt(manualInput.quantity, 10),
+        zone: parseInt(manualInput.zone, 10),
+        shipping_method: manualInput.shippingMethod,
+        'box L*W*H': manualInput.currentBox,
+        box_price: manualInput.currentBoxCost ? parseFloat(manualInput.currentBoxCost) : undefined
+      }]
+
+      const res = await fetch('/api/optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products: payload })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok || data.error) throw new Error(data.error || 'Failed to optimize')
+
+      if (data.results && data.results[0] && data.results[0].status !== 'error') {
+        const result = data.results[0] as OptimizationResult
+        setManualResult(result)
+        addBatchResults([result])
+        setProcessingStep(4)
+        toast.success('Optimization complete!')
+      } else {
+        throw new Error(data.results?.[0]?.error || 'Unknown error occurred')
+      }
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setIsOptimizing(false)
+    }
+  }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    const reader = new FileReader()
     const extension = file.name.split('.').pop()?.toLowerCase()
+    const reader = new FileReader()
 
     if (extension === 'csv') {
       Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          processData(results.data)
-        }
+        header: true, skipEmptyLines: true,
+        complete: (res) => processBulkData(res.data)
       })
     } else if (extension === 'xlsx' || extension === 'xls') {
       reader.onload = (evt) => {
-        const bstr = evt.target?.result
-        const wb = XLSX.read(bstr, { type: 'binary' })
-        const wsname = wb.SheetNames[0]
-        const ws = wb.Sheets[wsname]
-        const data = XLSX.utils.sheet_to_json(ws)
-        processData(data)
+        const wb = XLSX.read(evt.target?.result, { type: 'binary' })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        processBulkData(XLSX.utils.sheet_to_json(ws))
       }
       reader.readAsBinaryString(file)
     } else {
@@ -59,102 +129,51 @@ export default function OptimizationPage() {
     }
   }
 
-  const [processingStep, setProcessingStep] = useState(0)
-  const [totalItems, setTotalItems] = useState(0)
-  const router = useRouter()
-  const steps = [
-    "Reading Inventory Data...",
-    "Analyzing Volumetric Yield...",
-    "Claude AI Optimizing Box Selection...",
-    "Generating 3D Packing Paths...",
-    "Synchronizing with Orders Tab..."
-  ]
-
-  const processData = async (data: any[]) => {
+  const processBulkData = async (data: any[]) => {
     setIsOptimizing(true)
     setTotalItems(data.length)
     setRunning()
-    
-    // Reset store for fresh run
     setResults([], [])
 
-    const BATCH_SIZE = 50 // Process up to 50 items simultaneously for maximum speed
-    const totalBatches = Math.ceil(data.length / BATCH_SIZE)
-    
-    setProcessingStep(1) // "Analyzing Volumetric Yield..."
+    const BATCH_SIZE = 50
+    setProcessingStep(0)
     await new Promise(r => setTimeout(r, 600))
-    
+
     try {
       for (let i = 0; i < data.length; i += BATCH_SIZE) {
         const batch = data.slice(i, i + BATCH_SIZE)
-        const batchIndex = Math.floor(i / BATCH_SIZE) + 1
-        
-        // Cycle steps 2 and 3 for visual effect
-        setProcessingStep(batchIndex % 2 === 1 ? 2 : 3) 
+        setProcessingStep(i % 2 === 0 ? 1 : 2)
         
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 45000) // 45s timeout for AI
+        const timeoutId = setTimeout(() => controller.abort(), 45000)
 
         try {
-          const response = await fetch('/api/optimize', {
+          const res = await fetch('/api/optimize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ products: batch }),
             signal: controller.signal
           })
-
           clearTimeout(timeoutId)
-
-          if (!response.ok) {
-            const errBody = await response.json().catch(() => ({}))
-            throw new Error(errBody.error || `Batch ${batchIndex} failed (HTTP ${response.status})`)
-          }
-
-          const resData = await response.json()
           
-          if (resData.results && resData.results.length > 0) {
-            const mappedResults: OptimizationResult[] = resData.results.map((r: any) => ({
-              product_id: r.product_id,
-              product_name: r.product_name,
-              product_price: r.product_price,
-              product_dims: r.product_dims || 'N/A',
-              product_weight: r.product_weight || 0.5,
-              original_box: r.original_box || 'Unknown',
-              original_box_cost: r.original_box_price || 0,
-              optimized_box: r.optimized_box,
-              optimized_box_cost: r.box_price || 0,
-              optimized_box_dims: r.optimized_box_dims || '20x15x10',
-              cost_before: r.original_box_price || 0,
-              cost_after: r.box_price || 0,
-              savings: r.savings,
-              void_reduction: r.efficiency_score || 0,
-              status: 'success'
-            }))
-            
-            useOptimizationStore.getState().addBatchResults(mappedResults)
+          if (!res.ok) throw new Error(`Batch failed (HTTP ${res.status})`)
+          const resData = await res.json()
+          
+          if (resData.results) {
+            addBatchResults(resData.results.filter((r: any) => r.status !== 'error'))
           }
-        } catch (fetchErr: any) {
-          if (fetchErr.name === 'AbortError') {
-            console.error('Batch timed out')
-            toast.error(`Batch ${batchIndex} timed out. Using fallback data.`)
-          } else {
-            console.error('Batch error:', fetchErr)
-            toast.error(`Batch ${batchIndex} error. Skipping to next.`)
-          }
+        } catch (err) {
+          toast.error(`Batch error. Skipping to next.`)
         }
       }
-
-      setProcessingStep(4) // "Synchronizing..."
+      setProcessingStep(4)
       await new Promise(r => setTimeout(r, 1000))
-      
-      toast.success(`Successfully optimized ${data.length} items!`)
+      toast.success(`Successfully optimized items!`)
       router.push('/dashboard/orders')
-      
     } catch (err: any) {
-      console.error('Optimization failed:', err)
-      toast.error(err.message || 'Optimization failed')
+      toast.error('Optimization failed')
     } finally {
-      setIsOptimizing(false) // Always dismiss modal
+      setIsOptimizing(false)
     }
   }
 
@@ -163,18 +182,19 @@ export default function OptimizationPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="text-3xl font-bold text-white mb-1">AI Optimization</h1>
-          <p className="text-gray-500 text-sm font-medium">Standardize packaging for Amazon, Flipkart, and Zepto.</p>
+          <p className="text-gray-500 text-sm font-medium">Standardize packaging and minimize shipping costs.</p>
         </div>
       </div>
 
       <div className="grid lg:grid-cols-12 gap-6">
+        {/* Left Column - Input */}
         <div className="lg:col-span-7 space-y-6">
           <div className="glass p-8 rounded-3xl">
             <div className="flex gap-4 p-1 bg-white/[0.03] border border-white/5 rounded-2xl w-fit mb-8">
               {['manual', 'bulk'].map((tab) => (
                 <button 
                   key={tab} 
-                  onClick={() => setActiveTab(tab as any)}
+                  onClick={() => { setActiveTab(tab as any); setManualResult(null); }}
                   className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-[#00FFD1] text-[#0A0A0F]' : 'text-gray-500 hover:text-white'}`}
                 >
                   {tab}
@@ -184,35 +204,85 @@ export default function OptimizationPage() {
 
             <AnimatePresence mode="wait">
               {activeTab === 'manual' ? (
-                <motion.div key="manual" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-black text-white uppercase tracking-widest">Single Entry</h3>
-                    <button className="text-[10px] font-black text-[#00FFD1] uppercase tracking-widest flex items-center gap-1">
-                      <Plus className="w-3 h-3" /> Add Row
-                    </button>
-                  </div>
-                  {[1].map((i) => (
-                    <div key={i} className="flex gap-4 p-4 bg-white/[0.02] border border-white/5 rounded-2xl group hover:border-[#00FFD1]/30 transition-all">
-                      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
-                        <Package className="w-5 h-5 text-gray-600" />
-                      </div>
-                      <div className="flex-1 grid grid-cols-4 gap-4 items-center">
-                        <div className="col-span-2">
-                          <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-0.5">Product Name</p>
-                          <input type="text" placeholder="e.g. iPhone 15 Pro" className="bg-transparent border-none p-0 text-white text-sm focus:ring-0 w-full placeholder-gray-800" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-0.5">Price ($)</p>
-                          <input type="number" placeholder="999" className="bg-transparent border-none p-0 text-white text-sm focus:ring-0 w-full placeholder-gray-800" />
-                        </div>
-                        <div className="flex justify-end">
-                          <button className="p-2 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
+                <motion.div key="manual" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                  {/* Product Info */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Product Name</label>
+                      <input type="text" value={manualInput.productName} onChange={e => setManualInput(s => ({...s, productName: e.target.value}))} placeholder="e.g. iPhone 15 Pro" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all" />
                     </div>
-                  ))}
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">SKU / ID</label>
+                      <input type="text" value={manualInput.sku} onChange={e => setManualInput(s => ({...s, sku: e.target.value}))} placeholder="IPH-15P-256" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all" />
+                    </div>
+                  </div>
+
+                  {/* Dimensions & Weight */}
+                  <div className="grid grid-cols-4 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Length (cm)</label>
+                      <input type="number" value={manualInput.l} onChange={e => setManualInput(s => ({...s, l: e.target.value}))} placeholder="L" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Width (cm)</label>
+                      <input type="number" value={manualInput.w} onChange={e => setManualInput(s => ({...s, w: e.target.value}))} placeholder="W" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Height (cm)</label>
+                      <input type="number" value={manualInput.h} onChange={e => setManualInput(s => ({...s, h: e.target.value}))} placeholder="H" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Weight (kg)</label>
+                      <input type="number" value={manualInput.weight} onChange={e => setManualInput(s => ({...s, weight: e.target.value}))} placeholder="0.5" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all" />
+                    </div>
+                  </div>
+
+                  {/* Logistics Parameters */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Fragility</label>
+                      <select value={manualInput.fragility} onChange={e => setManualInput(s => ({...s, fragility: e.target.value}))} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all [&>option]:bg-[#0A0A0F]">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="extreme">Extreme</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Zone (1-6)</label>
+                      <select value={manualInput.zone} onChange={e => setManualInput(s => ({...s, zone: e.target.value}))} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all [&>option]:bg-[#0A0A0F]">
+                        {[1,2,3,4,5,6].map(z => <option key={z} value={z}>Zone {z}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Method</label>
+                      <select value={manualInput.shippingMethod} onChange={e => setManualInput(s => ({...s, shippingMethod: e.target.value}))} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all [&>option]:bg-[#0A0A0F]">
+                        <option value="standard">Standard</option>
+                        <option value="express">Express</option>
+                        <option value="same-day">Same-Day</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Baseline Context */}
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Current Box (Optional)</label>
+                      <input type="text" value={manualInput.currentBox} onChange={e => setManualInput(s => ({...s, currentBox: e.target.value}))} placeholder="e.g. 25x20x15" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Current Box Cost ($)</label>
+                      <input type="number" value={manualInput.currentBoxCost} onChange={e => setManualInput(s => ({...s, currentBoxCost: e.target.value}))} placeholder="0.00" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all" />
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={handleManualOptimize}
+                    className="w-full bg-[#00FFD1] text-[#0A0A0F] py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(0,255,209,0.2)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4"
+                  >
+                    <Brain className="w-4 h-4" /> Run AI Optimization
+                  </button>
+
                 </motion.div>
               ) : (
                 <motion.div key="bulk" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
@@ -225,19 +295,7 @@ export default function OptimizationPage() {
                       <UploadCloud className="w-8 h-8 text-[#00FFD1]" />
                     </div>
                     <h3 className="text-xl font-bold text-white mb-2">Upload Inventory Sheet</h3>
-                    <p className="text-gray-500 text-xs mb-8">Supports CSV, XLSX for Amazon, Flipkart, Zepto standards.</p>
-                    <div className="flex justify-center gap-4">
-                       <span className="px-3 py-1 bg-white/5 rounded-full text-[9px] font-black uppercase tracking-widest text-gray-400">SKU</span>
-                       <span className="px-3 py-1 bg-white/5 rounded-full text-[9px] font-black uppercase tracking-widest text-gray-400">Dimensions</span>
-                       <span className="px-3 py-1 bg-white/5 rounded-full text-[9px] font-black uppercase tracking-widest text-gray-400">Price</span>
-                    </div>
-                  </div>
-                  <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <FileSpreadsheet className="w-5 h-5 text-gray-500" />
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Download Template</span>
-                    </div>
-                    <Download className="w-4 h-4 text-gray-600 cursor-pointer hover:text-white" />
+                    <p className="text-gray-500 text-xs mb-8">Includes dims, weight, fragility, and zone for bulk processing.</p>
                   </div>
                 </motion.div>
               )}
@@ -245,48 +303,114 @@ export default function OptimizationPage() {
           </div>
         </div>
 
+        {/* Right Column - Results / Preview */}
         <div className="lg:col-span-5">
-          <div className="glass p-8 rounded-3xl h-full flex flex-col">
-            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-8 flex items-center gap-2">
-              <Brain className="w-4 h-4 text-[#00FFD1]" /> Model Preview
+          <div className="glass p-6 md:p-8 rounded-3xl h-full flex flex-col">
+            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-[#00FFD1]" /> Optimization Result
             </h3>
             
-            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
-              <div className="w-full h-64 mb-8 bg-black/20 rounded-3xl border border-white/5 overflow-hidden">
-                <Box3DViewer l={20} w={20} h={15} />
+            {!manualResult ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center opacity-50">
+                <Package className="w-16 h-16 mb-4 text-gray-600" />
+                <p className="text-xs text-gray-400 font-medium">Run optimization to see detailed recommendations, cost breakdowns, and 3D preview.</p>
               </div>
-              <p className="text-xs text-gray-500 leading-relaxed max-w-xs">
-                360° Real-time spatial analysis for optimized volumetric yield.
-              </p>
-            </div>
+            ) : (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 space-y-6">
+                
+                {/* 3D Preview */}
+                <div className="w-full h-48 bg-black/40 rounded-2xl border border-white/5 overflow-hidden">
+                  <Box3DViewer 
+                    l={parseFloat(manualResult.optimized_box_dims?.split(/[xX*]/)[0]) || 20} 
+                    w={parseFloat(manualResult.optimized_box_dims?.split(/[xX*]/)[1]) || 15} 
+                    h={parseFloat(manualResult.optimized_box_dims?.split(/[xX*]/)[2]) || 10} 
+                  />
+                </div>
 
-            <div className="mt-8 pt-8 border-t border-white/5 space-y-4">
-              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                <span className="text-gray-600">Model Stability</span>
-                <span className="text-[#00FFD1]">High (99.4%)</span>
-              </div>
-              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: '99%' }} className="h-full bg-[#00FFD1]" />
-              </div>
-            </div>
+                {/* Primary Recommendation */}
+                <div className="p-4 bg-[#00FFD1]/10 border border-[#00FFD1]/20 rounded-2xl flex justify-between items-center">
+                  <div>
+                    <p className="text-[10px] font-black text-[#00FFD1] uppercase tracking-widest mb-1">Recommended Box</p>
+                    <p className="text-lg font-bold text-white">{manualResult.optimized_box}</p>
+                    <p className="text-xs text-gray-400 mt-1">{manualResult.optimized_box_dims} • {manualResult.packaging_material}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Confidence</p>
+                    <p className="text-xl font-black text-white">{manualResult.confidence_score}%</p>
+                  </div>
+                </div>
+
+                {/* Metrics Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl">
+                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Damage Risk</p>
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className={`w-4 h-4 ${manualResult.damage_risk === 'Low' ? 'text-green-400' : manualResult.damage_risk === 'Medium' ? 'text-yellow-400' : 'text-red-400'}`} />
+                      <span className="text-sm font-bold text-white">{manualResult.damage_risk}</span>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl">
+                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Void Reduction</p>
+                    <div className="flex items-center gap-2">
+                      <TrendingDown className="w-4 h-4 text-[#00FFD1]" />
+                      <span className="text-sm font-bold text-white">{manualResult.space_utilization}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cost Breakdown */}
+                <div className="space-y-2 border-t border-white/5 pt-4">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Cost Breakdown</h4>
+                  
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Packaging (Box+Filler)</span>
+                    <span className="font-mono text-white">${manualResult.packaging_cost.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Shipping (Zone+Dim)</span>
+                    <span className="font-mono text-white">${manualResult.shipping_cost.toFixed(2)}</span>
+                  </div>
+                  
+                  <div className="flex justify-between text-sm font-bold pt-2 border-t border-white/5">
+                    <span className="text-white">Optimized Total</span>
+                    <span className="font-mono text-[#00FFD1]">${manualResult.total_cost.toFixed(2)}</span>
+                  </div>
+                  
+                  {manualResult.baseline_cost > 0 && (
+                    <div className="flex justify-between items-center mt-2 p-2 bg-green-500/10 rounded-lg">
+                      <span className="text-xs text-green-400 font-bold flex items-center gap-1">
+                        <TrendingDown className="w-3 h-3" /> Savings
+                      </span>
+                      <div className="text-right">
+                        <span className="font-mono text-green-400 font-bold">${manualResult.savings.toFixed(2)}</span>
+                        <span className="text-[10px] text-green-500/70 ml-1">({manualResult.savings_percent.toFixed(1)}%)</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* AI Reasoning */}
+                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl relative overflow-hidden">
+                  <Brain className="absolute -right-4 -bottom-4 w-16 h-16 text-white/5" />
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Info className="w-3 h-3"/> AI Reasoning</p>
+                  <p className="text-xs text-gray-300 leading-relaxed relative z-10">{manualResult.reasoning}</p>
+                </div>
+
+              </motion.div>
+            )}
           </div>
         </div>
       </div>
-      {/* AI Processing Modal */}
+
+      {/* Processing Modal */}
       <AnimatePresence>
         {isOptimizing && (
           <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] bg-[#0A0A0F]/90 backdrop-blur-xl flex items-center justify-center p-6"
           >
             <div className="max-w-md w-full text-center">
-              <motion.div 
-                animate={{ rotate: 360 }}
-                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                className="w-24 h-24 border-2 border-[#00FFD1]/20 border-t-[#00FFD1] rounded-full mx-auto mb-10 flex items-center justify-center"
-              >
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="w-24 h-24 border-2 border-[#00FFD1]/20 border-t-[#00FFD1] rounded-full mx-auto mb-10 flex items-center justify-center">
                 <Brain className="w-10 h-10 text-[#00FFD1]" />
               </motion.div>
               
@@ -294,28 +418,21 @@ export default function OptimizationPage() {
               <div className="flex justify-between items-center mb-4">
                 <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Processing Data</span>
                 <span className="text-[10px] font-black text-[#00FFD1] uppercase tracking-widest">
-                  {results.length} Items Optimized
+                  {results.length} / {totalItems} Items
                 </span>
               </div>
               <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden mb-8">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${totalItems > 0 ? (results.length / totalItems) * 100 : 0}%` }}
-                  className="h-full bg-[#00FFD1] shadow-[0_0_20px_#00FFD1]"
-                />
+                <motion.div initial={{ width: 0 }} animate={{ width: `${totalItems > 0 ? (results.length / totalItems) * 100 : 0}%` }} className="h-full bg-[#00FFD1] shadow-[0_0_20px_#00FFD1]" />
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 text-left pl-8 border-l border-white/10 ml-8">
                 {steps.map((step, i) => (
-                  <motion.div 
-                    key={i}
-                    initial={{ opacity: 0, x: -10 }}
+                  <motion.div key={i}
                     animate={{ 
                       opacity: i === processingStep ? 1 : i < processingStep ? 0.4 : 0.1,
-                      x: 0,
                       color: i === processingStep ? '#00FFD1' : '#fff'
                     }}
-                    className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3"
+                    className="text-[10px] font-black uppercase tracking-[0.1em] flex items-center gap-3"
                   >
                     {i < processingStep ? <CheckCircle2 className="w-3 h-3" /> : <div className={`w-1.5 h-1.5 rounded-full ${i === processingStep ? 'bg-[#00FFD1]' : 'bg-gray-800'}`} />}
                     {step}
@@ -329,6 +446,3 @@ export default function OptimizationPage() {
     </div>
   )
 }
-
-import { CheckCircle2 } from 'lucide-react'
-

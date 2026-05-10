@@ -75,11 +75,16 @@ export async function POST(request: NextRequest) {
         try {
           const opt = await runOptimization({
             productName: p.name,
-            weightKg: p.weight_kg || 0,
-            lengthCm: p.length_cm || 0,
-            widthCm: p.width_cm || 0,
-            heightCm: p.height_cm || 0,
-            fragile: p.fragile,
+            productId: p.id,
+            weightKg: p.weight_kg || 0.5,
+            lengthCm: p.length_cm || 10,
+            widthCm: p.width_cm || 10,
+            heightCm: p.height_cm || 10,
+            fragility: p.fragile ? 'high' : 'low',
+            quantity: 1,
+            category: p.category || 'general',
+            destinationZone: 2,
+            shippingMethod: 'standard',
             availableBoxes: boxes ?? []
           })
 
@@ -90,10 +95,10 @@ export async function POST(request: NextRequest) {
             product_snapshot: p,
             ai_response: opt,
             recommended_box: opt.recommendedBoxName,
-            efficiency_score: opt.efficiencyScore,
+            efficiency_score: opt.finalScore,
             space_utilization: opt.spaceUtilization,
-            cost_savings_usd: opt.costSavingsUsd,
-            co2_savings_kg: opt.co2SavingsKg,
+            cost_savings_usd: opt.savings,
+            co2_savings_kg: 0,
             ai_model: DEFAULT_MODEL
           }).select().single()
 
@@ -105,7 +110,7 @@ export async function POST(request: NextRequest) {
               optimization_id: optData.id,
               status: 'pending',
               quantity: 1,
-              total_cost_usd: opt.costSavingsUsd // placeholder
+              total_cost_usd: opt.savings // placeholder
             })
           }
           return optData
