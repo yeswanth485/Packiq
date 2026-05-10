@@ -23,6 +23,8 @@ export interface OptimizeInput {
   fragile: boolean
   category?: string
   notes?: string
+  currentBoxDims?: string
+  currentBoxPrice?: number
   availableBoxes: Array<{
     id: string
     name: string
@@ -43,8 +45,8 @@ export interface OptimizeOutput {
   recommendedBoxDims: string
   efficiencyScore: number      // 0–100
   spaceUtilization: number     // 0–100 %
-  productPriceUsd: number      // Added field
-  boxPriceUsd: number          // Added field
+  productPriceUsd: number
+  boxPriceUsd: number
   costSavingsUsd: number
   co2SavingsKg: number
   reasoning: string
@@ -85,8 +87,6 @@ async function callOpenRouterWithRetry(params: any, retries = 3) {
       lastError = err
       attempt++
       
-      // Handle rate limits (429) specifically if needed, but SDK might handle some
-      // The user wants exponential backoff: 1s, 2s, 4s
       if (attempt <= retries) {
         const backoff = Math.pow(2, attempt - 1) * 1000
         console.log(`[AI] Error: ${err.message}. Retrying in ${backoff}ms... (Attempt ${attempt}/${retries})`)
@@ -99,47 +99,43 @@ async function callOpenRouterWithRetry(params: any, retries = 3) {
 }
 
 export async function runOptimization(input: OptimizeInput, modelOverride?: string): Promise<OptimizeOutput> {
-  const systemPrompt = `You are an expert logistics and packaging engineer specializing in 3D spatial geometry and load optimization.
-Your task is to select the most efficient shipping box for a product from the provided catalog.
+  const systemPrompt = `You are a high-performance logistics and packaging engineer. 
+Your goal is to reduce shipping costs and void space by selecting the ABSOLUTE BEST box from the catalog.
 
-Core Principles:
-1. Spatial Logic: Evaluate all 6 possible orientations of the product (LWH, LHW, WLH, WHL, HLW, HWL) to find the tightest fit.
-2. Volume Efficiency: Prioritize boxes that minimize "void space" (box volume - product volume).
-3. Protection: For products marked as fragile, ensure at least 1cm of clearance on all sides for protective dunnage.
-4. Material Cost: If two boxes offer similar protection, choose the one with the lower cost.
-5. Sustainability: Prefer boxes with 'ecoCertified: true' when efficiency scores are within 5% of each other.
+Optimization Rules:
+1. FIT: Product must fit in the box (try all 6 rotations).
+2. VOID: Minimize (BoxVolume - ProductVolume).
+3. COST: Always prefer the cheaper box if it fits well.
+4. PROTECTION: Ensure sufficient clearance for fragile items.
+5. COMPARISON: You are replacing the user's CURRENT packaging. Only recommend a change if the new box is cheaper or significantly more efficient.
 
-Operational Constraint:
-Respond ONLY in valid, minified JSON matching the requested schema. No markdown, no preamble, no post-explanation.`
+Respond ONLY in valid JSON matching the requested schema.`
 
   const userPrompt = `
 Optimize packaging for this product:
 - Name: ${input.productName}
 - Unit Price: $${input.productPriceUsd ?? 0}
-- Weight: ${input.weightKg} kg
-- Dimensions: ${input.lengthCm} × ${input.widthCm} × ${input.heightCm} cm (L×W×H)
+- Dimensions: ${input.lengthCm} × ${input.widthCm} × ${input.heightCm} cm
 - Fragile: ${input.fragile}
-- Category: ${input.category ?? 'general'}
-- Notes: ${input.notes ?? 'none'}
+- Current Packaging: ${input.currentBoxDims || 'Not specified'} (Cost: $${input.currentBoxPrice || 0})
 
-Available boxes:
-${JSON.stringify(input.availableBoxes, null, 2)}
+Catalog of Available Boxes:
+${JSON.stringify(input.availableBoxes)}
 
 Respond ONLY with this JSON schema:
 {
-  "recommendedBoxId": "uuid string",
-  "recommendedBoxName": "string",
-  "recommendedBoxDims": "20x15x10",
-  "efficiencyScore": 85,
-  "spaceUtilization": 72.5,
+  "recommendedBoxId": "box-id",
+  "recommendedBoxName": "Box Name",
+  "recommendedBoxDims": "LxWxH",
+  "efficiencyScore": 0-100,
+  "spaceUtilization": 0-100,
   "productPriceUsd": ${input.productPriceUsd ?? 0},
-  "boxPriceUsd": 2.50, 
-  "costSavingsUsd": 0.35,
-  "co2SavingsKg": 0.12,
-  "reasoning": "string",
-  "packingTips": ["string"],
-  "alternativeBoxId": "string or null",
-  "alternativeBoxName": "string or null"
+  "boxPriceUsd": 0.00, 
+  "costSavingsUsd": 0.00,
+  "co2SavingsKg": 0.00,
+  "reasoning": "Explain why this box is better than the current one",
+  "packingTips": ["Step 1", "Step 2"],
+  "alternativeBoxId": "box-id-or-null"
 }
 `
 

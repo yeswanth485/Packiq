@@ -91,14 +91,22 @@ export default function OrdersPage() {
                     </div>
                   </td>
                   <td className="px-8 py-5">
-                    <span className="px-2 py-1 rounded-full bg-[#00FFD1]/10 text-[#00FFD1] text-[9px] font-black uppercase tracking-widest">
-                      {order.optimized_box}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className="px-2 py-0.5 rounded bg-white/5 text-gray-500 text-[8px] font-black uppercase line-through">{order.original_box}</span>
+                      <span className="px-2 py-1 rounded-full bg-[#00FFD1]/10 text-[#00FFD1] text-[9px] font-black uppercase tracking-widest">
+                        {order.optimized_box}
+                      </span>
+                    </div>
                   </td>
-                  <td className="px-8 py-5 text-gray-400 font-mono text-xs">${order.product_price.toFixed(2)}</td>
-                  <td className="px-8 py-5 font-bold text-white font-mono text-xs">${order.optimized_box_cost.toFixed(2)}</td>
+                  <td className="px-8 py-5 text-gray-400 font-mono text-xs font-medium">${order.product_price.toFixed(2)}</td>
                   <td className="px-8 py-5">
-                    <div className="flex items-center gap-1 text-[#00FFD1] font-mono text-xs font-bold">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-gray-600 line-through font-mono">${order.original_box_cost.toFixed(2)}</span>
+                      <span className="font-bold text-white font-mono text-xs">${order.optimized_box_cost.toFixed(2)}</span>
+                    </div>
+                  </td>
+                  <td className="px-8 py-5">
+                    <div className="flex items-center gap-1 text-[#00FFD1] font-mono text-xs font-bold bg-[#00FFD1]/5 px-3 py-1 rounded-full w-fit">
                       <Zap className="w-3 h-3" /> +${order.savings.toFixed(2)}
                     </div>
                   </td>

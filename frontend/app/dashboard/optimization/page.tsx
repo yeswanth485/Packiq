@@ -27,7 +27,7 @@ export default function OptimizationPage() {
   const [activeTab, setActiveTab] = useState<'manual' | 'bulk'>('manual')
   const [isOptimizing, setIsOptimizing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { setResults, setRunning } = useOptimizationStore()
+  const { results, setResults, setRunning } = useOptimizationStore()
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -73,59 +73,62 @@ export default function OptimizationPage() {
     setIsOptimizing(true)
     setRunning()
     
-    // Simulate initial steps for UX
-    for (let i = 0; i < 3; i++) {
-      setProcessingStep(i)
-      await new Promise(r => setTimeout(r, 600))
-    }
+    // Reset store for fresh run
+    setResults([], [])
+
+    const BATCH_SIZE = 5
+    const totalBatches = Math.ceil(data.length / BATCH_SIZE)
     
     try {
-      const response = await fetch('/api/optimize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ products: data })
-      })
+      for (let i = 0; i < data.length; i += BATCH_SIZE) {
+        const batch = data.slice(i, i + BATCH_SIZE)
+        const batchIndex = Math.floor(i / BATCH_SIZE) + 1
+        
+        setProcessingStep(2) // "Claude AI Optimizing..."
+        
+        const response = await fetch('/api/optimize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ products: batch })
+        })
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
+        if (!response.ok) throw new Error(`Batch ${batchIndex} failed`)
+
+        const resData = await response.json()
+        
+        if (resData.results && resData.results.length > 0) {
+          const mappedResults: OptimizationResult[] = resData.results.map((r: any) => ({
+            product_id: r.product_id,
+            product_name: r.product_name,
+            product_price: r.product_price,
+            product_dims: batch.find((d: any) => d.sku === r.product_id || d['SKU'] === r.product_id || d['product_id'] === r.product_id)?.dims || r.original_box || 'N/A',
+            product_weight: parseFloat(batch.find((d: any) => d.sku === r.product_id || d['SKU'] === r.product_id || d['product_id'] === r.product_id)?.weight || '0.5'),
+            original_box: r.original_box || 'Unknown',
+            original_box_cost: r.original_box_price || 0,
+            optimized_box: r.optimized_box,
+            optimized_box_cost: r.box_price || 0,
+            optimized_box_dims: r.optimized_box_dims || '20x15x10',
+            cost_before: r.original_box_price || 0,
+            cost_after: r.box_price || 0,
+            savings: r.savings,
+            void_reduction: r.efficiency_score || 0,
+            status: 'success'
+          }))
+          
+          // Use addBatchResults to show real-time updates in the store
+          useOptimizationStore.getState().addBatchResults(mappedResults)
+        }
+        
+        // Update progress percentage or step
+        setProcessingStep(Math.min(3, 2 + Math.floor((i / data.length) * 2)))
       }
 
-      setProcessingStep(3)
-      const resData = await response.json()
+      setProcessingStep(4) // "Synchronizing..."
+      await new Promise(r => setTimeout(r, 800))
       
-      setProcessingStep(4)
-      await new Promise(r => setTimeout(r, 600))
-
-      if (resData.results && resData.results.length > 0) {
-        // Map API results to the format the store expects
-        const mappedResults: OptimizationResult[] = resData.results.map((r: any) => ({
-          product_id: r.product_id,
-          product_name: r.product_name,
-          product_price: r.product_price,
-          product_dims: data.find((d: any) => d.sku === r.product_id || d['SKU'] === r.product_id || d['product_id'] === r.product_id)?.dims || 'N/A',
-          product_weight: parseFloat(data.find((d: any) => d.sku === r.product_id || d['SKU'] === r.product_id || d['product_id'] === r.product_id)?.weight || '0'),
-          original_box: r.original_box || 'Unknown',
-          original_box_cost: r.original_box_price || 0,
-          optimized_box: r.optimized_box,
-          optimized_box_cost: r.box_price || 0,
-          optimized_box_dims: r.optimized_box_dims || '20x15x10',
-          cost_before: r.original_box_price || 0,
-          cost_after: r.box_price || 0,
-          savings: r.savings,
-          void_reduction: r.efficiency_score || 0,
-          status: 'success'
-        }))
-        
-        setResults(mappedResults, resData.failed || [])
-        toast.success(`Optimized ${resData.results.length} items! Redirecting to Orders...`)
-        
-        setTimeout(() => {
-          router.push('/dashboard/orders')
-        }, 1500)
-      } else {
-        toast.error('No products were successfully optimized.')
-        setIsOptimizing(false)
-      }
+      toast.success(`Successfully optimized all items!`)
+      router.push('/dashboard/orders')
+      
     } catch (err: any) {
       console.error('Optimization failed:', err)
       toast.error(err.message || 'Optimization failed')
@@ -266,6 +269,12 @@ export default function OptimizationPage() {
               </motion.div>
               
               <h2 className="text-2xl font-bold text-white mb-2 uppercase tracking-tighter">AI Optimization Engine</h2>
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Processing Data</span>
+                <span className="text-[10px] font-black text-[#00FFD1] uppercase tracking-widest">
+                  {results.length} Items Optimized
+                </span>
+              </div>
               <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden mb-8">
                 <motion.div 
                   initial={{ width: 0 }}

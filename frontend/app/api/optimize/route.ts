@@ -119,12 +119,17 @@ export async function POST(req: Request) {
 
     // ── Per-product processor ──────────────────────────────────────────────
     const processProduct = async (p: any) => {
-      const prodDimStr: string = p['product L*W*H'] || p['product_l*w*h'] || ''
-      const boxDimStr: string  = p['box L*W*H']     || p['box_l*w*h']     || ''
-      const productPrice = parseFloat(p['price'] || p['product_price'] || p['product price'] || '0')
-      const originalBoxPrice = parseFloat(p['box_price'] || p['box price'] || '0')
-      const productName: string = p['product_name'] || p['product name'] || 'Unknown Product'
-      const productId: string   = p['product_id']   || p['product id']   || `auto-${Date.now()}`
+      // Find aliases for dimensions
+      const prodDimStr: string = (p['product L*W*H'] || p['product_l*w*h'] || p['product_dims'] || p['dims'] || p['Dimensions'] || p['product_dimensions'] || '').toString()
+      const boxDimStr: string  = (p['box L*W*H'] || p['box_l*w*h'] || p['box_dims'] || p['current used box L*W*H'] || p['original_box'] || '').toString()
+      
+      // Find aliases for prices
+      const productPrice = parseFloat(p['price'] || p['product_price'] || p['product price'] || p['Product Price'] || '0')
+      const originalBoxPrice = parseFloat(p['box_price'] || p['box price'] || p['current_box_price'] || p['Original Box Cost'] || '0')
+      
+      // Find aliases for names/ids
+      const productName: string = p['product_name'] || p['product name'] || p['Product Name'] || p['name'] || 'Unknown Product'
+      const productId: string   = p['product_id'] || p['product id'] || p['Product ID'] || p['sku'] || p['SKU'] || `auto-${Date.now()}`
 
       try {
         const prodDim = parseDimensions(prodDimStr)
@@ -170,7 +175,7 @@ export async function POST(req: Request) {
         // 2. AI optimization
         let aiResult: any
         let modelUsed = LIGHTWEIGHT_MODEL
-        const optInput = { 
+        const optInput: any = { 
           productName, 
           productPriceUsd: productPrice,
           weightKg: 0, 
@@ -178,6 +183,8 @@ export async function POST(req: Request) {
           widthCm: prodDim.w, 
           heightCm: prodDim.h, 
           fragile: false, 
+          currentBoxDims: boxDimStr,
+          currentBoxPrice: originalBoxPrice,
           availableBoxes: boxCatalog 
         }
 
@@ -244,10 +251,18 @@ export async function POST(req: Request) {
 
     // ── Parallel execution ─────────────────────────────────────────────────
     const allResults = await Promise.allSettled(products.map(processProduct))
-    const results  = allResults.filter(r => r.status === 'fulfilled' && !(r as any).value?.error).map(r => (r as any).value)
-    const failed   = allResults.filter(r => r.status === 'rejected' || (r as any).value?.error).map(r =>
-      r.status === 'rejected' ? { error: (r as any).reason?.message } : (r as any).value
-    )
+    
+    const results = allResults
+      .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled' && !r.value.error)
+      .map(r => r.value)
+    
+    const failed = allResults
+      .map((r, idx) => {
+        if (r.status === 'rejected') return { product_name: products[idx]?.product_name || 'Unknown', error: r.reason?.message || 'Unknown rejection' }
+        if (r.value.error) return r.value
+        return null
+      })
+      .filter(f => f !== null)
 
     const elapsedMs = Date.now() - startTime
 
