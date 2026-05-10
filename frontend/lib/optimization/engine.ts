@@ -232,9 +232,20 @@ export function validateInput(input: OptimizationInput): ValidationResult {
 // ─── Fit Check (All 6 Rotations) ─────────────────────────────────────────
 
 function productFitsInBox(input: OptimizationInput, box: BoxSpec, clearanceCm = 0): boolean {
-  const pd = [input.lengthCm + clearanceCm, input.widthCm + clearanceCm, input.heightCm + clearanceCm].sort((a, b) => a - b)
-  const bd = [box.lengthCm, box.widthCm, box.heightCm].sort((a, b) => a - b)
-  return bd[0] >= pd[0] && bd[1] >= pd[1] && bd[2] >= pd[2] && box.maxWeightKg >= input.weightKg
+  const { lengthCm: l, widthCm: w, heightCm: h } = input
+  const p1 = l + clearanceCm, p2 = w + clearanceCm, p3 = h + clearanceCm
+  const bl = box.lengthCm, bw = box.widthCm, bh = box.heightCm
+
+  // Explicit 6-way rotational check
+  const fitsLWH = (bl >= p1 && bw >= p2 && bh >= p3)
+  const fitsLHW = (bl >= p1 && bw >= p3 && bh >= p2)
+  const fitsWLH = (bl >= p2 && bw >= p1 && bh >= p3)
+  const fitsWHL = (bl >= p2 && bw >= p3 && bh >= p1)
+  const fitsHLW = (bl >= p3 && bw >= p1 && bh >= p2)
+  const fitsHWL = (bl >= p3 && bw >= p2 && bh >= p1)
+
+  const fitsRotationally = fitsLWH || fitsLHW || fitsWLH || fitsWHL || fitsHLW || fitsHWL
+  return fitsRotationally && box.maxWeightKg >= input.weightKg
 }
 
 // ─── Step 3: Generate Candidates ────────────────────────────────────────
@@ -323,9 +334,9 @@ export function generateCandidates(input: OptimizationInput): BoxCandidate[] {
   // 5. Alternative: second-smallest by volume
   if (byVolume[1]) addCandidate(byVolume[1], 'fragile-safe')
 
-  // Add remaining candidates (up to 8 total) so we don't miss good options
-  for (const box of byVolume.slice(0, 8)) {
-    addCandidate(box, 'smallest-fit')
+  // Add ALL remaining valid candidates so we don't miss good options
+  for (const box of fittingBoxes) {
+    addCandidate(box, 'smallest-fit') // Default tag
   }
 
   return candidates
@@ -523,10 +534,15 @@ export function runHeuristicOptimization(
   // Step 8: Damage risk
   const damageRisk = getDamageRisk(best.score.damageRiskScore, input.fragility)
 
-  // Step 9: Space utilization
+  // Step 9: Space utilization including required padding
   const productVol = input.lengthCm * input.widthCm * input.heightCm
   const boxVol = best.box.lengthCm * best.box.widthCm * best.box.heightCm
-  const spaceUtilization = boxVol > 0 ? Math.min(100, Math.round((productVol / boxVol) * 100)) : 0
+  
+  const fragilityPaddingRatio: Record<FragilityLevel, number> = { low: 0, medium: 0.1, high: 0.25, extreme: 0.5 }
+  const requiredPaddingVolume = productVol * fragilityPaddingRatio[input.fragility]
+  const effectiveVolume = productVol + requiredPaddingVolume
+
+  const spaceUtilization = boxVol > 0 ? Math.min(100, Math.round((effectiveVolume / boxVol) * 100)) : 0
 
   // Step 10: Packing tips
   const packingTips = buildPackingTips(input, best)

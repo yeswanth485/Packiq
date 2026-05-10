@@ -143,7 +143,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid request: products array required' }, { status: 400 })
     }
 
-    const products: any[] = body.products.slice(0, 500)
+    const products: any[] = body.products
 
     // Load box catalog from DB or use default
     const { data: dbBoxes } = await supabase.from('box_catalog').select('*')

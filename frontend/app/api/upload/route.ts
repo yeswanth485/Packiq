@@ -69,9 +69,9 @@ export async function POST(request: NextRequest) {
     // Background Optimization using Claude 4 Sonnet
     const { data: boxes } = await supabase.from('box_catalog').select('*')
     
-    // We process the first 5 in the response for speed, others could be backgrounded
+    // Process all uploaded rows
     const results = await Promise.all(
-      (dbProducts ?? []).slice(0, 5).map(async (p: any) => {
+      (dbProducts ?? []).map(async (p: any) => {
         try {
           const opt = await runOptimization({
             productName: p.name,
