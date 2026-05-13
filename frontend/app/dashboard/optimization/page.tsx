@@ -330,7 +330,15 @@ export default function OptimizationPage() {
                 {/* Primary Recommendation */}
                 <div className="p-4 bg-[#00FFD1]/10 border border-[#00FFD1]/20 rounded-2xl flex justify-between items-center">
                   <div>
-                    <p className="text-[10px] font-black text-[#00FFD1] uppercase tracking-widest mb-1">Recommended Box</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-[10px] font-black text-[#00FFD1] uppercase tracking-widest">Recommended Box</p>
+                      {manualResult.optimization_status === 'improved' && (
+                        <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[8px] font-black rounded-md border border-green-500/30 uppercase tracking-tighter">Improved</span>
+                      )}
+                      {manualResult.optimization_status === 'larger_than_baseline' && (
+                        <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[8px] font-black rounded-md border border-red-500/30 uppercase tracking-tighter">Larger</span>
+                      )}
+                    </div>
                     <p className="text-lg font-bold text-white">{manualResult.optimized_box}</p>
                     <p className="text-xs text-gray-400 mt-1">{manualResult.optimized_box_dims} • {manualResult.packaging_material}</p>
                   </div>
@@ -350,10 +358,10 @@ export default function OptimizationPage() {
                     </div>
                   </div>
                   <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl">
-                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Void Reduction</p>
+                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Efficiency Boost</p>
                     <div className="flex items-center gap-2">
                       <TrendingDown className="w-4 h-4 text-[#00FFD1]" />
-                      <span className="text-sm font-bold text-white">{manualResult.space_utilization}%</span>
+                      <span className="text-sm font-bold text-white">{manualResult.space_utilization}% <span className="text-[10px] text-gray-500 ml-1 font-normal">Utilization</span></span>
                     </div>
                   </div>
                 </div>

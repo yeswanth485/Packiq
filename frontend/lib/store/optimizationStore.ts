@@ -56,6 +56,7 @@ export interface OptimizationResult {
   reasoning: string
   packing_tips: string[]
   candidates_evaluated: number
+  optimization_status?: 'improved' | 'larger_than_baseline' | 'standard'
 
   // Status
   status: 'success' | 'warning' | 'error'

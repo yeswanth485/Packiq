@@ -1,10 +1,4 @@
-/**
- * PackVision AI — Core Optimization Engine
- * -----------------------------------------
- * Implements the full decision + optimization pipeline:
- *   Input → Validate → Generate Candidates → Score → Select Best
- *   → Calculate Costs → Calculate Savings → Return Recommendation
- */
+import { parseDimensions } from '../utils/parser'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +46,9 @@ export interface OptimizationInput {
 
   // Baseline (optional, for savings calc)
   currentBoxName?: string
+  currentBoxLength?: number
+  currentBoxWidth?: number
+  currentBoxHeight?: number
   currentBoxCostUsd?: number
   currentShippingCostUsd?: number
 
@@ -170,6 +167,20 @@ function selectPackagingMaterial(fragility: FragilityLevel): { material: string;
 // ─── Step 1: Normalize Input ──────────────────────────────────────────────
 
 export function normalizeInput(raw: Partial<OptimizationInput>): OptimizationInput {
+  // Try to parse baseline dimensions if provided in the name string
+  let bl = raw.currentBoxLength
+  let bw = raw.currentBoxWidth
+  let bh = raw.currentBoxHeight
+
+  if (raw.currentBoxName && (!bl || !bw || !bh)) {
+    const parsed = parseDimensions(raw.currentBoxName)
+    if (parsed) {
+      bl = parsed.l
+      bw = parsed.w
+      bh = parsed.h
+    }
+  }
+
   return {
     productName:     raw.productName     || 'Unknown Product',
     productId:       raw.productId       || `id-${Date.now()}`,
@@ -183,6 +194,9 @@ export function normalizeInput(raw: Partial<OptimizationInput>): OptimizationInp
     destinationZone: raw.destinationZone || 2,
     shippingMethod:  raw.shippingMethod  || 'standard',
     currentBoxName:  raw.currentBoxName,
+    currentBoxLength: bl,
+    currentBoxWidth:  bw,
+    currentBoxHeight: bh,
     currentBoxCostUsd: raw.currentBoxCostUsd,
     currentShippingCostUsd: raw.currentShippingCostUsd,
     availableBoxes:  raw.availableBoxes  || [],
@@ -384,15 +398,33 @@ function scoreCandidate(
   const voidPenalty = voidRatio * 40
   const sustainabilityScore = Math.min(100, Math.max(0, 80 - voidPenalty + ecoBonus))
 
+  // ─── Optimization Penalty / Bonus ─────────────────────────────────────
+  // If we have a baseline box, we MUST prioritize boxes that are smaller.
+  let optimizationScore = 50 // neutral
+  if (input.currentBoxLength && input.currentBoxWidth && input.currentBoxHeight) {
+    const baselineVol = input.currentBoxLength * input.currentBoxWidth * input.currentBoxHeight
+    if (boxVol > baselineVol * 1.05) {
+      // Significantly larger than baseline: heavy penalty
+      optimizationScore = 0
+    } else if (boxVol < baselineVol * 0.95) {
+      // Significantly smaller than baseline: bonus
+      optimizationScore = 100
+    } else {
+      // Similar size
+      optimizationScore = 40
+    }
+  }
+
   // Weighted final score
-  // 35% cost efficiency, 25% fit, 20% safety, 10% sustainability, 10% operational speed
+  // Adjusting weights to prioritize volume reduction (optimization)
+  // 30% cost efficiency, 30% fit/void, 15% optimization, 15% safety, 10% sustainability
   const costEfficiency = (packagingCostScore * 0.5 + shippingCostScore * 0.5)
   const finalScore =
-    0.35 * costEfficiency +
-    0.25 * fitScore +
-    0.20 * damageRiskScore +
-    0.10 * sustainabilityScore +
-    0.10 * voidScore
+    0.30 * costEfficiency +
+    0.30 * fitScore +
+    0.15 * optimizationScore +
+    0.15 * damageRiskScore +
+    0.10 * sustainabilityScore
 
   return {
     fitScore: Math.round(fitScore),
@@ -491,6 +523,8 @@ function buildReasoning(
 
   if (savings > 0) {
     parts.push(`Total fulfillment cost of $${best.totalCostUsd.toFixed(2)} saves $${savings.toFixed(2)} (${savingsPercent.toFixed(1)}%) vs. your current baseline of $${baseline.toFixed(2)}.`)
+  } else if (input.currentBoxLength && (best.box.lengthCm * best.box.widthCm * best.box.heightCm < input.currentBoxLength * input.currentBoxWidth * input.currentBoxHeight)) {
+    parts.push(`Although direct cost savings are minimal, this box significantly reduces packaging volume, improving warehouse density.`)
   } else {
     parts.push(`While cost is similar to baseline, this box reduces damage risk and improves packing efficiency.`)
   }

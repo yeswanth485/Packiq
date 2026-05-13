@@ -155,11 +155,9 @@ function mapRecommendationToResponse(rec: any, engineInput: any) {
     confidence_score:       rec.confidenceScore,
     void_reduction:         rec.spaceUtilization,
 
-    fit_score:              rec.fitScore,
-    void_score:             rec.voidScore,
-    cost_score:             rec.costScore,
-    sustainability_score:   rec.sustainabilityScore,
     final_score:            rec.finalScore,
+    optimization_status:    (engineInput.currentBoxLength && rec.recommendedBoxDims) ? 
+                              (parseFloat(rec.recommendedBoxDims.split('x')[0]) * parseFloat(rec.recommendedBoxDims.split('x')[1]) * parseFloat(rec.recommendedBoxDims.split('x')[2]) < engineInput.currentBoxLength * engineInput.currentBoxWidth * engineInput.currentBoxHeight ? 'improved' : 'larger_than_baseline') : 'standard',
 
     alternative_box_name:   rec.alternativeBoxName,
     alternative_box_dims:   rec.alternativeBoxDims,
@@ -255,6 +253,13 @@ export async function POST(req: Request) {
         }
 
         const response = mapRecommendationToResponse(rec, engineInput)
+
+        // Log optimization results
+        if (response.optimization_status === 'larger_than_baseline') {
+          console.warn(`[Optimization] Product ${engineInput.productId} recommended a LARGER box than baseline.`)
+        } else if (response.savings > 0) {
+          console.log(`[Optimization] Product ${engineInput.productId} optimized! Savings: $${response.savings.toFixed(2)}`)
+        }
 
         // Persist to DB
         try {
