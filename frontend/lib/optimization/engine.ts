@@ -245,9 +245,11 @@ export function validateInput(input: OptimizationInput): ValidationResult {
 
 // ─── Fit Check (All 6 Rotations) ─────────────────────────────────────────
 
-function productFitsInBox(input: OptimizationInput, box: BoxSpec, clearanceCm = 0): boolean {
+function productFitsInBox(input: OptimizationInput, box: BoxSpec, clearanceCm = 1): boolean {
   const { lengthCm: l, widthCm: w, heightCm: h } = input
-  const p1 = l + clearanceCm, p2 = w + clearanceCm, p3 = h + clearanceCm
+  // Enforce at least 1cm clearance on all sides as per CRITICAL RULES
+  const effectiveClearance = Math.max(1, clearanceCm)
+  const p1 = l + effectiveClearance, p2 = w + effectiveClearance, p3 = h + effectiveClearance
   const bl = box.lengthCm, bw = box.widthCm, bh = box.heightCm
 
   // Explicit 6-way rotational check
@@ -272,13 +274,18 @@ export function generateCandidates(input: OptimizationInput): BoxCandidate[] {
   const candidates: BoxCandidate[] = []
 
   // Filter boxes that can fit the product
-  const fittingBoxes = input.availableBoxes.filter(box => productFitsInBox(input, box, clearance))
-  if (fittingBoxes.length === 0) {
-    // Try without clearance as a last resort
-    const looseFit = input.availableBoxes.filter(box => productFitsInBox(input, box, 0))
-    if (looseFit.length === 0) return []
-    fittingBoxes.push(...looseFit)
+  let fittingBoxes = input.availableBoxes.filter(box => productFitsInBox(input, box, clearance))
+  
+  // CRITICAL RULE: The recommended box MUST have a smaller volume than the "currently used box"
+  if (input.currentBoxLength && input.currentBoxWidth && input.currentBoxHeight) {
+    const currentVol = input.currentBoxLength * input.currentBoxWidth * input.currentBoxHeight
+    fittingBoxes = fittingBoxes.filter(box => {
+      const boxVol = box.lengthCm * box.widthCm * box.heightCm
+      return boxVol < currentVol
+    })
   }
+
+  if (fittingBoxes.length === 0) return []
 
   const productVol = input.lengthCm * input.widthCm * input.heightCm
 

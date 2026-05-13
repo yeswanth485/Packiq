@@ -82,78 +82,57 @@ async function callOpenRouterWithRetry(params: any, retries = 2) {
 export async function runOptimization(input: OptimizeInput, modelOverride?: string): Promise<OptimizationRecommendation> {
   const model = modelOverride || DEFAULT_MODEL
 
-  const systemPrompt = `You are PackVision AI, an expert logistics and packaging optimization engine.
+  const systemPrompt = `You are PackIQ's packaging optimization engine. Your ONLY goal is to recommend a box that is SMALLER than the customer's currently used box, while still fitting the product dimensions.
 
-Your task is NOT to simply pick a box. You must run a full optimization pipeline:
-1. Generate multiple box candidates from the catalog (smallest fit, safest fit, cheapest fit, most efficient, fragile-safe alternative)
-2. Score each candidate on: fit efficiency, void space, damage risk, packaging cost, shipping cost, sustainability
-3. Select the BEST box using weighted scoring: 35% cost + 25% fit + 20% safety + 10% sustainability + 10% speed
-4. Calculate three cost layers: packaging cost (box + tape + filler + labor), shipping cost (dim weight + zone + courier rate), total cost
-5. Calculate savings vs. the baseline the user provided
-6. Assign a damage risk level (Low / Medium / High) and confidence score
-7. Write a clear explanation of WHY this box was selected
+CRITICAL RULES:
+1. The recommended box MUST have a smaller volume than the "currently used box".
+2. The recommended box MUST still fit the product (product L × W × H must fit inside box L × W × H with at least 1cm clearance on each side for padding).
+3. NEVER recommend a box that is equal to or larger than the currently used box.
+4. If no smaller standard box fits, return: { "status": "no_smaller_box_available", "reason": "..." }
+5. Always show the volume saved (in cm³) and the estimated DIM weight reduction.
 
-Shipping cost formula:
-- Dim weight = (L × W × H) / 5000
-- Chargeable weight = max(actual weight, dim weight)
-- Zone rates: Zone1=$0.42, Zone2=$0.54, Zone3=$0.66, Zone4=$0.84, Zone5=$1.08, Zone6=$1.44 per kg
-- Express multiplier: 1.6x, Same-day: 2.5x, Standard: 1.0x
+Your output is a packaging recommendation, not a general suggestion. Be precise and data-driven.
+Return ONLY valid JSON. No explanation text.`
 
-Packaging cost formula:
-- Total = boxCost + $0.024 (tape) + voidVolume_cm3 × fillerCostPerCm3 + $0.18 (labor)
-- Filler cost per cm3: low fragility=$0.000005, medium=$0.00001, high=$0.000015, extreme=$0.000018
+  const currentVol = (input.currentBoxLength && input.currentBoxWidth && input.currentBoxHeight)
+    ? input.currentBoxLength * input.currentBoxWidth * input.currentBoxHeight
+    : 999999999
 
-Respond ONLY in valid JSON matching the exact schema provided. No markdown, no explanation outside JSON.`
+  const userPrompt = `TASK:
+1. Find the SMALLEST box from the catalog that fits this product with at least 1cm padding on all sides.
+2. The chosen box volume MUST be strictly less than the currently used box volume (${currentVol} cm³).
+3. If no smaller box fits, return: { "status": "no_smaller_box_available", "reason": "..." }
 
-  const productVol = input.lengthCm * input.widthCm * input.heightCm
-
-  const userPrompt = `Optimize packaging for:
-- Product: "${input.productName}" (ID: ${input.productId})
-- Category: ${input.category}
-- Price: $${input.productPriceUsd ?? 0}
-- Dimensions: ${input.lengthCm} × ${input.widthCm} × ${input.heightCm} cm (volume: ${productVol} cm³)
-- Weight: ${input.weightKg} kg
-- Fragility: ${input.fragility}
-- Quantity: ${input.quantity}
-- Destination Zone: ${input.destinationZone}
-- Shipping Method: ${input.shippingMethod}
-- Current Box: ${input.currentBoxName || 'Not specified'} (Cost: $${input.currentBoxCostUsd || 0})
-- Current Shipping Cost: $${input.currentShippingCostUsd || 'unknown'}
+Product SKU: ${input.productId}
+Product Dimensions: ${input.lengthCm} cm (L) × ${input.widthCm} cm (W) × ${input.heightCm} cm (H)
+Product Weight: ${input.weightKg} kg
+Currently Used Box: ${input.currentBoxName || 'Unknown'} (${input.currentBoxLength}x${input.currentBoxWidth}x${input.currentBoxHeight})
+Currently Used Box Volume: ${currentVol} cm³
 
 Available Box Catalog:
 ${JSON.stringify(input.availableBoxes, null, 2)}
 
-Return ONLY this JSON schema (all numbers as floats, 2 decimal places):
+Return ONLY this JSON format:
 {
-  "productId": "${input.productId}",
-  "productName": "${input.productName}",
-  "recommendedBoxId": "box-id",
-  "recommendedBoxName": "Box Name",
-  "recommendedBoxDims": "LxWxH",
-  "recommendedBoxSku": "SKU",
-  "packagingMaterial": "material name",
-  "fillMaterial": "filler type",
-  "packagingCost": 0.00,
-  "shippingCost": 0.00,
-  "totalCost": 0.00,
-  "baselineCost": 0.00,
-  "savings": 0.00,
-  "savingsPercent": 0.0,
-  "damageRisk": "Low|Medium|High",
-  "spaceUtilization": 0,
-  "confidenceScore": 0,
+  "recommended_box": { "id": "id", "name": "name", "sku": "sku", "length": 0, "width": 0, "height": 0 },
+  "recommended_volume": 0,
+  "current_volume": ${currentVol},
+  "volume_saved_cm3": 0,
+  "volume_saved_percent": 0,
+  "dim_weight_reduction_kg": 0,
+  "estimated_cost_saving_usd": 0,
+  "confidence": "high/medium/low",
+  "reasoning": "...",
+  "damageRisk": "Low/Medium/High",
+  "packagingCost": 0,
+  "shippingCost": 0,
+  "totalCost": 0,
   "fitScore": 0,
   "voidScore": 0,
   "costScore": 0,
   "sustainabilityScore": 0,
   "finalScore": 0,
-  "alternativeBoxName": "name or null",
-  "alternativeBoxDims": "LxWxH or null",
-  "reasoning": "Clear explanation of why this box was selected",
-  "packingTips": ["tip1", "tip2", "tip3"],
-  "candidatesEvaluated": 0,
-  "model": "${model}",
-  "dataQuality": "complete|partial|estimated"
+  "packingTips": ["..."]
 }`
 
   const result = await callOpenRouterWithRetry({
@@ -177,8 +156,45 @@ export async function runLightweightTask(prompt: string, data: any): Promise<any
       { role: 'system', content: 'You are a helpful logistics assistant. Always respond in valid JSON.' },
       { role: 'user', content: `${prompt}\n\nData: ${JSON.stringify(data)}` }
     ],
-    temperature: 0.7,
+    temperature: 0.1,
     max_tokens: 1024,
     response_format: { type: 'json_object' },
   })
+}
+
+export async function runQCReview(optimizationResult: any): Promise<{ valid: boolean; error?: string; action?: string }> {
+  const prompt = `You are a quality control agent for PackIQ.
+
+Review this optimization result and flag any errors:
+{{optimization_result_json}}
+
+Rules to check:
+- recommended_box volume MUST be < current_box volume
+- product dimensions + 1cm padding MUST fit inside recommended_box on all sides
+- volume_saved_percent must be > 0
+- dim_weight_reduction_kg must be > 0
+
+If any rule is violated, return:
+{ "valid": false, "error": "describe what went wrong", "action": "reject_and_use_no_smaller_box_available" }
+
+If all rules pass, return:
+{ "valid": true }`
+
+  return await runLightweightTask(prompt, optimizationResult)
+}
+
+export async function runBusinessSummary(results: any[], shipmentsPerMonth: number): Promise<any> {
+  const prompt = `Generate a business summary report with:
+1. Total SKUs analyzed
+2. SKUs where a smaller box was found (count + percentage)
+3. SKUs where no smaller box was available (count + reason patterns)
+4. Total estimated volume reduction (cm³ and %)
+5. Total estimated DIM weight saved (kg)
+6. Estimated monthly cost savings (USD) based on ${shipmentsPerMonth} shipments/month
+7. Top 3 SKUs with the biggest optimization opportunity
+8. Carbon footprint reduction estimate (use 0.0006 kg CO₂ per cm³ saved as baseline)
+
+Format as structured JSON for dashboard display.`
+
+  return await runLightweightTask(prompt, { total_skus: results.length, optimization_results_json: results, shipments_per_month: shipmentsPerMonth })
 }

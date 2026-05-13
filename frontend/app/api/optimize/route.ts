@@ -26,16 +26,16 @@ function checkRateLimit(userId: string) {
 
 // ─── Default Box Catalog ──────────────────────────────────────────────────
 const DEFAULT_CATALOG = [
-  { id: 'amz-a1', name: 'Amazon A1 (Extra Small)',  sku: 'AMZ-A1', lengthCm: 15.0, widthCm: 10.0, heightCm:  5.0, maxWeightKg:  2, costUsd: 0.35, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
-  { id: 'amz-a2', name: 'Amazon A2 (Small)',        sku: 'AMZ-A2', lengthCm: 20.0, widthCm: 15.0, heightCm: 10.0, maxWeightKg:  5, costUsd: 0.55, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
-  { id: 'amz-a3', name: 'Amazon A3 (Medium)',       sku: 'AMZ-A3', lengthCm: 25.0, widthCm: 20.0, heightCm: 15.0, maxWeightKg:  8, costUsd: 0.75, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
-  { id: 'amz-a4', name: 'Amazon A4 (Large)',        sku: 'AMZ-A4', lengthCm: 35.0, widthCm: 25.0, heightCm: 20.0, maxWeightKg: 12, costUsd: 0.95, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
-  { id: 'amz-a5', name: 'Amazon A5 (XL)',           sku: 'AMZ-A5', lengthCm: 45.0, widthCm: 35.0, heightCm: 25.0, maxWeightKg: 20, costUsd: 1.35, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
-  { id: 'amz-m1', name: 'Amazon Mailer S1',         sku: 'AMZ-M1', lengthCm: 20.0, widthCm: 12.0, heightCm:  2.0, maxWeightKg:  1, costUsd: 0.20, material: 'Kraft Paper', ecoCertified: true,  doubleWall: false },
-  { id: 'gen-c1', name: 'Generic Cube (Small)',     sku: 'GEN-C1', lengthCm: 10.0, widthCm: 10.0, heightCm: 10.0, maxWeightKg:  2, costUsd: 0.30, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
-  { id: 'dw-001', name: 'Heavy Duty Box (DW)',      sku: 'DW-001', lengthCm: 30.0, widthCm: 25.0, heightCm: 20.0, maxWeightKg: 15, costUsd: 1.20, material: 'Corrugated',  ecoCertified: false, doubleWall: true  },
-  { id: 'fk-s1',  name: 'Flipkart S1',             sku: 'FK-S1',  lengthCm: 18.0, widthCm: 12.0, heightCm:  8.0, maxWeightKg:  5, costUsd: 0.40, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
-  { id: 'fk-m1',  name: 'Flipkart M1',             sku: 'FK-M1',  lengthCm: 28.0, widthCm: 18.0, heightCm: 12.0, maxWeightKg:  8, costUsd: 0.70, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'amz-a1', name: 'Amazon A1 (XS)',         sku: 'AMZ-A1', lengthCm: 15.2, widthCm: 10.2, heightCm:  5.1, maxWeightKg:  2, costUsd: 0.35, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'amz-a2', name: 'Amazon A2 (S)',          sku: 'AMZ-A2', lengthCm: 20.3, widthCm: 15.2, heightCm: 10.2, maxWeightKg:  5, costUsd: 0.55, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'amz-a3', name: 'Amazon A3 (M)',          sku: 'AMZ-A3', lengthCm: 30.5, widthCm: 20.3, heightCm: 15.2, maxWeightKg:  8, costUsd: 0.75, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'amz-a4', name: 'Amazon A4 (L)',          sku: 'AMZ-A4', lengthCm: 35.6, widthCm: 25.4, heightCm: 20.3, maxWeightKg: 12, costUsd: 0.95, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'amz-a5', name: 'Amazon A5 (XL)',         sku: 'AMZ-A5', lengthCm: 45.7, widthCm: 35.6, heightCm: 25.4, maxWeightKg: 20, costUsd: 1.35, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'amz-m1', name: 'Amazon Mailer S1',       sku: 'AMZ-M1', lengthCm: 20.0, widthCm: 12.0, heightCm:  2.0, maxWeightKg:  1, costUsd: 0.20, material: 'Kraft Paper', ecoCertified: true,  doubleWall: false },
+  { id: 'gen-c1', name: 'Generic Cube (S)',       sku: 'GEN-C1', lengthCm: 10.0, widthCm: 10.0, heightCm: 10.0, maxWeightKg:  2, costUsd: 0.30, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'dw-001', name: 'Heavy Duty DW',          sku: 'DW-001', lengthCm: 30.0, widthCm: 25.0, heightCm: 20.0, maxWeightKg: 15, costUsd: 1.20, material: 'Corrugated',  ecoCertified: false, doubleWall: true  },
+  { id: 'fk-s1',  name: 'Flipkart S1',            sku: 'FK-S1',  lengthCm: 18.0, widthCm: 12.0, heightCm:  8.0, maxWeightKg:  5, costUsd: 0.40, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'fk-m1',  name: 'Flipkart M1',            sku: 'FK-M1',  lengthCm: 28.0, widthCm: 18.0, heightCm: 12.0, maxWeightKg:  8, costUsd: 0.70, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
 ]
 
 // ─── Flexible column value finder ────────────────────────────────────────
@@ -123,52 +123,63 @@ function mapProductToEngineInput(p: any, boxCatalog: typeof DEFAULT_CATALOG) {
 
 // ─── Map engine recommendation → API response ────────────────────────────
 function mapRecommendationToResponse(rec: any, engineInput: any) {
+  // Map both AI and Heuristic engine outputs
+  const isAI = !!rec.recommended_box
+  
+  const boxName = isAI ? rec.recommended_box.name : rec.recommendedBoxName
+  const boxSku = isAI ? rec.recommended_box.sku : rec.recommendedBoxSku
+  const boxDims = isAI ? `${rec.recommended_box.length}x${rec.recommended_box.width}x${rec.recommended_box.height}` : rec.recommendedBoxDims
+
   return {
-    product_id:             rec.productId,
-    product_name:           rec.productName,
+    product_id:             rec.productId || engineInput.productId,
+    product_name:           rec.productName || engineInput.productName,
     product_price:          engineInput.productPriceUsd || 0,
     product_dims:           `${engineInput.lengthCm}x${engineInput.widthCm}x${engineInput.heightCm}`,
     product_weight:         engineInput.weightKg,
 
     original_box:           engineInput.currentBoxName || 'Not specified',
     original_box_cost:      engineInput.currentBoxCostUsd || 0,
-    optimized_box:          rec.recommendedBoxName,
-    optimized_box_sku:      rec.recommendedBoxSku,
-    optimized_box_dims:     rec.recommendedBoxDims,
+    optimized_box:          boxName,
+    optimized_box_sku:      boxSku,
+    optimized_box_dims:     boxDims,
     optimized_box_cost:     rec.packagingCost,
 
-    packaging_material:     rec.packagingMaterial,
-    fill_material:          rec.fillMaterial,
+    packaging_material:     rec.packagingMaterial || 'Corrugated',
+    fill_material:          rec.fillMaterial || 'Paper Dunnage',
 
     packaging_cost:         rec.packagingCost,
     shipping_cost:          rec.shippingCost,
     total_cost:             rec.totalCost,
-    baseline_cost:          rec.baselineCost,
-    cost_before:            rec.baselineCost,
+    baseline_cost:          rec.baselineCost || 0,
+    cost_before:            rec.baselineCost || 0,
     cost_after:             rec.totalCost,
 
-    savings:                rec.savings,
-    savings_percent:        rec.savingsPercent,
+    savings:                rec.savings || (rec.volume_saved_cm3 ? (rec.estimated_cost_saving_usd || 0) : 0),
+    savings_percent:        rec.savingsPercent || rec.volume_saved_percent || 0,
 
-    damage_risk:            rec.damageRisk,
-    space_utilization:      rec.spaceUtilization,
-    confidence_score:       rec.confidenceScore,
-    void_reduction:         rec.spaceUtilization,
+    damage_risk:            rec.damageRisk || 'Low',
+    space_utilization:      rec.spaceUtilization || 100 - (rec.voidScore || 0),
+    confidence_score:       rec.confidenceScore || (rec.confidence === 'high' ? 95 : rec.confidence === 'medium' ? 75 : 50),
+    void_reduction:         rec.voidScore || 0,
 
-    final_score:            rec.finalScore,
-    optimization_status:    (engineInput.currentBoxLength && rec.recommendedBoxDims) ? 
-                              (parseFloat(rec.recommendedBoxDims.split('x')[0]) * parseFloat(rec.recommendedBoxDims.split('x')[1]) * parseFloat(rec.recommendedBoxDims.split('x')[2]) < engineInput.currentBoxLength * engineInput.currentBoxWidth * engineInput.currentBoxHeight ? 'improved' : 'larger_than_baseline') : 'standard',
+    final_score:            rec.finalScore || 85,
+    optimization_status:    (engineInput.currentBoxLength && boxDims) ? 
+                              (parseFloat(boxDims.split('x')[0]) * parseFloat(boxDims.split('x')[1]) * parseFloat(boxDims.split('x')[2]) < engineInput.currentBoxLength * engineInput.currentBoxWidth * engineInput.currentBoxHeight ? 'improved' : 'larger_than_baseline') : 'standard',
 
     alternative_box_name:   rec.alternativeBoxName,
     alternative_box_dims:   rec.alternativeBoxDims,
 
     reasoning:              rec.reasoning,
-    packing_tips:           rec.packingTips,
-    candidates_evaluated:   rec.candidatesEvaluated,
+    packing_tips:           rec.packingTips || [],
+    candidates_evaluated:   rec.candidatesEvaluated || 1,
 
-    model:                  rec.model,
-    data_quality:           rec.dataQuality,
+    model:                  rec.model || 'Unknown',
+    data_quality:           rec.dataQuality || 'complete',
     cached:                 false,
+    
+    // New fields from PackIQ prompt
+    volume_saved_cm3:       rec.volume_saved_cm3,
+    dim_weight_reduction:   rec.dim_weight_reduction_kg,
   }
 }
 
@@ -232,11 +243,33 @@ export async function POST(req: Request) {
         // Run AI with timeout, fall back to heuristic engine
         let rec: any = null
         let modelUsed = LIGHTWEIGHT_MODEL
+        const { runOptimization, runQCReview } = await import('@/lib/openrouter')
 
         try {
           const timeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000))
           rec = await Promise.race([runOptimization(engineInput, LIGHTWEIGHT_MODEL), timeout])
           modelUsed = LIGHTWEIGHT_MODEL
+          
+          if (rec && rec.status === 'no_smaller_box_available') {
+            return {
+              product_id: engineInput.productId,
+              product_name: engineInput.productName,
+              error: rec.reason || 'No smaller box available',
+              status: 'no_smaller_box_available',
+            }
+          }
+
+          // Quality Control Step
+          if (rec) {
+            const qc = await runQCReview(rec)
+            if (!qc.valid) {
+              console.warn('[QC Failed] AI recommendation rejected:', qc.error)
+              // If QC fails, we can try heuristic or just return no smaller box
+              rec = runHeuristicOptimization(engineInput)
+              modelUsed = 'PackVision Heuristic v2.0'
+            }
+          }
+
         } catch (aiErr) {
           console.warn('[AI Failed] Using heuristic engine:', aiErr)
           rec = runHeuristicOptimization(engineInput)
@@ -247,8 +280,8 @@ export async function POST(req: Request) {
           return {
             product_id: engineInput.productId,
             product_name: engineInput.productName,
-            error: 'No suitable box found in catalog',
-            status: 'error',
+            error: 'No suitable smaller box found in catalog',
+            status: 'no_smaller_box_available',
           }
         }
 

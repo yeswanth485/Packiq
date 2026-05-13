@@ -35,6 +35,8 @@ export default function OptimizationPage() {
     currentBoxCost: ''
   })
   const [manualResult, setManualResult] = useState<OptimizationResult | null>(null)
+  const [summaryReport, setSummaryReport] = useState<any>(null)
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
 
   const [processingStep, setProcessingStep] = useState(0)
   const [totalItems, setTotalItems] = useState(0)
@@ -169,11 +171,32 @@ export default function OptimizationPage() {
       setProcessingStep(4)
       await new Promise(r => setTimeout(r, 1000))
       toast.success(`Successfully optimized items!`)
-      router.push('/dashboard/orders')
+      
+      // Auto-generate summary for bulk
+      handleGenerateSummary(resData.results)
     } catch (err: any) {
       toast.error('Optimization failed')
     } finally {
       setIsOptimizing(false)
+    }
+  }
+
+  const handleGenerateSummary = async (optimizationResults: any[]) => {
+    setIsGeneratingSummary(true)
+    try {
+      const res = await fetch('/api/optimize/summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ results: optimizationResults, shipmentsPerMonth: 1000 })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setSummaryReport(data.summary)
+      }
+    } catch (err) {
+      console.error('Failed to generate summary', err)
+    } finally {
+      setIsGeneratingSummary(false)
     }
   }
 
@@ -447,6 +470,73 @@ export default function OptimizationPage() {
                   </motion.div>
                 ))}
               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Business Summary Modal */}
+      <AnimatePresence>
+        {summaryReport && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-[#0A0A0F]/95 backdrop-blur-2xl flex items-center justify-center p-6"
+          >
+            <div className="max-w-3xl w-full glass p-8 rounded-[40px] border border-white/10 overflow-y-auto max-h-[90vh]">
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[#00FFD1]/20 rounded-xl flex items-center justify-center">
+                    <TrendingDown className="w-6 h-6 text-[#00FFD1]" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white uppercase tracking-tighter">Business Impact Report</h2>
+                </div>
+                <button onClick={() => setSummaryReport(null)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
+                  <Trash2 className="w-6 h-6 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="p-5 bg-white/[0.03] border border-white/5 rounded-3xl">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">SKUs Optimized</p>
+                    <p className="text-3xl font-black text-white">{summaryReport.SKUs_where_a_smaller_box_was_found?.count || summaryReport.SKUs_where_a_smaller_box_was_found || 0} <span className="text-sm text-gray-500">({summaryReport.SKUs_where_a_smaller_box_was_found?.percentage || ''})</span></p>
+                  </div>
+                  <div className="p-5 bg-white/[0.03] border border-white/5 rounded-3xl">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Monthly Cost Savings</p>
+                    <p className="text-3xl font-black text-[#00FFD1]">{summaryReport.Estimated_monthly_cost_savings?.replace('USD', '$') || summaryReport.Estimated_monthly_cost_savings_USD || 'N/A'}</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="p-5 bg-white/[0.03] border border-white/5 rounded-3xl">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Volume Reduction</p>
+                    <p className="text-3xl font-black text-white">{summaryReport.Total_estimated_volume_reduction?.cm3 || summaryReport.Total_estimated_volume_reduction || '0'} <span className="text-sm text-gray-500">saved</span></p>
+                  </div>
+                  <div className="p-5 bg-white/[0.03] border border-white/5 rounded-3xl">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Carbon Footprint Reduction</p>
+                    <p className="text-3xl font-black text-green-400">{summaryReport.Carbon_footprint_reduction_estimate || '0 kg'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 p-6 bg-[#00FFD1]/5 border border-[#00FFD1]/10 rounded-3xl">
+                <h4 className="text-[10px] font-black text-[#00FFD1] uppercase tracking-widest mb-4">Top Optimization Opportunities</h4>
+                <div className="space-y-3">
+                  {summaryReport.Top_3_SKUs_with_the_biggest_optimization_opportunity?.map((sku: any, i: number) => (
+                    <div key={i} className="flex justify-between items-center text-sm">
+                      <span className="text-gray-300">{sku.sku || sku.name || sku}</span>
+                      <span className="font-mono text-white font-bold">{sku.savings || sku.opportunity || ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button 
+                onClick={() => router.push('/dashboard/orders')}
+                className="w-full bg-[#00FFD1] text-[#0A0A0F] py-4 rounded-2xl font-black text-xs uppercase tracking-widest mt-8 hover:scale-[1.02] transition-all"
+              >
+                View Detailed Results
+              </button>
             </div>
           </motion.div>
         )}

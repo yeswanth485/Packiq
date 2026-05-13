@@ -87,7 +87,7 @@ export default function CatalogClient({ initialBoxes }: { initialBoxes: any[] })
               placeholder="Search by name or SKU..." 
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+              className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-[#00FFD1] transition-colors"
             />
           </div>
           <div className="relative">
@@ -95,7 +95,7 @@ export default function CatalogClient({ initialBoxes }: { initialBoxes: any[] })
             <select 
               value={materialFilter}
               onChange={e => setMaterialFilter(e.target.value)}
-              className="appearance-none bg-white/5 border border-white/10 rounded-xl pl-10 pr-8 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer capitalize"
+              className="appearance-none bg-white/[0.03] border border-white/10 rounded-xl pl-10 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#00FFD1] transition-colors cursor-pointer capitalize [&>option]:bg-[#0A0A0F]"
             >
               {materials.map(m => (
                 <option key={m} value={m}>{m === 'all' ? 'All Materials' : m}</option>
@@ -105,7 +105,7 @@ export default function CatalogClient({ initialBoxes }: { initialBoxes: any[] })
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-lg shadow-indigo-600/20"
+          className="flex items-center gap-2 bg-[#00FFD1] hover:scale-[1.02] text-[#0A0A0F] px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(0,255,209,0.2)]"
         >
           <Plus className="w-4 h-4" />
           Add Box
@@ -114,50 +114,46 @@ export default function CatalogClient({ initialBoxes }: { initialBoxes: any[] })
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredBoxes.map((box) => (
-          <div key={box.id} className="glass rounded-2xl border border-white/5 overflow-hidden card-hover flex flex-col group">
-            <div className="p-5 border-b border-white/5 bg-gradient-to-br from-indigo-500/10 to-transparent relative">
+          <div key={box.id} className="glass rounded-3xl border border-white/5 overflow-hidden card-hover flex flex-col group">
+            <div className="p-6 border-b border-white/5 bg-gradient-to-br from-[#00FFD1]/10 to-transparent relative">
               <div className="absolute top-4 right-4">
                 {box.in_stock ? (
-                  <span className="flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase text-green-400 bg-green-500/10 px-2 py-1 rounded-md border border-green-500/20">
+                  <span className="flex items-center gap-1 text-[8px] font-black tracking-widest uppercase text-[#00FFD1] bg-[#00FFD1]/10 px-2 py-1 rounded-md border border-[#00FFD1]/20">
                     <CheckCircle2 className="w-3 h-3" /> In Stock
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase text-red-400 bg-red-500/10 px-2 py-1 rounded-md border border-red-500/20">
-                    <XCircle className="w-3 h-3" /> Out of Stock
+                  <span className="flex items-center gap-1 text-[8px] font-black tracking-widest uppercase text-red-400 bg-red-500/10 px-2 py-1 rounded-md border border-red-500/20">
+                    <XCircle className="w-3 h-3" /> OOS
                   </span>
                 )}
               </div>
-              <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center mb-4 text-indigo-400">
+              <div className="w-12 h-12 rounded-xl bg-[#00FFD1]/20 flex items-center justify-center mb-4 text-[#00FFD1]">
                 <BoxIcon className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors">{box.name}</h3>
-              <p className="text-xs text-gray-500 font-mono">SKU: {box.sku || 'N/A'}</p>
+              <h3 className="text-lg font-bold text-white mb-1 group-hover:text-[#00FFD1] transition-colors">{box.name}</h3>
+              <p className="text-[10px] text-gray-500 font-mono tracking-tighter uppercase">{box.sku || 'N/A'}</p>
             </div>
             
-            <div className="p-5 flex-1 flex flex-col gap-3">
-              <div className="flex items-center gap-3 text-sm text-gray-300">
+            <div className="p-6 flex-1 flex flex-col gap-4">
+              <div className="flex items-center gap-3 text-xs text-gray-300">
                 <Ruler className="w-4 h-4 text-gray-500 shrink-0" />
-                <span>{box.length_cm} × {box.width_cm} × {box.height_cm} cm</span>
+                <span className="font-mono">{box.length_cm} × {box.width_cm} × {box.height_cm} cm</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-gray-300">
+              <div className="flex items-center gap-3 text-xs text-gray-300">
                 <Tag className="w-4 h-4 text-gray-500 shrink-0" />
                 <span className="capitalize">{box.material || 'Standard'}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-gray-300">
-                <Factory className="w-4 h-4 text-gray-500 shrink-0" />
-                <span>{box.supplier || 'Generic'}</span>
-              </div>
               
-              <div className="mt-auto pt-4 flex items-end justify-between">
+              <div className="mt-auto pt-4 flex items-end justify-between border-t border-white/5">
                 <div>
-                  <p className="text-xs text-gray-500 mb-0.5">Unit Cost</p>
-                  <div className="flex items-center gap-1 text-green-400 font-bold text-lg">
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Unit Cost</p>
+                  <div className="flex items-center gap-1 text-[#00FFD1] font-black text-xl">
                     ${Number(box.cost_usd || 0).toFixed(2)}
                   </div>
                 </div>
                 {box.eco_certified && (
-                  <span className="text-[10px] font-bold tracking-wider uppercase text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">
-                    Eco Certified
+                  <span className="text-[8px] font-black tracking-widest uppercase text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">
+                    Eco
                   </span>
                 )}
               </div>
@@ -234,8 +230,8 @@ export default function CatalogClient({ initialBoxes }: { initialBoxes: any[] })
               </div>
               
               <div className="flex gap-3 pt-4 mt-4 border-t border-white/5">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-300 bg-white/5 hover:bg-white/10 transition-colors">Cancel</button>
-                <button type="submit" disabled={isSubmitting} className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 transition-colors">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 bg-white/5 hover:bg-white/10 transition-all">Cancel</button>
+                <button type="submit" disabled={isSubmitting} className="flex-1 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#0A0A0F] bg-[#00FFD1] hover:scale-[1.02] disabled:opacity-50 transition-all shadow-[0_0_20px_rgba(0,255,209,0.2)]">
                   {isSubmitting ? 'Saving...' : 'Save Box'}
                 </button>
               </div>
