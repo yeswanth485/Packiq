@@ -77,6 +77,7 @@ export default function OrdersPage() {
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-[#0A0A0F] sticky top-0 z-10">
               <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5">
+                <th className="px-8 py-4">Product</th>
                 <th className="px-8 py-4">Baseline Box</th>
                 <th className="px-8 py-4">Optimized Box</th>
                 <th className="px-8 py-4">Total Cost</th>
@@ -90,16 +91,19 @@ export default function OrdersPage() {
                 <tr key={`${order.product_id}-${idx}`} onClick={() => setSelectedOrder(order)} className="hover:bg-white/[0.02] transition-colors cursor-pointer group">
                   <td className="px-8 py-5">
                     <div className="flex flex-col">
-                      <span className="font-bold text-white text-xs">{order.product_name}</span>
-                      <span className="text-[9px] font-mono text-gray-500 uppercase tracking-tighter">{order.original_box || 'Not specified'}</span>
+                      <span className="font-bold text-white">{order.product_name}</span>
+                      <span className="text-[10px] font-mono text-gray-500">{order.product_id}</span>
                     </div>
+                  </td>
+                  <td className="px-8 py-5">
+                    <span className="text-gray-400 text-xs font-mono">{order.original_box || '—'}</span>
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex flex-col gap-1 items-start">
                       <span className="px-2 py-1 rounded-full bg-[#00FFD1]/10 text-[#00FFD1] text-[9px] font-black uppercase tracking-widest border border-[#00FFD1]/20">
                         {order.optimized_box || 'No Change'}
                       </span>
-                      <span className="text-[10px] text-gray-500 flex items-center gap-1 font-mono uppercase">
+                      <span className="text-[10px] text-gray-500 font-mono uppercase tracking-tighter">
                          {order.optimized_box_dims}
                       </span>
                     </div>

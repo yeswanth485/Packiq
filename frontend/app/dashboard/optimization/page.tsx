@@ -159,6 +159,9 @@ export default function OptimizationPage() {
           })
           clearTimeout(timeoutId)
           
+          if (!res.ok) throw new Error(`Batch failed (HTTP ${res.status})`)
+          const resData = await res.json()
+          
           if (resData.results) {
             const batchResults = resData.results.map((r: any) => ({
               ...r,
