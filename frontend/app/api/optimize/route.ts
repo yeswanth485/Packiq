@@ -348,20 +348,13 @@ export async function POST(req: Request) {
     }
 
     const allSettled = await Promise.allSettled(products.map(processProduct))
-    const results = allSettled
-      .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled' && !(r.value as any)?.error)
-      .map(r => r.value)
-
-    const errors = allSettled
-      .filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && (r.value as any)?.error))
-      .length
+    const results = allSettled.map(r => r.status === 'fulfilled' ? r.value : { error: 'Process failed', status: 'error' })
 
     return NextResponse.json({
       success: true,
       results,
       count: results.length,
-      errors,
-      total: products.length,
+      errorCount: results.filter((r: any) => r.status === 'error').length
     })
   } catch (error: any) {
     console.error('[Optimize API] Fatal error:', error)

@@ -184,7 +184,7 @@ export default function OptimizationPage() {
             baseline_cost: 0,
             damage_risk: 'Low',
             optimized_box: 'Error',
-            original_box: p.box_L_W_H_cm || p['box L*W*H'] || 'Unknown'
+            original_box: p['box_L*W*H_cm'] || p['box L*W*H'] || 'Unknown'
           }))
           addBatchResults(errorResults as any)
           allResults.push(...errorResults)
@@ -192,10 +192,11 @@ export default function OptimizationPage() {
       }
       setProcessingStep(4)
       await new Promise(r => setTimeout(r, 1000))
-      toast.success(`Successfully optimized items!`)
+      toast.success(`Successfully optimized ${allResults.length} items!`)
       
-      // Auto-generate summary for bulk
+      // Auto-generate summary and then navigate immediately
       handleGenerateSummary(allResults)
+      router.push('/dashboard/orders')
     } catch (err: any) {
       toast.error('Optimization failed')
     } finally {
@@ -214,10 +215,6 @@ export default function OptimizationPage() {
       const data = await res.json()
       if (data.success) {
         setSummaryReport(data.summary)
-        // Automatically move to orders after a short delay
-        setTimeout(() => {
-          router.push('/dashboard/orders')
-        }, 10000)
       }
     } catch (err) {
       console.error('Failed to generate summary', err)
