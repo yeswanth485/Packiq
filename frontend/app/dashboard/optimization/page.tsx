@@ -137,7 +137,7 @@ export default function OptimizationPage() {
     setRunning()
     setResults([], [])
 
-    const BATCH_SIZE = 5 // Reduced to prevent AI timeouts and ensure 100% data processing
+    const BATCH_SIZE = 10 // Balanced for speed and reliability
     setProcessingStep(0)
     await new Promise(r => setTimeout(r, 600))
 
@@ -195,7 +195,8 @@ export default function OptimizationPage() {
       toast.success(`Successfully optimized ${allResults.length} items!`)
       
       // Auto-generate summary and then navigate immediately
-      handleGenerateSummary(allResults)
+      await handleGenerateSummary(allResults)
+      await new Promise(r => setTimeout(r, 500))
       router.push('/dashboard/orders')
     } catch (err: any) {
       toast.error('Optimization failed')

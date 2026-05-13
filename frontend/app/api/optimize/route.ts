@@ -261,13 +261,13 @@ export async function POST(req: Request) {
 
         // Run AI with timeout, fall back to heuristic engine
         let rec: any = null
-        let modelUsed = LIGHTWEIGHT_MODEL
-        const { runOptimization, runQCReview } = await import('@/lib/openrouter')
+        const { runOptimization, runQCReview, FREE_MODEL } = await import('@/lib/openrouter')
+        let modelUsed = FREE_MODEL
 
         try {
-          const timeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000))
-          rec = await Promise.race([runOptimization(engineInput, LIGHTWEIGHT_MODEL), timeout])
-          modelUsed = LIGHTWEIGHT_MODEL
+          const timeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))
+          rec = await Promise.race([runOptimization(engineInput, FREE_MODEL), timeout])
+          modelUsed = FREE_MODEL
           
           if (rec && rec.status === 'no_smaller_box_available') {
             return {

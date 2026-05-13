@@ -110,14 +110,14 @@ export default function OrdersPage() {
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex flex-col">
-                      {order.baseline_cost > 0 && <span className="text-[10px] text-gray-600 line-through font-mono">${order.baseline_cost.toFixed(2)}</span>}
-                      <span className="font-bold text-white font-mono text-sm">${order.total_cost.toFixed(2)}</span>
+                      {(order.baseline_cost || 0) > 0 && <span className="text-[10px] text-gray-600 line-through font-mono">${(order.baseline_cost || 0).toFixed(2)}</span>}
+                      <span className="font-bold text-white font-mono text-sm">${(order.total_cost || 0).toFixed(2)}</span>
                     </div>
                   </td>
                   <td className="px-8 py-5">
-                    {order.savings > 0 ? (
+                    {(order.savings || 0) > 0 ? (
                       <div className="flex items-center gap-1 text-[#00FFD1] font-mono text-xs font-bold bg-[#00FFD1]/5 border border-[#00FFD1]/10 px-2 py-1 rounded-md w-fit">
-                        <TrendingDown className="w-3 h-3" /> {order.savings_percent.toFixed(1)}%
+                        <TrendingDown className="w-3 h-3" /> {(order.savings_percent || 0).toFixed(1)}%
                       </div>
                     ) : (
                       <span className="text-[10px] text-gray-500 font-mono">—</span>
