@@ -159,16 +159,17 @@ export default function OptimizationPage() {
           })
           clearTimeout(timeoutId)
           
-          if (!res.ok) throw new Error(`Batch failed (HTTP ${res.status})`)
-          const resData = await res.json()
-          
           if (resData.results) {
-            const validResults = resData.results.filter((r: any) => r.status !== 'error')
-            addBatchResults(validResults)
-            allResults.push(...validResults)
+            const batchResults = resData.results.map((r: any) => ({
+              ...r,
+              status: r.status || 'success'
+            }))
+            addBatchResults(batchResults)
+            allResults.push(...batchResults)
           }
         } catch (err) {
-          toast.error(`Batch error. Skipping to next.`)
+          console.error('Batch error:', err)
+          toast.error(`Batch error. Including as-is.`)
         }
       }
       setProcessingStep(4)
@@ -195,6 +196,10 @@ export default function OptimizationPage() {
       const data = await res.json()
       if (data.success) {
         setSummaryReport(data.summary)
+        // Automatically move to orders after a short delay
+        setTimeout(() => {
+          router.push('/dashboard/orders')
+        }, 10000)
       }
     } catch (err) {
       console.error('Failed to generate summary', err)
@@ -360,9 +365,6 @@ export default function OptimizationPage() {
                       <p className="text-[10px] font-black text-[#00FFD1] uppercase tracking-widest">Recommended Box</p>
                       {manualResult.optimization_status === 'improved' && (
                         <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[8px] font-black rounded-md border border-green-500/30 uppercase tracking-tighter">Improved</span>
-                      )}
-                      {manualResult.optimization_status === 'larger_than_baseline' && (
-                        <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[8px] font-black rounded-md border border-red-500/30 uppercase tracking-tighter">Larger</span>
                       )}
                     </div>
                     <p className="text-lg font-bold text-white">{manualResult.optimized_box}</p>
