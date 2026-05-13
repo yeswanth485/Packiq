@@ -523,7 +523,7 @@ function buildReasoning(
 
   if (savings > 0) {
     parts.push(`Total fulfillment cost of $${best.totalCostUsd.toFixed(2)} saves $${savings.toFixed(2)} (${savingsPercent.toFixed(1)}%) vs. your current baseline of $${baseline.toFixed(2)}.`)
-  } else if (input.currentBoxLength && (best.box.lengthCm * best.box.widthCm * best.box.heightCm < input.currentBoxLength * input.currentBoxWidth * input.currentBoxHeight)) {
+  } else if (input.currentBoxLength && input.currentBoxWidth && input.currentBoxHeight && (best.box.lengthCm * best.box.widthCm * best.box.heightCm < input.currentBoxLength * input.currentBoxWidth * input.currentBoxHeight)) {
     parts.push(`Although direct cost savings are minimal, this box significantly reduces packaging volume, improving warehouse density.`)
   } else {
     parts.push(`While cost is similar to baseline, this box reduces damage risk and improves packing efficiency.`)
