@@ -235,8 +235,12 @@ export async function POST(req: Request) {
         return {
           product_id: engineInput.productId,
           product_name: engineInput.productName,
+          original_box: engineInput.currentBoxName || 'Not specified',
           error: 'Invalid or missing dimensions',
           status: 'error',
+          savings: 0,
+          total_cost: engineInput.currentBoxCostUsd || 0,
+          baseline_cost: engineInput.currentBoxCostUsd || 0,
         }
       }
 
@@ -269,8 +273,14 @@ export async function POST(req: Request) {
             return {
               product_id: engineInput.productId,
               product_name: engineInput.productName,
+              original_box: engineInput.currentBoxName || 'Not specified',
               error: rec.reason || 'No smaller box available',
               status: 'no_smaller_box_available',
+              savings: 0,
+              total_cost: engineInput.currentBoxCostUsd || 0,
+              baseline_cost: engineInput.currentBoxCostUsd || 0,
+              optimized_box: 'No Smaller Box Fits',
+              optimized_box_dims: '—'
             }
           }
 

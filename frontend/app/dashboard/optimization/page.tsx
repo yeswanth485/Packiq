@@ -137,7 +137,7 @@ export default function OptimizationPage() {
     setRunning()
     setResults([], [])
 
-    const BATCH_SIZE = 50
+    const BATCH_SIZE = 5 // Reduced to prevent AI timeouts and ensure 100% data processing
     setProcessingStep(0)
     await new Promise(r => setTimeout(r, 600))
 
@@ -172,7 +172,22 @@ export default function OptimizationPage() {
           }
         } catch (err) {
           console.error('Batch error:', err)
-          toast.error(`Batch error. Including as-is.`)
+          toast.error(`Batch error. Including items with error status.`)
+          // Add items as errors so they aren't lost from the manifest
+          const errorResults = batch.map((p: any) => ({
+            product_id: p.product_id || p.sku || 'unknown',
+            product_name: p.product_name || p.name || 'Unknown',
+            status: 'error',
+            error: 'Batch processing failed',
+            savings: 0,
+            total_cost: 0,
+            baseline_cost: 0,
+            damage_risk: 'Low',
+            optimized_box: 'Error',
+            original_box: p.box_L_W_H_cm || p['box L*W*H'] || 'Unknown'
+          }))
+          addBatchResults(errorResults as any)
+          allResults.push(...errorResults)
         }
       }
       setProcessingStep(4)
