@@ -24,8 +24,8 @@ export default function DashboardClient() {
   const chartData = useMemo(() => {
     if (optResults.length === 0) return []
     return optResults.slice(-20).map((r, idx) => ({
-      name: r.product_name.substring(0, 8),
-      savings: Number(r.savings.toFixed(2))
+      name: (r.product_name || 'Item').substring(0, 8),
+      savings: Number((r.savings || 0).toFixed(2))
     }))
   }, [optResults])
 
@@ -125,15 +125,15 @@ export default function DashboardClient() {
                   <AnimatePresence initial={false}>
                     {optResults.slice(-50).reverse().map((item, idx) => (
                       <motion.tr 
-                        key={item.product_id + idx} 
+                        key={`${item.product_id}-${idx}`} 
                         initial={{ opacity: 0, x: -10 }} 
                         animate={{ opacity: 1, x: 0 }}
                         className="hover:bg-white/[0.02] transition-colors"
                       >
-                        <td className="px-6 py-4 font-mono font-bold text-gray-300">{item.product_name}</td>
-                        <td className="px-6 py-4 text-gray-500 text-xs">{item.original_box}</td>
-                        <td className="px-6 py-4 font-mono text-[#00FFD1] text-xs">{item.optimized_box}</td>
-                        <td className="px-6 py-4 text-green-400 font-bold">+${item.savings.toFixed(2)}</td>
+                        <td className="px-6 py-4 font-mono font-bold text-gray-300">{item.product_name || 'Unknown'}</td>
+                        <td className="px-6 py-4 text-gray-500 text-xs">{item.original_box || '—'}</td>
+                        <td className="px-6 py-4 font-mono text-[#00FFD1] text-xs">{item.optimized_box || 'No Change'}</td>
+                        <td className="px-6 py-4 text-green-400 font-bold">+${(item.savings || 0).toFixed(2)}</td>
                       </motion.tr>
                     ))}
                   </AnimatePresence>
