@@ -141,6 +141,7 @@ export default function OptimizationPage() {
     setProcessingStep(0)
     await new Promise(r => setTimeout(r, 600))
 
+    const allResults: any[] = []
     try {
       for (let i = 0; i < data.length; i += BATCH_SIZE) {
         const batch = data.slice(i, i + BATCH_SIZE)
@@ -162,7 +163,9 @@ export default function OptimizationPage() {
           const resData = await res.json()
           
           if (resData.results) {
-            addBatchResults(resData.results.filter((r: any) => r.status !== 'error'))
+            const validResults = resData.results.filter((r: any) => r.status !== 'error')
+            addBatchResults(validResults)
+            allResults.push(...validResults)
           }
         } catch (err) {
           toast.error(`Batch error. Skipping to next.`)
@@ -173,7 +176,7 @@ export default function OptimizationPage() {
       toast.success(`Successfully optimized items!`)
       
       // Auto-generate summary for bulk
-      handleGenerateSummary(resData.results)
+      handleGenerateSummary(allResults)
     } catch (err: any) {
       toast.error('Optimization failed')
     } finally {
