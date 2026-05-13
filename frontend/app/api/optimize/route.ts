@@ -102,6 +102,18 @@ function mapProductToEngineInput(p: any, boxCatalog: typeof DEFAULT_CATALOG) {
   // Box price — supports: "box_price", "box price", "box_price_inr"
   const rawBoxPrice = findValue(p, 'box_price', 'box price', 'box_price_inr', 'box_price_usd', 'box_cost') || '0'
 
+  // Parse current box dimensions if available
+  let currentBoxLength: number | undefined
+  let currentBoxWidth: number | undefined
+  let currentBoxHeight: number | undefined
+
+  if (boxDimStr) {
+    const parts = boxDimStr.toLowerCase().split(/[x*]/).map(p => parseFloat(p.trim()))
+    if (parts.length === 3 && parts.every(p => !isNaN(p))) {
+      [currentBoxLength, currentBoxWidth, currentBoxHeight] = parts
+    }
+  }
+
   return {
     productName:        findValue(p, 'product_name', 'name') || 'Unknown',
     productId:          findValue(p, 'product_id', 'sku') || `id-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -116,6 +128,9 @@ function mapProductToEngineInput(p: any, boxCatalog: typeof DEFAULT_CATALOG) {
     destinationZone,
     shippingMethod,
     currentBoxName:     boxDimStr || undefined,
+    currentBoxLength,
+    currentBoxWidth,
+    currentBoxHeight,
     currentBoxCostUsd:  parseFloat(rawBoxPrice) || undefined,
     availableBoxes:     boxCatalog,
   }

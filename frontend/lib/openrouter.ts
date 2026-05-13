@@ -30,6 +30,9 @@ export interface OptimizeInput {
   destinationZone: number        // 1–6
   shippingMethod: ShippingMethod
   currentBoxName?: string
+  currentBoxLength?: number
+  currentBoxWidth?: number
+  currentBoxHeight?: number
   currentBoxCostUsd?: number
   currentShippingCostUsd?: number
   availableBoxes: BoxSpec[]
