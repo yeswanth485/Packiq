@@ -116,9 +116,14 @@ export default function OnboardingWizard() {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (user) {
-      const { error } = await (supabase.from('profiles') as any).upsert({
-        id: user.id,
-        email: user.email,
+      // Check if profile already exists to bypass Supabase RLS upsert-insert policy gotcha
+      const { data: existingProfile } = await (supabase.from('profiles') as any)
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      let dbError;
+      const profileData = {
         company: data.companyName,
         industry: data.industry,
         company_size: data.companySize,
@@ -132,11 +137,28 @@ export default function OnboardingWizard() {
         optimization_goal: data.optimizationGoal,
         sustainability_mode: data.sustainabilityMode,
         onboarding_completed: true
-      }, { onConflict: 'id' })
+      }
 
-      if (error) {
-        console.error('Failed to update profile:', error)
-        alert('Failed to save profile: ' + error.message)
+      if (existingProfile) {
+        // Use .update() which only requires the UPDATE policy (already exists in active DB)
+        const { error } = await (supabase.from('profiles') as any)
+          .update(profileData)
+          .eq('id', user.id)
+        dbError = error
+      } else {
+        // Fallback to .insert() if the row doesn't exist
+        const { error } = await (supabase.from('profiles') as any)
+          .insert({
+            id: user.id,
+            email: user.email,
+            ...profileData
+          })
+        dbError = error
+      }
+
+      if (dbError) {
+        console.error('Failed to update profile:', dbError)
+        alert('Failed to save profile: ' + dbError.message)
         setLoading(false)
         return
       }
