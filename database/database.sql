@@ -5,6 +5,12 @@
 -- EXTENSIONS
 create extension if not exists "uuid-ossp";
 
+-- CLEAN UP LEGACY TABLES (ensures fresh schema application)
+drop table if exists public.products cascade;
+drop table if exists public.optimizations cascade;
+drop table if exists public.box_catalog cascade;
+drop table if exists public.profiles cascade;
+
 -- ============================================================
 -- 1. PROFILES
 -- ============================================================
