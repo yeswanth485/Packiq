@@ -77,13 +77,21 @@ function findValue(p: any, ...keys: string[]): string {
   for (const k of keys) {
     if (p[k] !== undefined && p[k] !== null && p[k] !== '') return String(p[k])
   }
-  // Then try case-insensitive + normalized matching against all row keys
+  // Then try case-insensitive + normalized EXACT matching against all row keys
   const normalizedKeys = keys.map(k => k.toLowerCase().replace(/[^a-z0-9]/g, ''))
   for (const rowKey of Object.keys(p)) {
     const normalized = rowKey.toLowerCase().replace(/[^a-z0-9]/g, '')
     for (const target of normalizedKeys) {
-      // Match if normalized key contains or equals the target
-      if (normalized === target || normalized.startsWith(target) || normalized.includes(target)) {
+      if (normalized === target) {
+        if (p[rowKey] !== undefined && p[rowKey] !== null && p[rowKey] !== '') return String(p[rowKey])
+      }
+    }
+  }
+  // If still not found, try relaxed matching but ensure target length similarity to prevent false matching
+  for (const rowKey of Object.keys(p)) {
+    const normalized = rowKey.toLowerCase().replace(/[^a-z0-9]/g, '')
+    for (const target of normalizedKeys) {
+      if (normalized.includes(target) && Math.abs(normalized.length - target.length) <= 3) {
         if (p[rowKey] !== undefined && p[rowKey] !== null && p[rowKey] !== '') return String(p[rowKey])
       }
     }
@@ -93,9 +101,30 @@ function findValue(p: any, ...keys: string[]): string {
 
 // ─── Map raw product row → engine input ──────────────────────────────────
 function mapProductToEngineInput(p: any, boxCatalog: typeof DEFAULT_CATALOG) {
-  // Product dimensions — supports: "product L*W*H", "product_L*W*H_cm", "product_dims", etc.
-  const prodDimStr = findValue(p, 'product L*W*H', 'product_L*W*H', 'product_L*W*H_cm', 'product_dims', 'product_l*w*h', 'dimensions', 'dims', 'lwh')
-  const prodDim = parseDimensions(prodDimStr) || { l: 0, w: 0, h: 0 }
+  // Parse product dimensions — supports separate columns AND combined string
+  let l = 0, w = 0, h = 0
+  const plVal = findValue(p, 'product_length', 'product_l', 'length', 'l', 'len')
+  const pwVal = findValue(p, 'product_width', 'product_w', 'width', 'w')
+  const phVal = findValue(p, 'product_height', 'product_h', 'height', 'h')
+
+  if (plVal && pwVal && phVal) {
+    l = parseFloat(plVal)
+    w = parseFloat(pwVal)
+    h = parseFloat(phVal)
+  } else {
+    const prodDimStr = findValue(
+      p, 
+      'product L*W*H', 'product_L*W*H', 'product_L*W*H_cm', 'product_dims', 'product_dimensions',
+      'product_l*w*h', 'dimensions', 'dims', 'lwh', 'product_l_w_h',
+      'item_dims', 'item L*W*H'
+    )
+    const prodDim = parseDimensions(prodDimStr)
+    if (prodDim) {
+      l = prodDim.l
+      w = prodDim.w
+      h = prodDim.h
+    }
+  }
 
   // Fragility mapping
   const fragMap: Record<string, FragilityLevel> = {
@@ -127,38 +156,58 @@ function mapProductToEngineInput(p: any, boxCatalog: typeof DEFAULT_CATALOG) {
   // Price — supports price, price_inr, price_usd
   const rawPrice = findValue(p, 'price', 'price_inr', 'price_usd', 'mrp') || '0'
 
-  // Box dimensions — supports: "box L*W*H", "box_L*W*H_cm", "box_dims", etc.
-  const boxDimStr = findValue(p, 'box L*W*H', 'box_L*W*H', 'box_L*W*H_cm', 'box_dims', 'current_box', 'current_box_dims')
-
-  // Box price — supports: "box_price", "box price", "box_price_inr"
-  const rawBoxPrice = findValue(p, 'box_price', 'box price', 'box_price_inr', 'box_price_usd', 'box_cost') || '0'
-
-  // Parse current box dimensions if available
+  // Parse baseline / current box dimensions — supports separate columns AND combined string
   let currentBoxLength: number | undefined
   let currentBoxWidth: number | undefined
   let currentBoxHeight: number | undefined
 
-  if (boxDimStr) {
+  const blVal = findValue(p, 'current_box_length', 'current_box_l', 'box_length', 'box_l', 'baseline_length', 'baseline_l', 'original_box_length', 'original_box_l')
+  const bwVal = findValue(p, 'current_box_width', 'current_box_w', 'box_width', 'box_w', 'baseline_width', 'baseline_w', 'original_box_width', 'original_box_w')
+  const bhVal = findValue(p, 'current_box_height', 'current_box_h', 'box_height', 'box_h', 'baseline_height', 'baseline_h', 'original_box_height', 'original_box_h')
+
+  if (blVal && bwVal && bhVal) {
+    currentBoxLength = parseFloat(blVal)
+    currentBoxWidth = parseFloat(bwVal)
+    currentBoxHeight = parseFloat(bhVal)
+  }
+
+  const boxDimStr = findValue(
+    p, 
+    'box L*W*H', 'box_L*W*H', 'box_L*W*H_cm', 'box_dims', 'box_dimensions',
+    'current_box', 'current_box_dims', 'current_box_dimensions',
+    'current used box L*W*H', 'current_used_box_l_w_h',
+    'baseline_box', 'baseline_box_dims', 'baseline_box_dimensions', 'baseline box L*W*H',
+    'box', 'original_box', 'original box'
+  )
+
+  if ((!currentBoxLength || !currentBoxWidth || !currentBoxHeight) && boxDimStr) {
     const parts = boxDimStr.toLowerCase().split(/[x*]/).map(p => parseFloat(p.trim()))
     if (parts.length === 3 && parts.every(p => !isNaN(p))) {
       [currentBoxLength, currentBoxWidth, currentBoxHeight] = parts
     }
   }
 
+  // Box price — supports: "box_price", "box price", "box_price_inr"
+  const rawBoxPrice = findValue(
+    p, 
+    'box_price', 'box price', 'box_price_inr', 'box_price_usd', 'box_cost', 'box cost',
+    'current_box_price', 'current_box_cost', 'baseline_box_price', 'baseline_box_cost'
+  ) || '0'
+
   return {
     productName:        findValue(p, 'product_name', 'name') || 'Unknown',
     productId:          findValue(p, 'product_id', 'sku') || `id-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     productPriceUsd:    parseFloat(rawPrice) || 0,
-    lengthCm:           prodDim.l,
-    widthCm:            prodDim.w,
-    heightCm:           prodDim.h,
+    lengthCm:           l,
+    widthCm:            w,
+    heightCm:           h,
     weightKg:           parseFloat(findValue(p, 'weight_kg', 'weight') || '0.5'),
     fragility,
     quantity:           parseInt(findValue(p, 'quantity', 'qty') || '1', 10),
     category:           findValue(p, 'category', 'product_category') || 'general',
     destinationZone,
     shippingMethod,
-    currentBoxName:     boxDimStr || undefined,
+    currentBoxName:     boxDimStr || (currentBoxLength ? `${currentBoxLength}x${currentBoxWidth}x${currentBoxHeight}` : undefined),
     currentBoxLength,
     currentBoxWidth,
     currentBoxHeight,
