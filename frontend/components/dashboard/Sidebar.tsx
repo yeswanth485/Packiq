@@ -69,7 +69,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: any) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-3 space-y-1 overflow-hidden mt-4">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto no-scrollbar mt-4">
         {!isCollapsed && <p className="text-[10px] font-black text-gray-700 uppercase tracking-widest mb-4 ml-3">Operations</p>}
         {navItems.map((item) => {
           const Icon = item.icon

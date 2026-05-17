@@ -8,6 +8,7 @@ import {
 } from 'recharts'
 import { toast } from 'sonner'
 import StatCard from '@/components/dashboard/StatCard'
+import { useOptimizationStore } from '@/lib/store/optimizationStore'
 
 const COLORS = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444']
 const SUCCESS_COLORS = ['#10b981', '#ef4444']
@@ -15,13 +16,44 @@ const RISK_COLORS = { Low: '#10b981', Medium: '#f59e0b', High: '#ef4444' }
 
 export default function AnalyticsClient({ allOptimizations }: { allOptimizations: any[] }) {
   const [dateRange, setDateRange] = useState(30) // days
+  const { results: optResults } = useOptimizationStore()
+
+  const optimizationsToUse = useMemo(() => {
+    if (allOptimizations && allOptimizations.length > 0) {
+      return allOptimizations
+    }
+
+    // Map Zustand results to standard DB schema format for seamless fallback
+    return optResults.map((r, index) => ({
+      id: r.product_id || `opt-${index}`,
+      created_at: new Date().toISOString(),
+      status: r.status === 'error' ? 'failed' : 'completed',
+      recommended_box: r.optimized_box || 'N/A',
+      cost_savings_usd: r.savings || 0,
+      efficiency_score: r.space_utilization || 0,
+      product_snapshot: {
+        name: r.product_name || r.product_id || 'Unknown',
+        current_cost_usd: r.baseline_cost || 0
+      },
+      ai_response: {
+        volume_saved_cm3: r.volume_saved_cm3 || 0,
+        sustainabilityScore: r.sustainability_score || 0,
+        dim_weight_reduction_kg: r.dim_weight_reduction || 0,
+        damageRisk: r.damage_risk || 'Low',
+        recommended_box: {
+          material: r.packaging_material || 'Corrugated Cardboard'
+        },
+        new_cost_usd: r.total_cost || 0
+      }
+    }))
+  }, [allOptimizations, optResults])
 
   const filteredData = useMemo(() => {
     const cutoff = new Date()
     cutoff.setDate(cutoff.getDate() - dateRange)
     
-    return allOptimizations.filter(o => new Date(o.created_at) >= cutoff)
-  }, [allOptimizations, dateRange])
+    return optimizationsToUse.filter(o => new Date(o.created_at) >= cutoff)
+  }, [optimizationsToUse, dateRange])
 
   // KPIs
   const totalSavings = filteredData.reduce((acc, o) => acc + (o.cost_savings_usd || 0), 0)
