@@ -48,28 +48,31 @@ export async function middleware(request: NextRequest) {
       return supabaseResponse
     }
 
-    // Check Onboarding
-    let onboardingCompleted = false
-    try {
-      const { data: profile } = await (supabase.from('profiles') as any)
-        .select('onboarding_completed')
-        .eq('id', user.id)
-        .single()
-      
-      onboardingCompleted = !!profile?.onboarding_completed
-    } catch (e) {
-      onboardingCompleted = false
+    // Check Onboarding status: check user metadata first for instant routing, fallback to DB if not found
+    let onboardingCompleted = !!user.user_metadata?.onboarding_completed
+    
+    if (!onboardingCompleted) {
+      try {
+        const { data: profile } = await (supabase.from('profiles') as any)
+          .select('onboarding_completed')
+          .eq('id', user.id)
+          .single()
+        
+        onboardingCompleted = !!profile?.onboarding_completed
+      } catch (e) {
+        onboardingCompleted = false
+      }
     }
 
-    // Redirect to Onboarding if not done
-    if (!onboardingCompleted && !pathname.startsWith('/onboarding') && !pathname.startsWith('/auth')) {
+    // Redirect to Onboarding if not done (exempting root landing page '/')
+    if (!onboardingCompleted && pathname !== '/' && !pathname.startsWith('/onboarding') && !pathname.startsWith('/auth')) {
       const url = request.nextUrl.clone()
       url.pathname = '/onboarding'
       return NextResponse.redirect(url)
     }
 
-    // Redirect to Dashboard if done and on Landing/Auth
-    if (onboardingCompleted && (pathname === '/' || pathname.startsWith('/auth'))) {
+    // Redirect to Dashboard if done and on Auth pages (exempting root landing page '/')
+    if (onboardingCompleted && pathname.startsWith('/auth')) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)

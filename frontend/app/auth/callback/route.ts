@@ -16,17 +16,22 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code)
     if (!sessionError) {
-      // Check onboarding status
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('onboarding_completed')
-        .single()
+      // Get the logged in user to filter the profile query correctly
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('id', user.id)
+          .single()
 
-      if (profile && (profile as any).onboarding_completed) {
-        return NextResponse.redirect(`${origin}/dashboard`)
-      } else {
-        return NextResponse.redirect(`${origin}/onboarding`)
+        if (profile && (profile as any).onboarding_completed) {
+          return NextResponse.redirect(`${origin}/dashboard`)
+        }
       }
+      
+      return NextResponse.redirect(`${origin}/onboarding`)
     } else {
       return NextResponse.redirect(`${origin}/auth/login?error=session_error&message=${encodeURIComponent(sessionError.message)}`)
     }

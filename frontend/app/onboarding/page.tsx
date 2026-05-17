@@ -135,6 +135,11 @@ export default function OnboardingWizard() {
         return
       }
 
+      // Sync onboarding completion status with auth session metadata for instant routing synchronization
+      await supabase.auth.updateUser({
+        data: { onboarding_completed: true }
+      })
+
       // Confetti Burst
       confetti({
         particleCount: 100,
