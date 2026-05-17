@@ -95,7 +95,8 @@ export default function SettingsPage() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+        const profile = data as any
         setFormData((prev: any) => ({
           ...prev,
           full_name: profile?.full_name || user.user_metadata?.full_name || 'Admin',
