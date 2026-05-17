@@ -91,8 +91,21 @@ export default function SettingsPage() {
   })
 
   useEffect(() => {
-    // Simulate initial load
-    setTimeout(() => setLoading(false), 500)
+    async function getUser() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+        setFormData((prev: any) => ({
+          ...prev,
+          full_name: profile?.full_name || user.user_metadata?.full_name || 'Admin',
+          email: user.email || 'admin@example.com',
+          company_name: profile?.company || 'Enterprise'
+        }))
+      }
+      setLoading(false)
+    }
+    getUser()
   }, [])
 
   const handleSave = () => {

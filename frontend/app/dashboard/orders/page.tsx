@@ -7,8 +7,10 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { useOptimizationStore, OptimizationResult } from '@/lib/store/optimizationStore'
 import Box3DViewer from '@/components/dashboard/Box3DViewer'
+import { useRouter } from 'next/navigation'
 
 export default function OrdersPage() {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedOrder, setSelectedOrder] = useState<OptimizationResult | null>(null)
   const { results: orders, totalSaved } = useOptimizationStore()
@@ -21,7 +23,7 @@ export default function OrdersPage() {
   const highRiskCount = orders.filter(o => o.damage_risk === 'High').length
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-20">
+    <div className="max-w-[1200px] w-full mx-auto space-y-6 pb-20 px-4 md:px-0">
       
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -186,7 +188,7 @@ export default function OrdersPage() {
                 <div className="grid grid-cols-3 gap-3">
                   <div className="p-3 bg-white/[0.02] border border-white/5 rounded-2xl flex flex-col items-center justify-center text-center">
                     <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Confidence</p>
-                    <p className="text-lg font-black text-[#00FFD1]">{selectedOrder.confidence_score}%</p>
+                    <p className="text-lg font-black text-[#00FFD1]">{selectedOrder.confidence_score?.toFixed(1)}%</p>
                   </div>
                   <div className="p-3 bg-white/[0.02] border border-white/5 rounded-2xl flex flex-col items-center justify-center text-center">
                     <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Void Redux</p>
@@ -253,7 +255,10 @@ export default function OrdersPage() {
 
               {/* Manifest Footer (Actions) */}
               <div className="p-6 border-t border-white/5 bg-[#0A0A0F] grid grid-cols-2 gap-4">
-                <button className="h-12 bg-white/[0.03] text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-colors border border-white/10 flex items-center justify-center gap-2">
+                <button 
+                  onClick={() => router.push('/dashboard/labels')}
+                  className="h-12 bg-white/[0.03] text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-colors border border-white/10 flex items-center justify-center gap-2"
+                >
                   <Printer className="w-4 h-4" /> Print Label
                 </button>
                 <button className="h-12 bg-[#00FFD1] text-[#0A0A0F] rounded-xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-transform flex items-center justify-center shadow-[0_0_15px_rgba(0,255,209,0.2)]">

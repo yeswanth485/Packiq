@@ -18,7 +18,8 @@ import {
   User,
   Activity,
   Database,
-  Leaf
+  Leaf,
+  Tag
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -29,6 +30,7 @@ const navItems = [
   { href: '/dashboard/optimization',label: 'Optimization',      icon: Zap },
   { href: '/dashboard/products',    label: 'Products',          icon: Database },
   { href: '/dashboard/orders',      label: 'Orders',            icon: ShoppingCart },
+  { href: '/dashboard/labels',      label: 'Labels',            icon: Tag },
   { href: '/dashboard/analytics',   label: 'Analytics',         icon: TrendingUp },
   { href: '/dashboard/sustainability', label: 'Sustainability', icon: Leaf },
   { href: '/dashboard/catalog',     label: 'Box Catalog',       icon: Box },

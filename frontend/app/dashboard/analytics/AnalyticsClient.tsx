@@ -10,8 +10,8 @@ import { toast } from 'sonner'
 import StatCard from '@/components/dashboard/StatCard'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
 
-const COLORS = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444']
-const SUCCESS_COLORS = ['#10b981', '#ef4444']
+const COLORS = ['#00FFD1', '#4f46e5', '#3b82f6', '#ec4899', '#f59e0b']
+const SUCCESS_COLORS = ['#00FFD1', '#ef4444']
 const RISK_COLORS = { Low: '#10b981', Medium: '#f59e0b', High: '#ef4444' }
 
 export default function AnalyticsClient({ allOptimizations }: { allOptimizations: any[] }) {
@@ -191,7 +191,7 @@ export default function AnalyticsClient({ allOptimizations }: { allOptimizations
   }
 
   return (
-    <div className="space-y-6 fade-in pb-12">
+    <div className="max-w-[1200px] w-full mx-auto space-y-6 fade-in pb-20 px-4 md:px-0">
       {/* Header controls */}
       <div className="flex flex-wrap items-center justify-between gap-4 glass p-4 rounded-2xl border border-white/5">
         <div className="flex items-center gap-2">
@@ -259,10 +259,10 @@ export default function AnalyticsClient({ allOptimizations }: { allOptimizations
                   <YAxis stroke="#ffffff50" fontSize={12} tickFormatter={val => `$${val}`} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', borderRadius: '12px' }}
-                    itemStyle={{ color: '#10b981' }}
+                    itemStyle={{ color: '#00FFD1' }}
                     formatter={(val: any) => [`$${Number(val).toFixed(2)}`, 'Savings']}
                   />
-                  <Line type="monotone" dataKey="savings" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981' }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="savings" stroke="#00FFD1" strokeWidth={3} dot={{ r: 4, fill: '#00FFD1' }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
