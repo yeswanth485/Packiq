@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Package, Zap, TrendingUp, CheckCircle2, Brain, Sparkles, Activity, DollarSign, Leaf, Weight } from 'lucide-react'
+import { Package, Zap, TrendingUp, CheckCircle2, Brain, Sparkles, Activity, DollarSign, Leaf, Weight, Building } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
@@ -29,8 +29,20 @@ export default function DashboardClient() {
     runsToday: number
     aiModel: string
   } | null>(null)
+  const [profileData, setProfileData] = useState<{
+    company: string
+    industry: string
+    companySize: string
+    monthlyVolume: number
+    primaryCarriers: string[]
+    fulfillmentType: string
+    warehousesCount: number
+    sizeUnits: string
+    optimizationGoal: string
+    sustainabilityMode: boolean
+  } | null>(null)
 
-  // ── Fetch real stats from DB on mount ──────────────────────────────────
+  // ── Fetch real stats and profile from DB on mount ─────────────────────────
   useEffect(() => {
     const fetchDbStats = async () => {
       try {
@@ -38,6 +50,29 @@ export default function DashboardClient() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
+        // 1. Fetch Profile Preferences
+        const { data: profile } = await (supabase as any)
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+
+        if (profile) {
+          setProfileData({
+            company: profile.company || '',
+            industry: profile.industry || '',
+            companySize: profile.company_size || '',
+            monthlyVolume: profile.monthly_volume || 1000,
+            primaryCarriers: profile.primary_carriers || [],
+            fulfillmentType: profile.fulfillment_type || 'In-House',
+            warehousesCount: profile.warehouses_count || 1,
+            sizeUnits: profile.size_units || 'cm',
+            optimizationGoal: profile.optimization_goal || 'void',
+            sustainabilityMode: profile.sustainability_mode || false,
+          })
+        }
+
+        // 2. Fetch Optimization Summary
         const { data } = await (supabase as any).rpc('get_optimization_summary', {
           p_user_id: user.id,
           p_days: 30,
@@ -61,8 +96,8 @@ export default function DashboardClient() {
             aiModel:         recent?.ai_model || 'PackVision Heuristic v2.0',
           })
         }
-      } catch {
-        // Non-fatal — session store data still shows
+      } catch (err) {
+        console.error('Error loading DB stats:', err)
       }
     }
     fetchDbStats()
@@ -243,6 +278,49 @@ export default function DashboardClient() {
 
         {/* AI Sidebar */}
         <div className="lg:col-span-4 space-y-6">
+
+          {/* Operations Profile (Onboarding Data Sync) */}
+          {profileData && (
+            <div className="glass p-8 rounded-3xl border border-white/5 relative overflow-hidden bg-gradient-to-br from-indigo-500/5 to-transparent">
+              <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                <Building className="w-4 h-4 text-indigo-400" /> Operations Profile
+              </h3>
+              <div className="space-y-4 text-xs">
+                <div className="flex justify-between items-center py-2 border-b border-white/5">
+                  <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Company</span>
+                  <span className="text-white font-bold">{profileData.company || 'Not Specified'}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-white/5">
+                  <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Industry</span>
+                  <span className="text-white font-medium">{profileData.industry || 'Not Specified'} {profileData.companySize && `(${profileData.companySize})`}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-white/5">
+                  <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Logistics Goal</span>
+                  <span className="text-[#00FFD1] font-bold uppercase tracking-widest text-[10px]">
+                    {profileData.optimizationGoal === 'void' ? 'Minimize Void' : profileData.optimizationGoal === 'cost' ? 'Reduce Carrier Cost' : profileData.optimizationGoal === 'speed' ? 'Speed of Pack' : 'Not set'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-white/5">
+                  <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Monthly Volume</span>
+                  <span className="text-white font-semibold">{profileData.monthlyVolume.toLocaleString()} / mo</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-white/5">
+                  <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Fulfillment</span>
+                  <span className="text-white">{profileData.fulfillmentType} ({profileData.warehousesCount} WH)</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-white/5">
+                  <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Primary Carriers</span>
+                  <span className="text-white truncate max-w-[150px]">{profileData.primaryCarriers.join(', ') || 'None'}</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Eco-Mode</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${profileData.sustainabilityMode ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-white/5 text-gray-500'}`}>
+                    {profileData.sustainabilityMode ? 'Enabled 🌿' : 'Disabled'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Claude AI Insights */}
           <div className="bg-gradient-to-br from-[#185FA5]/20 to-[#00FFD1]/20 border border-[#00FFD1]/20 rounded-3xl p-8 relative overflow-hidden">

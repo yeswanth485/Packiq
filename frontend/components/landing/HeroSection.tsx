@@ -34,12 +34,19 @@ const FloatingBox = ({ delay = 0, x = '10%', y = '10%', size = 40 }) => (
   </motion.div>
 )
 
+const TERMS = ['Fulfillment', 'Packaging', 'DIM Weight', 'Distribution', 'Supply Chain', 'Logistics']
+
 export function HeroSection() {
   const [mounted, setMounted] = useState(false)
   const [showVideo, setShowVideo] = useState(false)
+  const [termIndex, setTermIndex] = useState(0)
 
   useEffect(() => {
     setMounted(true)
+    const interval = setInterval(() => {
+      setTermIndex((prev) => (prev + 1) % TERMS.length)
+    }, 3000)
+    return () => clearInterval(interval)
   }, [])
 
   if (!mounted) return null
@@ -85,11 +92,22 @@ export function HeroSection() {
             </StaggerItem>
 
             <StaggerItem>
-              <h1 className="text-7xl md:text-[90px] font-bold font-syne tracking-tighter mb-8 leading-[0.95]">
+              <h1 className="text-6xl md:text-[80px] font-bold font-syne tracking-tighter mb-8 leading-[0.95]">
                 The AI Brain<br />
                 Behind Modern<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00FFD1] via-[#00d4b0] to-[#185FA5] animate-gradient-x">
-                  Fulfillment
+                <span className="relative inline-block overflow-hidden h-[75px] md:h-[95px] w-full pt-1">
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={termIndex}
+                      initial={{ y: 50, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: -50, opacity: 0 }}
+                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                      className="absolute left-0 text-transparent bg-clip-text bg-gradient-to-r from-[#00FFD1] via-[#00d4b0] to-[#185FA5] w-full block"
+                    >
+                      {TERMS[termIndex]}
+                    </motion.span>
+                  </AnimatePresence>
                 </span>
               </h1>
             </StaggerItem>

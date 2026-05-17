@@ -112,12 +112,21 @@ export default function OnboardingWizard() {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (user) {
-      const { error } = await (supabase.from('profiles') as any).upsert({
-        id: user.id,
-        email: user.email,
+      const { error } = await (supabase.from('profiles') as any).update({
         company: data.companyName,
+        industry: data.industry,
+        company_size: data.companySize,
+        website_url: data.websiteUrl,
+        monthly_volume: data.monthlyVolume,
+        primary_carriers: data.primaryCarriers,
+        fulfillment_type: data.fulfillmentType,
+        warehouses_count: data.warehousesCount,
+        size_units: data.sizeUnits,
+        materials: data.materials,
+        optimization_goal: data.optimizationGoal,
+        sustainability_mode: data.sustainabilityMode,
         onboarding_completed: true
-      })
+      }).eq('id', user.id)
 
       if (error) {
         console.error('Failed to update profile:', error)

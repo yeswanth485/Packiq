@@ -56,7 +56,7 @@ const FloatingElements = () => {
 export default function LoginPage() {
   const supabase = createClient()
   const router = useRouter()
-  const [formData, setFormData] = useState({ email: '', password: '', companyName: '' })
+  const [formData, setFormData] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -90,13 +90,9 @@ export default function LoginPage() {
         const { data: newProfile, error: createError } = await (supabase.from('profiles') as any).insert({
           id: data.user.id,
           email: data.user.email,
-          company: formData.companyName,
           onboarding_completed: false
         }).select().single()
         profile = newProfile
-      } else if (formData.companyName && !profile.company) {
-        // If company name was provided in login and is missing in profile, update it
-        await (supabase.from('profiles') as any).update({ company: formData.companyName }).eq('id', data.user.id)
       }
 
       setIsSuccess(true)
@@ -237,18 +233,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-1">Company Name</label>
-                <div className="relative group">
-                  <Building className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-700 group-focus-within:text-[#00FFD1] transition-colors" />
-                  <input
-                    type="text" required
-                    className="w-full h-14 bg-white/[0.02] border border-white/10 rounded-2xl pl-14 pr-5 text-white text-sm focus:border-[#00FFD1] focus:bg-white/[0.04] transition-all outline-none"
-                    placeholder="Acme Logistics"
-                    onChange={e => setFormData({...formData, companyName: e.target.value})}
-                  />
-                </div>
-              </div>
+
 
               <button
                 type="submit" disabled={loading || isSuccess}
