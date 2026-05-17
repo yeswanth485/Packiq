@@ -71,8 +71,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    // Redirect to Dashboard if done and on Auth pages (exempting root landing page '/')
-    if (onboardingCompleted && pathname.startsWith('/auth')) {
+    // Redirect to Dashboard if done and visiting Landing ('/') or Auth pages
+    if (onboardingCompleted && (pathname === '/' || pathname.startsWith('/auth'))) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)
