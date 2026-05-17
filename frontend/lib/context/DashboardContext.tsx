@@ -18,6 +18,9 @@ interface DashboardContextType {
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined)
 
+let statsCache: { data: DashboardStats; ts: number } | null = null
+const CACHE_TTL = 60_000 // 60 seconds
+
 export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [stats, setStats] = useState<DashboardStats>({
     totalSavings: 0,
@@ -29,6 +32,11 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
 
   const refreshStats = useCallback(async () => {
+    if (statsCache && Date.now() - statsCache.ts < CACHE_TTL) {
+      setStats(statsCache.data)
+      return
+    }
+
     setIsRefreshing(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -48,12 +56,15 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         ? (optimizations || []).reduce((acc: number, o: any) => acc + (o.efficiency_score || 0), 0) / count
         : 0
 
-      setStats({
+      const newStats = {
         totalSavings,
-        ordersProcessed: count * 1.5, // Mocking orders count based on optimizations for now
+        ordersProcessed: count * 1.5,
         efficiency: avgEff,
         optimizationsCount: count
-      })
+      }
+
+      setStats(newStats)
+      statsCache = { data: newStats, ts: Date.now() }
     } catch (error) {
       console.error('Error refreshing dashboard stats:', error)
     } finally {

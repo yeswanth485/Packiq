@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { parseDimensions } from '@/lib/utils/parser'
 import { runOptimization, LIGHTWEIGHT_MODEL } from '@/lib/openrouter'
-import { runHeuristicOptimization, normalizeInput } from '@/lib/optimization/engine'
+import { runHeuristicOptimization, normalizeInput, runProductionOptimization } from '@/lib/optimization/engine'
 import type { FragilityLevel, ShippingMethod } from '@/lib/optimization/engine'
 
 export const maxDuration = 60
@@ -224,8 +224,13 @@ function mapRecommendationToResponse(rec: any, engineInput: any) {
     cached:                 false,
     
     // New fields from PackIQ prompt
-    volume_saved_cm3:       rec.volume_saved_cm3,
-    dim_weight_reduction:   rec.dim_weight_reduction_kg,
+    volume_saved_cm3:       rec.volumeSavedCm3 || rec.volume_saved_cm3 || 0,
+    dim_weight_reduction:   rec.dimWeightReduction || rec.dim_weight_reduction_kg || 0,
+    top_alternatives:       rec.topAlternatives || [],
+    score_breakdown:        rec.scoreBreakdown || null,
+    engine_version:         rec.engineVersion || 'PackVision Heuristic v2.0',
+    fit_check_passed:       rec.fitCheckPassed ?? true,
+    clearance_used:         rec.clearanceUsed || 0,
   }
 }
 
@@ -281,7 +286,10 @@ export async function POST(req: Request) {
 
         if (isBulk) {
           // Bulk uploads skip external network/LLM dependencies for sub-millisecond local speed
-          const rec = runHeuristicOptimization(engineInput)
+          let rec = runProductionOptimization(engineInput) as any
+          if (!rec) {
+             rec = runHeuristicOptimization(engineInput)
+          }
           if (!rec) {
             return {
               product_id: engineInput.productId,
@@ -327,44 +335,19 @@ export async function POST(req: Request) {
           return { ...mapped, cached: true }
         }
 
-        // Run AI with timeout, fall back to heuristic engine
+        // Run Production Optimization first
         let rec: any = null
-        const { runOptimization, runQCReview, FREE_MODEL } = await import('@/lib/openrouter')
-        let modelUsed = FREE_MODEL
+        let modelUsed = 'PackVision ML-Scorer v1.0'
 
         try {
-          const timeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))
-          rec = await Promise.race([runOptimization(engineInput, FREE_MODEL), timeout])
-          modelUsed = FREE_MODEL
+          rec = runProductionOptimization(engineInput)
           
-          if (rec && rec.status === 'no_smaller_box_available') {
-            return {
-              product_id: engineInput.productId,
-              product_name: engineInput.productName,
-              original_box: engineInput.currentBoxName || 'Not specified',
-              error: rec.reason || 'No smaller box available',
-              status: 'no_smaller_box_available',
-              savings: 0,
-              total_cost: engineInput.currentBoxCostUsd || 0,
-              baseline_cost: engineInput.currentBoxCostUsd || 0,
-              optimized_box: 'No Smaller Box Fits',
-              optimized_box_dims: '—'
-            }
+          if (!rec) {
+            rec = runHeuristicOptimization(engineInput)
+            modelUsed = 'PackVision Heuristic v2.0'
           }
-
-          // Quality Control Step
-          if (rec) {
-            const qc = await runQCReview(rec)
-            if (!qc.valid) {
-              console.warn('[QC Failed] AI recommendation rejected:', qc.error)
-              // If QC fails, we can try heuristic or just return no smaller box
-              rec = runHeuristicOptimization(engineInput)
-              modelUsed = 'PackVision Heuristic v2.0'
-            }
-          }
-
-        } catch (aiErr) {
-          console.warn('[AI Failed] Using heuristic engine:', aiErr)
+        } catch (err) {
+          console.warn('[Engine Failed] Using heuristic fallback:', err)
           rec = runHeuristicOptimization(engineInput)
           modelUsed = 'PackVision Heuristic v2.0'
         }

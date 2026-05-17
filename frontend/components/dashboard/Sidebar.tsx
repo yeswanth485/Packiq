@@ -78,6 +78,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: any) {
             <div key={item.href} className="relative group px-1">
               <Link
                 href={item.href}
+                prefetch={true}
                 className={`flex items-center gap-3 px-3 h-[44px] rounded-xl text-xs font-bold transition-all duration-300 relative ${
                   active
                     ? 'bg-[#00FFD1]/10 text-white'

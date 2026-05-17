@@ -90,7 +90,7 @@ export default function LoginPage() {
         const { data: newProfile, error: createError } = await (supabase.from('profiles') as any).insert({
           id: data.user.id,
           email: data.user.email,
-          onboarding_completed: false
+          onboarding_completed: true
         }).select().single()
         profile = newProfile
       }
@@ -98,11 +98,7 @@ export default function LoginPage() {
       setIsSuccess(true)
       await new Promise(r => setTimeout(r, 800))
 
-      if (profile?.onboarding_completed) {
-        router.push('/dashboard')
-      } else {
-        router.push('/onboarding')
-      }
+      router.push('/dashboard')
     } catch (err: any) {
       toast.error(err.message)
       setLoading(false)

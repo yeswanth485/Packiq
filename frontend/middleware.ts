@@ -48,17 +48,8 @@ export async function middleware(request: NextRequest) {
       return supabaseResponse
     }
 
-    const onboardingCompleted = !!user.user_metadata?.onboarding_completed
-
-    // Redirect to Dashboard if done and visiting Landing ('/') or Auth pages
-    if (onboardingCompleted && (pathname === '/' || pathname.startsWith('/auth'))) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/dashboard'
-      return NextResponse.redirect(url)
-    }
-
-    // Redirect to Dashboard if trying to access auth pages
-    if (pathname.startsWith('/auth')) {
+    // Redirect to Dashboard if visiting Landing ('/') or Auth pages
+    if (pathname === '/' || pathname.startsWith('/auth')) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)

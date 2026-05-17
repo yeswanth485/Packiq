@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 class BoxSpec(BaseModel):
@@ -35,6 +35,21 @@ class OptimizationInput(BaseModel):
     current_box_height: Optional[float] = None
     current_box_cost_usd: Optional[float] = None
 
+class ScoreBreakdown(BaseModel):
+    empty_space_penalty: float
+    shipping_cost_penalty: float
+    damage_risk_penalty: float
+    material_cost_penalty: float
+    total_score: float
+
+class AlternativeBox(BaseModel):
+    box_name: str
+    box_sku: Optional[str] = None
+    box_dims: str
+    score: float
+    total_cost: float
+    reasoning: Optional[str] = None
+
 class OptimizationResponse(BaseModel):
     recommended_box_name: str
     recommended_box_dims: str  # e.g., "10x10x10"
@@ -52,3 +67,10 @@ class OptimizationResponse(BaseModel):
     dim_weight_reduction: float
     volume_saved_cm3: float
     sustainability_score: float
+    
+    # New Fields
+    top_alternatives: List[AlternativeBox] = []
+    score_breakdown: Optional[ScoreBreakdown] = None
+    engine_version: str = "ML-Scorer v1.0"
+    fit_check_passed: bool = True
+    clearance_used: float = 0.0

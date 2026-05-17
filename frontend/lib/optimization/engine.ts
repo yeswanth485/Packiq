@@ -643,3 +643,237 @@ export function runHeuristicOptimization(
     dataQuality,
   }
 }
+
+// --- ML-Grade Production Optimization Engine ---
+
+export interface ScoreBreakdown {
+  emptySpacePenalty: number
+  shippingCostPenalty: number
+  damageRiskPenalty: number
+  materialCostPenalty: number
+  totalScore: number
+}
+
+export interface AlternativeBox {
+  boxName: string
+  boxSku?: string
+  boxDims: string
+  score: number
+  totalCost: number
+  reasoning: string
+}
+
+export interface ProductionOptimizationRecommendation extends OptimizationRecommendation {
+  topAlternatives: AlternativeBox[]
+  scoreBreakdown: ScoreBreakdown
+  engineVersion: string
+  fitCheckPassed: boolean
+  clearanceUsed: number
+  volumeSavedCm3: number
+  dimWeightReduction: number
+}
+
+function checkAllOrientations(pl: number, pw: number, ph: number, bl: number, bw: number, bh: number, clearance: number): boolean {
+  const rotations = [
+    [pl, pw, ph], [pl, ph, pw],
+    [pw, pl, ph], [pw, ph, pl],
+    [ph, pl, pw], [ph, pw, pl]
+  ]
+  for (const [rl, rw, rh] of rotations) {
+    if ((rl + clearance * 2 <= bl) && (rw + clearance * 2 <= bw) && (rh + clearance * 2 <= bh)) {
+      return true
+    }
+  }
+  return false
+}
+
+export function runProductionOptimization(
+  rawInput: Partial<OptimizationInput>,
+): ProductionOptimizationRecommendation | null {
+  const input = normalizeInput(rawInput)
+  const validation = validateInput(input)
+  if (!validation.valid) return null
+
+  const pl = input.lengthCm
+  const pw = input.widthCm
+  const ph = input.heightCm
+  const productVol = pl * pw * ph
+  
+  const clearances: Record<FragilityLevel, number> = { low: 0.5, medium: 1.0, high: 2.5, extreme: 5.0 }
+  const clearance = clearances[input.fragility] || 1.0
+
+  let baselineCost = 0.0
+  let baselineVol = 0.0
+  if (input.currentBoxLength && input.currentBoxWidth && input.currentBoxHeight) {
+    baselineVol = input.currentBoxLength * input.currentBoxWidth * input.currentBoxHeight
+    const dimWeight = (input.currentBoxLength * input.currentBoxWidth * input.currentBoxHeight) / DIM_DIVISOR
+    const billableWeight = Math.max(input.weightKg, dimWeight)
+    const base = input.shippingMethod === 'express' ? 15.0 : (input.shippingMethod === 'same-day' ? 25.0 : 8.5)
+    const zoneMult = ZONE_RATES_USD[input.destinationZone] || 1.0
+    const baselineShipping = base + (billableWeight * 1.5 * zoneMult)
+    baselineCost = baselineShipping + (input.currentBoxCostUsd || 0)
+  }
+
+  const maxBoxCost = input.availableBoxes.reduce((max, b) => Math.max(max, b.costUsd), 0)
+  const maxVoidVol = input.availableBoxes.reduce((max, b) => Math.max(max, (b.lengthCm * b.widthCm * b.heightCm) - productVol), 0)
+
+  const validCandidates: any[] = []
+
+  for (const box of input.availableBoxes) {
+    if (!checkAllOrientations(pl, pw, ph, box.lengthCm, box.widthCm, box.heightCm, clearance)) {
+      continue
+    }
+    if (box.maxWeightKg && input.weightKg > box.maxWeightKg) {
+      continue
+    }
+
+    const boxVol = box.lengthCm * box.widthCm * box.heightCm
+    const voidVol = Math.max(0, boxVol - productVol)
+    const emptySpaceRatio = boxVol > 0 ? Math.max(0, (boxVol - productVol) / boxVol) : 1.0
+
+    const dimWeight = boxVol / DIM_DIVISOR
+    const billableWeight = Math.max(input.weightKg, dimWeight)
+    
+    const baseRate = input.shippingMethod === 'express' ? 15.0 : (input.shippingMethod === 'same-day' ? 25.0 : 8.5)
+    const zoneMult = ZONE_RATES_USD[input.destinationZone] || 1.0
+    const shippingCost = baseRate + (billableWeight * 1.5 * zoneMult)
+    const totalCost = shippingCost + box.costUsd
+
+    const emptySpacePenalty = emptySpaceRatio * 100.0
+
+    const maxDimWeight = Math.max(input.weightKg, (100 * 100 * 100) / DIM_DIVISOR)
+    const maxTheoreticalShipping = baseRate + (maxDimWeight * 1.5 * zoneMult)
+    const shippingCostPenalty = maxTheoreticalShipping > 0 ? Math.min(100.0, (shippingCost / maxTheoreticalShipping) * 100.0) : 0
+
+    const minBoxDim = Math.min(box.lengthCm, box.widthCm, box.heightCm)
+    const minProdDim = Math.min(pl, pw, ph)
+    const actualClearance = Math.max(0, minBoxDim - minProdDim) / 2.0
+    const clearanceRatio = clearance > 0 ? actualClearance / clearance : 1.0
+
+    let damageRiskPenalty = 0.0
+    if (input.fragility === 'high' || input.fragility === 'extreme') {
+      if (!box.doubleWall) damageRiskPenalty += 40.0
+      if (clearanceRatio < 1.0) damageRiskPenalty += 40.0 * (1.0 - clearanceRatio)
+    } else if (input.fragility === 'medium') {
+      if (clearanceRatio < 1.0) damageRiskPenalty += 20.0 * (1.0 - clearanceRatio)
+    }
+    if (clearanceRatio > 3.0) damageRiskPenalty += 10.0
+    damageRiskPenalty = Math.min(100.0, damageRiskPenalty)
+
+    const costPenalty = maxBoxCost > 0 ? (box.costUsd / maxBoxCost) * 50.0 : 0.0
+    const voidPenalty = maxVoidVol > 0 ? (voidVol / maxVoidVol) * 50.0 : 0.0
+    const materialCostPenalty = Math.min(100.0, costPenalty + voidPenalty)
+
+    const w1 = 0.25, w2 = 0.35, w3 = 0.25, w4 = 0.15
+    const totalScore = (emptySpacePenalty * w1) + (shippingCostPenalty * w2) + (damageRiskPenalty * w3) + (materialCostPenalty * w4)
+
+    let damageRisk: DamageRisk = 'Low'
+    if (damageRiskPenalty > 60) damageRisk = 'High'
+    else if (damageRiskPenalty > 20) damageRisk = 'Medium'
+
+    validCandidates.push({
+      box,
+      score: totalScore,
+      breakdown: {
+        emptySpacePenalty,
+        shippingCostPenalty,
+        damageRiskPenalty,
+        materialCostPenalty,
+        totalScore
+      },
+      metrics: {
+        shippingCost,
+        totalCost,
+        emptySpaceRatio,
+        boxVol,
+        damageRisk,
+        dimWeight
+      }
+    })
+  }
+
+  if (validCandidates.length === 0) return null
+
+  validCandidates.sort((a, b) => a.score - b.score)
+  const winner = validCandidates[0]
+  const wBox = winner.box
+  const wMetrics = winner.metrics
+
+  const savings = baselineCost > 0 ? Math.max(0, baselineCost - wMetrics.totalCost) : 0
+  const savingsPercent = baselineCost > 0 ? (savings / baselineCost) * 100 : 0
+
+  let dimReduction = 0
+  let volSaved = 0
+  if (baselineVol > 0) {
+    volSaved = baselineVol - wMetrics.boxVol
+    const oldDim = baselineVol / DIM_DIVISOR
+    const newDim = wMetrics.boxVol / DIM_DIVISOR
+    dimReduction = Math.max(0, oldDim - newDim)
+  }
+
+  let susScore = 100 - (wMetrics.emptySpaceRatio * 100 * 0.5)
+  if (wBox.ecoCertified) susScore += 15
+  if (wBox.material && wBox.material.toLowerCase() === 'kraft') susScore += 10
+  susScore = Math.min(100, Math.max(0, susScore))
+
+  const topAlternatives: AlternativeBox[] = []
+  for (let i = 1; i < Math.min(4, validCandidates.length); i++) {
+    const alt = validCandidates[i]
+    topAlternatives.push({
+      boxName: alt.box.name,
+      boxSku: alt.box.sku,
+      boxDims: `${alt.box.lengthCm}x${alt.box.widthCm}x${alt.box.heightCm}`,
+      score: alt.score,
+      totalCost: alt.metrics.totalCost,
+      reasoning: "Alternative choice with slightly higher overall score."
+    })
+  }
+
+  const confidence = Math.max(0, 100 - winner.score)
+
+  let material = 'Single-Wall Corrugated'
+  let filler = 'Paper Dunnage'
+  if (input.fragility === 'extreme') { material = 'Double-Wall Corrugated'; filler = 'Foam + Air Cushions' }
+  else if (input.fragility === 'high') { material = 'Double-Wall Corrugated'; filler = 'Bubble Wrap + Foam' }
+  else if (input.fragility === 'medium') { filler = 'Bubble Wrap' }
+
+  return {
+    productId: input.productId,
+    productName: input.productName,
+    recommendedBoxId: wBox.id,
+    recommendedBoxName: wBox.name,
+    recommendedBoxDims: `${wBox.lengthCm}x${wBox.widthCm}x${wBox.heightCm}`,
+    recommendedBoxSku: wBox.sku,
+    packagingMaterial: material,
+    fillMaterial: filler,
+    packagingCost: parseFloat(wBox.costUsd.toFixed(2)),
+    shippingCost: parseFloat(wMetrics.shippingCost.toFixed(2)),
+    totalCost: parseFloat(wMetrics.totalCost.toFixed(2)),
+    baselineCost: parseFloat(baselineCost.toFixed(2)),
+    savings: parseFloat(savings.toFixed(2)),
+    savingsPercent: parseFloat(savingsPercent.toFixed(1)),
+    damageRisk: wMetrics.damageRisk,
+    spaceUtilization: (1.0 - wMetrics.emptySpaceRatio) * 100.0,
+    confidenceScore: confidence,
+    fitScore: 100 - winner.breakdown.emptySpacePenalty,
+    voidScore: 100 - winner.breakdown.emptySpacePenalty,
+    costScore: 100 - ((winner.breakdown.shippingCostPenalty + winner.breakdown.materialCostPenalty) / 2),
+    sustainabilityScore: susScore,
+    finalScore: 100 - winner.score,
+    reasoning: `Selected ${wBox.name} because it minimized the total optimization score (cost + waste).`,
+    packingTips: [],
+    candidatesEvaluated: validCandidates.length,
+    model: 'PackVision ML-Scorer v1.0',
+    dataQuality: 'complete',
+    topAlternatives: topAlternatives,
+    scoreBreakdown: winner.breakdown,
+    engineVersion: 'ML-Scorer v1.0',
+    fitCheckPassed: true,
+    clearanceUsed: clearance,
+    volumeSavedCm3: volSaved,
+    dimWeightReduction: dimReduction
+  }
+}
+
+ 
+ 
