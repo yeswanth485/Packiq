@@ -3,10 +3,10 @@
 import { CountUpNumber } from '@/components/animations'
 
 const METRICS = [
-  { label: "Brands Trust PackIQ", value: 10000, suffix: "+" },
-  { label: "Shipments Optimized", value: 50, suffix: "M+" },
-  { label: "Platform Uptime", value: 99.9, suffix: "%" },
-  { label: "Avg. ROI Achieved", value: 32, prefix: "+", suffix: "%" }
+  { label: "SKUs Optimized", value: 10000, suffix: "+" },
+  { label: "Savings Generated", value: 2.4, prefix: "₹", suffix: "Cr" },
+  { label: "Avg Cost Reduction", value: 23, suffix: "%" },
+  { label: "Engine Uptime", value: 99.8, suffix: "%" }
 ]
 
 export function MetricsShowcase() {

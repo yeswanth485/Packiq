@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Zap, Plus, Trash2, ArrowRight, UploadCloud, Brain, Package, FileSpreadsheet, Download,
-  CheckCircle2, AlertTriangle, ShieldCheck, TrendingDown, Info
+  CheckCircle2, AlertTriangle, ShieldCheck, TrendingDown, Info, DollarSign
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useOptimizationStore, OptimizationResult } from '@/lib/store/optimizationStore'
@@ -34,6 +34,8 @@ export default function OptimizationPage() {
     currentBox: '',
     currentBoxCost: ''
   })
+  const [currency, setCurrency] = useState<'USD' | 'INR'>('USD')
+  const INR_RATE = 83.5
   const [manualResult, setManualResult] = useState<OptimizationResult | null>(null)
   const [summaryReport, setSummaryReport] = useState<any>(null)
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
@@ -48,6 +50,29 @@ export default function OptimizationPage() {
     "Selecting optimal box...",
     "Calculating savings vs. baseline..."
   ]
+
+  // ── Currency formatter ────────────────────────────────────────────
+  const fmt = (val: number) => currency === 'INR'
+    ? `₹${(val * INR_RATE).toFixed(0)}`
+    : `$${val.toFixed(2)}`
+
+  // ── CSV Template download ─────────────────────────────────────────
+  const downloadTemplate = () => {
+    const headers = 'product_name,product_id,product L*W*H,weight_kg,fragility,quantity,zone,shipping_method,box L*W*H,box_price,category'
+    const rows = [
+      'iPhone 15 Pro,IPH-15P,14x7x8,0.24,medium,1,2,standard,20x15x12,0.75,electronics',
+      'Cotton T-Shirt,TSH-M-BLK,30x25x3,0.18,low,10,1,standard,35x30x10,0.40,clothing',
+      'Glass Vase,VAS-001,18x18x35,1.2,extreme,1,4,express,25x25x45,1.20,fragile',
+    ]
+    const csv = [headers, ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url
+    a.download = 'packvision_template.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   const handleManualOptimize = async () => {
     if (!manualInput.productName || !manualInput.l || !manualInput.w || !manualInput.h) {
@@ -231,6 +256,20 @@ export default function OptimizationPage() {
           <h1 className="text-3xl font-bold text-white mb-1">AI Optimization</h1>
           <p className="text-gray-500 text-sm font-medium">Standardize packaging and minimize shipping costs.</p>
         </div>
+        {/* Currency toggle */}
+        <div className="flex items-center gap-1 p-1 bg-white/[0.03] border border-white/10 rounded-xl">
+          {(['USD', 'INR'] as const).map(c => (
+            <button
+              key={c}
+              onClick={() => setCurrency(c)}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                currency === c ? 'bg-[#00FFD1] text-[#0A0A0F]' : 'text-gray-500 hover:text-white'
+              }`}
+            >
+              {c === 'USD' ? '$ USD' : '₹ INR'}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-12 gap-6">
@@ -262,6 +301,16 @@ export default function OptimizationPage() {
                       <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">SKU / ID</label>
                       <input type="text" value={manualInput.sku} onChange={e => setManualInput(s => ({...s, sku: e.target.value}))} placeholder="IPH-15P-256" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all" />
                     </div>
+                  </div>
+
+                  {/* Category */}
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Category</label>
+                    <select value={manualInput.category} onChange={e => setManualInput(s => ({...s, category: e.target.value}))} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all [&>option]:bg-[#0A0A0F]">
+                      {['general','electronics','clothing','books','cosmetics','food','toys','fragile','medical','automotive'].map(c => (
+                        <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Dimensions & Weight */}
@@ -342,8 +391,15 @@ export default function OptimizationPage() {
                       <UploadCloud className="w-8 h-8 text-[#00FFD1]" />
                     </div>
                     <h3 className="text-xl font-bold text-white mb-2">Upload Inventory Sheet</h3>
-                    <p className="text-gray-500 text-xs mb-8">Includes dims, weight, fragility, and zone for bulk processing.</p>
+                    <p className="text-gray-500 text-xs mb-8">Supports CSV and Excel. Includes dims, weight, fragility, and zone for bulk processing.</p>
                   </div>
+                  {/* Template download */}
+                  <button
+                    onClick={downloadTemplate}
+                    className="w-full py-3 bg-white/[0.03] border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white hover:border-[#00FFD1]/30 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" /> Download CSV Template
+                  </button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -365,12 +421,17 @@ export default function OptimizationPage() {
             ) : (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 space-y-6">
                 
-                {/* 3D Preview */}
+                {/* 3D Preview — passes product dims for inside-box view */}
                 <div className="w-full h-48 bg-black/40 rounded-2xl border border-white/5 overflow-hidden">
                   <Box3DViewer 
                     l={parseFloat(manualResult.optimized_box_dims?.split(/[xX*]/)[0]) || 20} 
                     w={parseFloat(manualResult.optimized_box_dims?.split(/[xX*]/)[1]) || 15} 
-                    h={parseFloat(manualResult.optimized_box_dims?.split(/[xX*]/)[2]) || 10} 
+                    h={parseFloat(manualResult.optimized_box_dims?.split(/[xX*]/)[2]) || 10}
+                    productL={parseFloat(manualInput.l) || undefined}
+                    productW={parseFloat(manualInput.w) || undefined}
+                    productH={parseFloat(manualInput.h) || undefined}
+                    spaceUtilization={manualResult.space_utilization}
+                    fragility={manualInput.fragility as any}
                   />
                 </div>
 
@@ -412,20 +473,20 @@ export default function OptimizationPage() {
 
                 {/* Cost Breakdown */}
                 <div className="space-y-2 border-t border-white/5 pt-4">
-                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Cost Breakdown</h4>
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Cost Breakdown ({currency})</h4>
                   
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Packaging (Box+Filler)</span>
-                    <span className="font-mono text-white">${manualResult.packaging_cost.toFixed(2)}</span>
+                    <span className="font-mono text-white">{fmt(manualResult.packaging_cost)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Shipping (Zone+Dim)</span>
-                    <span className="font-mono text-white">${manualResult.shipping_cost.toFixed(2)}</span>
+                    <span className="font-mono text-white">{fmt(manualResult.shipping_cost)}</span>
                   </div>
                   
                   <div className="flex justify-between text-sm font-bold pt-2 border-t border-white/5">
                     <span className="text-white">Optimized Total</span>
-                    <span className="font-mono text-[#00FFD1]">${manualResult.total_cost.toFixed(2)}</span>
+                    <span className="font-mono text-[#00FFD1]">{fmt(manualResult.total_cost)}</span>
                   </div>
                   
                   {manualResult.baseline_cost > 0 && (
@@ -434,7 +495,7 @@ export default function OptimizationPage() {
                         <TrendingDown className="w-3 h-3" /> Savings
                       </span>
                       <div className="text-right">
-                        <span className="font-mono text-green-400 font-bold">${manualResult.savings.toFixed(2)}</span>
+                        <span className="font-mono text-green-400 font-bold">{fmt(manualResult.savings)}</span>
                         <span className="text-[10px] text-green-500/70 ml-1">({manualResult.savings_percent.toFixed(1)}%)</span>
                       </div>
                     </div>

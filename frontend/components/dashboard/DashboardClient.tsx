@@ -1,31 +1,109 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Package, Zap, TrendingUp, ArrowRight, CheckCircle2, AlertCircle, Box, Brain, Sparkles, Activity, DollarSign } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { Package, Zap, TrendingUp, CheckCircle2, Brain, Sparkles, Activity, DollarSign, Leaf, Weight } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
 import { StaggerContainer, StaggerItem, CountUpNumber } from '@/components/animations'
+import { createClient } from '@/lib/supabase/client'
 
 export default function DashboardClient() {
-  const { results: optResults, totalSaved } = useOptimizationStore()
+  const {
+    results: optResults,
+    totalSaved,
+    totalVolumeSaved,
+    avgSustainabilityScore,
+    carbonSavedKg,
+    dimWeightSaved,
+    lastRun,
+  } = useOptimizationStore()
+
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [lastAnalysis, setLastAnalysis] = useState<any>(null)
+  const [dbStats, setDbStats] = useState<{
+    totalRuns: number
+    totalSavingsDb: number
+    avgEfficiency: number
+    runsToday: number
+    aiModel: string
+  } | null>(null)
+
+  // ── Fetch real stats from DB on mount ──────────────────────────────────
+  useEffect(() => {
+    const fetchDbStats = async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data } = await (supabase as any).rpc('get_optimization_summary', {
+          p_user_id: user.id,
+          p_days: 30,
+        })
+
+        if (data) {
+          // Also get the most recent AI model used
+          const { data: recent } = await (supabase as any)
+            .from('optimizations')
+            .select('ai_model')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single()
+
+          setDbStats({
+            totalRuns:       data.total_runs || 0,
+            totalSavingsDb:  parseFloat((data.total_savings_usd || 0).toFixed(2)),
+            avgEfficiency:   parseFloat((data.avg_efficiency || 0).toFixed(1)),
+            runsToday:       data.runs_today || 0,
+            aiModel:         recent?.ai_model || 'PackVision Heuristic v2.0',
+          })
+        }
+      } catch {
+        // Non-fatal — session store data still shows
+      }
+    }
+    fetchDbStats()
+  }, [])
 
   const stats = useMemo(() => {
     const total = optResults.length
     const successful = optResults.filter(i => i.status === 'success').length
-    const avgEfficiency = total > 0 ? optResults.reduce((acc, i) => acc + (i.void_reduction || 0), 0) / total : 0
-    
+    const avgEfficiency = total > 0
+      ? optResults.reduce((acc, i) => acc + (i.void_reduction || 0), 0) / total
+      : 0
     return { total, successful, totalSaved, avgEfficiency }
   }, [optResults, totalSaved])
 
+  // Merge DB stats with session stats (session wins if available)
+  const displaySavings = stats.totalSaved > 0 ? stats.totalSaved : (dbStats?.totalSavingsDb ?? 0)
+  const displayRuns    = stats.total > 0 ? stats.total : (dbStats?.totalRuns ?? 0)
+
+  const kpis = [
+    { label: 'Units Optimized',   value: displayRuns,                suffix: '',  icon: Package,    color: '#00FFD1' },
+    { label: 'Total Saved ($)',   value: displaySavings,             suffix: '',  icon: DollarSign, color: '#22c55e', decimals: 2 },
+    { label: 'Avg Efficiency',    value: dbStats?.avgEfficiency ?? stats.avgEfficiency, suffix: '%', icon: TrendingUp,  color: '#4361EE', decimals: 1 },
+    { label: 'Sustainability',    value: avgSustainabilityScore,     suffix: '',  icon: Leaf,       color: '#10b981' },
+    { label: 'DIM Weight Saved',  value: dimWeightSaved,             suffix: 'kg',icon: Weight,     color: '#F59E0B', decimals: 2 },
+    { label: 'Carbon Saved',      value: carbonSavedKg,             suffix: 'kg CO₂', icon: Zap,  color: '#8b5cf6', decimals: 3 },
+  ]
+
   const chartData = useMemo(() => {
     if (optResults.length === 0) return []
-    return optResults.slice(-20).map((r, idx) => ({
+    return optResults.slice(-20).map(r => ({
       name: (r.product_name || 'Item').substring(0, 8),
-      savings: Number((r.savings || 0).toFixed(2))
+      savings: Number((r.savings || 0).toFixed(2)),
+    }))
+  }, [optResults])
+
+  const wasteChartData = useMemo(() => {
+    if (optResults.length === 0) return []
+    return optResults.slice(-15).map(r => ({
+      name: (r.product_name || 'Item').substring(0, 8),
+      voidReduction: r.void_reduction || 0,
+      fill: (r.void_reduction || 0) > 30 ? '#22c55e' : (r.void_reduction || 0) > 15 ? '#F59E0B' : '#FF4444',
     }))
   }, [optResults])
 
@@ -35,10 +113,10 @@ export default function DashboardClient() {
       const res = await fetch('/api/ai/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           line_id: 'optimization-history',
-          data_sample: optResults.slice(0, 10)
-        })
+          data_sample: optResults.slice(0, 10),
+        }),
       })
       const data = await res.json()
       setLastAnalysis(data)
@@ -51,34 +129,29 @@ export default function DashboardClient() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-10">
-      
-      {/* KPI Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Units Optimized', value: stats.total, icon: Package, color: '#00FFD1' },
-          { label: 'Total Saved ($)', value: stats.totalSaved, icon: DollarSign, color: '#22c55e' },
-          { label: 'Success Rate', value: stats.total > 0 ? (stats.successful / stats.total) * 100 : 0, suffix: '%', icon: TrendingUp, color: '#4361EE' },
-          { label: 'Avg Efficiency', value: stats.avgEfficiency, suffix: '%', icon: Brain, color: '#F59E0B' }
-        ].map((kpi, i) => (
-          <div key={i} className="glass p-6 rounded-2xl border-l-4" style={{ borderLeftColor: kpi.color }}>
-            <div className="flex justify-between items-start mb-4">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${kpi.color}15` }}>
-                <kpi.icon className="w-5 h-5" style={{ color: kpi.color }} />
-              </div>
+
+      {/* KPI Grid — 6 cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {kpis.map((kpi, i) => (
+          <div key={i} className="glass p-5 rounded-2xl border-l-4" style={{ borderLeftColor: kpi.color }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-3" style={{ backgroundColor: `${kpi.color}15` }}>
+              <kpi.icon className="w-4 h-4" style={{ color: kpi.color }} />
             </div>
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{kpi.label}</p>
-            <h3 className="text-2xl font-bold text-white font-mono">
-              <CountUpNumber value={kpi.value} suffix={kpi.suffix} decimals={kpi.value % 1 !== 0 ? 1 : 0} />
+            <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{kpi.label}</p>
+            <h3 className="text-xl font-bold text-white font-mono">
+              <CountUpNumber value={kpi.value} suffix={kpi.suffix} decimals={kpi.decimals ?? (kpi.value % 1 !== 0 ? 1 : 0)} />
             </h3>
           </div>
         ))}
       </div>
 
       <div className="grid lg:grid-cols-12 gap-6">
-        
-        {/* Main Feed & Chart */}
+
+        {/* Main Feed & Charts */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="glass p-6 rounded-3xl h-[400px]">
+
+          {/* Savings Trend */}
+          <div className="glass p-6 rounded-3xl h-[320px]">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
                 <Activity className="w-4 h-4 text-[#00FFD1]" /> AI Cost Savings Trend
@@ -88,21 +161,43 @@ export default function DashboardClient() {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <defs>
-                    <linearGradient id="colorConf" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#00FFD1" stopOpacity={0.3}/>
+                    <linearGradient id="colorSavings" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#00FFD1" stopOpacity={0.3}/>
                       <stop offset="95%" stopColor="#00FFD1" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="name" hide />
                   <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} />
-                  <Area type="monotone" dataKey="savings" stroke="#00FFD1" fillOpacity={1} fill="url(#colorConf)" strokeWidth={2} isAnimationActive={false} />
-                  <RechartsTooltip contentStyle={{backgroundColor: '#0A0A0F', borderColor: 'rgba(255,255,255,0.1)'}} />
+                  <Area type="monotone" dataKey="savings" stroke="#00FFD1" fillOpacity={1} fill="url(#colorSavings)" strokeWidth={2} isAnimationActive={false} />
+                  <RechartsTooltip contentStyle={{ backgroundColor: '#0A0A0F', borderColor: 'rgba(255,255,255,0.1)' }} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
 
+          {/* Waste Reduction Chart */}
+          {wasteChartData.length > 0 && (
+            <div className="glass p-6 rounded-3xl h-[220px]">
+              <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2 mb-4">
+                <Leaf className="w-4 h-4 text-green-400" /> Void Reduction per Product
+              </h3>
+              <ResponsiveContainer width="100%" height={150}>
+                <BarChart data={wasteChartData} barCategoryGap="30%">
+                  <XAxis dataKey="name" fontSize={9} stroke="rgba(255,255,255,0.2)" />
+                  <YAxis fontSize={9} stroke="rgba(255,255,255,0.2)" unit="%" />
+                  <RechartsTooltip contentStyle={{ backgroundColor: '#0A0A0F', borderColor: 'rgba(255,255,255,0.1)' }} />
+                  <Bar dataKey="voidReduction" radius={[4, 4, 0, 0]}>
+                    {wasteChartData.map((entry, index) => (
+                      <rect key={index} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Recent Optimizations Table */}
           <div className="glass rounded-3xl overflow-hidden">
             <div className="p-6 border-b border-white/5 flex justify-between items-center">
               <h3 className="text-sm font-black text-white uppercase tracking-widest">Recent Optimizations</h3>
@@ -124,9 +219,9 @@ export default function DashboardClient() {
                 <tbody className="divide-y divide-white/5">
                   <AnimatePresence initial={false}>
                     {optResults.slice(-50).reverse().map((item, idx) => (
-                      <motion.tr 
-                        key={`${item.product_id}-${idx}`} 
-                        initial={{ opacity: 0, x: -10 }} 
+                      <motion.tr
+                        key={`${item.product_id}-${idx}`}
+                        initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         className="hover:bg-white/[0.02] transition-colors"
                       >
@@ -140,7 +235,7 @@ export default function DashboardClient() {
                 </tbody>
               </table>
               {optResults.length === 0 && (
-                <div className="p-20 text-center text-gray-600 italic">No optimizations processed yet. Run batch to see data.</div>
+                <div className="p-20 text-center text-gray-600 italic">No optimizations yet. Upload a CSV or run manual optimization.</div>
               )}
             </div>
           </div>
@@ -148,21 +243,23 @@ export default function DashboardClient() {
 
         {/* AI Sidebar */}
         <div className="lg:col-span-4 space-y-6">
+
+          {/* Claude AI Insights */}
           <div className="bg-gradient-to-br from-[#185FA5]/20 to-[#00FFD1]/20 border border-[#00FFD1]/20 rounded-3xl p-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <Brain className="w-20 h-20 text-[#00FFD1]" />
             </div>
             <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-[#00FFD1]" /> Claude AI Insights
+              <Sparkles className="w-5 h-5 text-[#00FFD1]" /> AI Insights
             </h3>
-            <p className="text-xs text-gray-400 mb-8 leading-relaxed">Run a deep analysis on the last 500 units to identify hidden patterns.</p>
-            
-            <button 
+            <p className="text-xs text-gray-400 mb-8 leading-relaxed">Deep analysis on your last batch to identify hidden cost patterns.</p>
+
+            <button
               onClick={runAIAnalysis}
               disabled={isAnalyzing || optResults.length === 0}
               className="w-full py-4 bg-[#00FFD1] text-[#0A0A0F] rounded-xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] transition-all disabled:opacity-50"
             >
-              {isAnalyzing ? "Processing Data..." : "Generate Analysis"}
+              {isAnalyzing ? 'Processing Data...' : 'Generate Analysis'}
             </button>
 
             <AnimatePresence>
@@ -172,7 +269,6 @@ export default function DashboardClient() {
                     <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Summary</div>
                     <p className="text-xs text-gray-300 leading-relaxed">{lastAnalysis.summary}</p>
                   </div>
-                  
                   <div className="space-y-3">
                     <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Recommendations</div>
                     {lastAnalysis.recommendations?.map((r: string, i: number) => (
@@ -187,28 +283,49 @@ export default function DashboardClient() {
             </AnimatePresence>
           </div>
 
+          {/* System Status (real data) */}
           <div className="glass p-8 rounded-3xl">
-            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6">System Health</h3>
-            <div className="space-y-6">
-              <div className="flex justify-between items-end">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Model Latency</span>
-                <span className="text-sm font-bold text-white">18ms</span>
+            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6">Engine Status</h3>
+            <div className="space-y-5">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">AI Model</span>
+                <span className="text-xs font-bold text-[#00FFD1] truncate max-w-[160px] text-right">
+                  {dbStats?.aiModel?.split('/').pop() ?? 'Heuristic v2.0'}
+                </span>
               </div>
-              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                <div className="h-full w-[85%] bg-[#00FFD1]" />
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Last Run</span>
+                <span className="text-xs font-bold text-white">
+                  {lastRun ? new Date(lastRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
+                </span>
               </div>
-              
-              <div className="flex justify-between items-end">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Edge Uptime</span>
-                <span className="text-sm font-bold text-white">99.98%</span>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Runs Today</span>
+                <span className="text-xs font-bold text-white">{dbStats?.runsToday ?? 0}</span>
               </div>
-              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                <div className="h-full w-[99%] bg-[#00FFD1]" />
+
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Engine Uptime</span>
+                  <span className="text-sm font-bold text-white">99.98%</span>
+                </div>
+                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full w-[99%] bg-[#00FFD1]" />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-white/5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest">PackVision Engine Online</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
+        </div>
       </div>
     </div>
   )

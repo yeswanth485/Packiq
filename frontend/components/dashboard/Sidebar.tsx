@@ -16,7 +16,9 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
-  Activity
+  Activity,
+  Database,
+  Leaf
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -25,8 +27,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 const navItems = [
   { href: '/dashboard',             label: 'Dashboard',         icon: LayoutDashboard },
   { href: '/dashboard/optimization',label: 'Optimization',      icon: Zap },
+  { href: '/dashboard/products',    label: 'Products',          icon: Database },
   { href: '/dashboard/orders',      label: 'Orders',            icon: ShoppingCart },
   { href: '/dashboard/analytics',   label: 'Analytics',         icon: TrendingUp },
+  { href: '/dashboard/analytics#sustainability', label: 'Sustainability', icon: Leaf },
   { href: '/dashboard/catalog',     label: 'Box Catalog',       icon: Box },
   { href: '/dashboard/subscription',label: 'Subscription',      icon: CreditCard },
   { href: '/dashboard/settings',    label: 'Settings',          icon: Settings },
@@ -104,13 +108,25 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: any) {
       {/* User / Logout */}
       <div className="p-4 border-t border-white/5 flex flex-col gap-4">
         {!isCollapsed && (
-          <div className="flex items-center gap-3 bg-white/[0.02] p-3 rounded-2xl border border-white/5">
-            <div className="w-8 h-8 rounded-full bg-[#00FFD1]/20 border border-[#00FFD1]/30 flex items-center justify-center shrink-0">
-               <User className="w-4 h-4 text-[#00FFD1]" />
+          <div className="flex flex-col gap-3">
+            {/* AI Status */}
+            <div className="bg-white/[0.02] p-3 rounded-2xl border border-white/5 flex items-center justify-between group/status cursor-default">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Engine Online</span>
+              </div>
+              <Activity className="w-3 h-3 text-green-500/50 group-hover/status:text-green-400 transition-colors" />
             </div>
-            <div className="flex flex-col whitespace-nowrap overflow-hidden">
-              <span className="text-[11px] font-bold text-white truncate">{profile?.full_name || 'Admin'}</span>
-              <span className="text-[9px] text-gray-500 uppercase tracking-widest truncate">{profile?.company || 'Enterprise'}</span>
+
+            {/* Profile */}
+            <div className="flex items-center gap-3 bg-white/[0.02] p-3 rounded-2xl border border-white/5">
+              <div className="w-8 h-8 rounded-full bg-[#00FFD1]/20 border border-[#00FFD1]/30 flex items-center justify-center shrink-0">
+                 <User className="w-4 h-4 text-[#00FFD1]" />
+              </div>
+              <div className="flex flex-col whitespace-nowrap overflow-hidden">
+                <span className="text-[11px] font-bold text-white truncate">{profile?.full_name || 'Admin'}</span>
+                <span className="text-[9px] text-gray-500 uppercase tracking-widest truncate">{profile?.company || 'Enterprise'}</span>
+              </div>
             </div>
           </div>
         )}

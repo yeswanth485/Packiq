@@ -63,6 +63,10 @@ export interface OptimizationResult {
   error_message?: string
   model: string
   data_quality: 'complete' | 'partial' | 'estimated'
+
+  // Extended metrics (returned by engine)
+  dim_weight_reduction?: number
+  volume_saved_cm3?: number
 }
 
 // ─── Store State ──────────────────────────────────────────────────────────
@@ -76,6 +80,12 @@ interface OptimizationState {
   itemsProcessed: number
   status: 'idle' | 'running' | 'completed' | 'error'
   skippedItems: any[]
+
+  // Sustainability & advanced metrics
+  totalVolumeSaved: number       // cm³ saved across all results
+  avgSustainabilityScore: number // 0–100
+  carbonSavedKg: number          // totalVolumeSaved × 0.0006
+  dimWeightSaved: number         // kg of DIM weight eliminated
 
   // Actions
   setRunning: () => void
@@ -91,7 +101,23 @@ function computeStats(results: OptimizationResult[]) {
   const avgConfidence = results.length > 0
     ? results.reduce((acc, r) => acc + (r.confidence_score || 0), 0) / results.length
     : 0
-  return { totalSaved, totalShippingSaved, avgConfidence: Math.round(avgConfidence) }
+
+  const totalVolumeSaved = results.reduce((acc, r) => acc + (r.volume_saved_cm3 || 0), 0)
+  const avgSustainabilityScore = results.length > 0
+    ? results.reduce((acc, r) => acc + (r.sustainability_score || 0), 0) / results.length
+    : 0
+  const carbonSavedKg = totalVolumeSaved * 0.0006
+  const dimWeightSaved = results.reduce((acc, r) => acc + (r.dim_weight_reduction || 0), 0)
+
+  return {
+    totalSaved,
+    totalShippingSaved,
+    avgConfidence: Math.round(avgConfidence),
+    totalVolumeSaved: Math.round(totalVolumeSaved),
+    avgSustainabilityScore: Math.round(avgSustainabilityScore),
+    carbonSavedKg: parseFloat(carbonSavedKg.toFixed(3)),
+    dimWeightSaved: parseFloat(dimWeightSaved.toFixed(2)),
+  }
 }
 
 export const useOptimizationStore = create<OptimizationState>()(
@@ -105,6 +131,10 @@ export const useOptimizationStore = create<OptimizationState>()(
       itemsProcessed: 0,
       status: 'idle',
       skippedItems: [],
+      totalVolumeSaved: 0,
+      avgSustainabilityScore: 0,
+      carbonSavedKg: 0,
+      dimWeightSaved: 0,
 
       setRunning: () => set({
         status: 'running',
@@ -114,6 +144,10 @@ export const useOptimizationStore = create<OptimizationState>()(
         avgConfidence: 0,
         itemsProcessed: 0,
         skippedItems: [],
+        totalVolumeSaved: 0,
+        avgSustainabilityScore: 0,
+        carbonSavedKg: 0,
+        dimWeightSaved: 0,
       }),
 
       setResults: (results, skipped) => {
@@ -149,6 +183,10 @@ export const useOptimizationStore = create<OptimizationState>()(
         itemsProcessed: 0,
         status: 'idle',
         skippedItems: [],
+        totalVolumeSaved: 0,
+        avgSustainabilityScore: 0,
+        carbonSavedKg: 0,
+        dimWeightSaved: 0,
       }),
     }),
     {

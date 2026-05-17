@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Check } from 'lucide-react'
@@ -8,50 +9,53 @@ const PLANS = [
   {
     name: 'Starter',
     subtitle: 'For small businesses getting started',
-    price: '$0',
+    priceUSD: '$12',
+    priceINR: '₹999',
     period: '/mo',
     color: '#ffffff',
     features: [
-      'Up to 100 optimizations/mo',
-      '5 box catalog entries',
+      '500 optimizations/mo',
+      'Box catalog manager',
+      'CSV bulk upload',
       'Basic analytics',
-      'Email support',
+      'Standard support',
     ],
     cta: 'Get Started Free',
     href: '/auth/signup',
     popular: false,
   },
   {
-    name: 'Pro',
+    name: 'Growth',
     subtitle: 'For growing e-commerce brands',
-    price: '$49',
+    priceUSD: '$59',
+    priceINR: '₹4,999',
     period: '/mo',
     color: '#00FFD1',
     features: [
       'Unlimited optimizations',
-      'Full box catalog',
-      'Advanced analytics & reports',
-      '3D box visualization',
-      'Priority support',
-      'CSV bulk upload',
+      'PackVision AI analysis',
+      '3D Box visualization',
+      'Sustainability & waste reports',
+      'Priority email support',
     ],
-    cta: 'Start Pro Trial',
+    cta: 'Start Growth Trial',
     href: '/auth/signup',
     popular: true,
   },
   {
     name: 'Enterprise',
     subtitle: 'For large-scale operations',
-    price: '$149',
-    period: '/mo',
+    priceUSD: 'Custom',
+    priceINR: 'Custom',
+    period: '',
     color: '#4361EE',
     features: [
-      'Everything in Pro',
+      'Everything in Growth',
       'Custom AI model training',
+      'Warehouse intelligence',
+      'API access & integrations',
       'Dedicated account manager',
-      'API access with SLA',
-      'Multi-brand management',
-      'On-premise deployment',
+      'SLA guarantee',
     ],
     cta: 'Contact Sales',
     href: '/auth/signup',
@@ -60,12 +64,14 @@ const PLANS = [
 ]
 
 export function PricingSection() {
+  const [currency, setCurrency] = useState<'USD' | 'INR'>('USD')
+
   return (
     <section id="pricing" className="py-40 px-6 bg-[#0A0A0F] relative overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] bg-[#185FA5]/5 rounded-full blur-[200px] pointer-events-none" />
 
       <div className="max-w-[1300px] mx-auto relative z-10">
-        <div className="text-center mb-24">
+        <div className="text-center mb-16">
           <div className="text-[10px] font-black text-[#00FFD1] uppercase tracking-[0.5em] mb-6">Subscription Plans</div>
           <h2 className="text-5xl md:text-[100px] font-bold font-syne tracking-tighter leading-[0.85] mb-10">
             Engineered for <br />
@@ -73,9 +79,26 @@ export function PricingSection() {
               Exponential Scale
             </span>
           </h2>
-          <p className="text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed font-medium">
+          <p className="text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed font-medium mb-10">
             Choose the right infrastructure for your logistics volume.
           </p>
+          
+          {/* Currency Toggle */}
+          <div className="inline-flex items-center p-1 bg-white/[0.03] border border-white/10 rounded-2xl mx-auto">
+            {(['USD', 'INR'] as const).map(c => (
+              <button
+                key={c}
+                onClick={() => setCurrency(c)}
+                className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                  currency === c 
+                    ? 'bg-[#00FFD1] text-[#0A0A0F] shadow-[0_0_20px_rgba(0,255,209,0.3)]' 
+                    : 'text-gray-500 hover:text-white'
+                }`}
+              >
+                {c === 'USD' ? '$ USD' : '₹ INR'}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 items-stretch">
@@ -108,10 +131,10 @@ export function PricingSection() {
               <div className="mb-12">
                 <div className="flex items-baseline gap-2">
                   <span
-                    className="text-6xl font-black font-syne tracking-tighter"
+                    className={`font-black font-syne tracking-tighter ${plan.priceUSD === 'Custom' ? 'text-4xl' : 'text-6xl'}`}
                     style={{ color: plan.color }}
                   >
-                    {plan.price}
+                    {currency === 'USD' ? plan.priceUSD : plan.priceINR}
                   </span>
                   <span className="text-gray-600 text-xl font-bold">{plan.period}</span>
                 </div>

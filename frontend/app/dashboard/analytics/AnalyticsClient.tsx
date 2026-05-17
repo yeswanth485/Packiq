@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Calendar, Download, TrendingUp, Package, Percent, Box as BoxIcon } from 'lucide-react'
+import { Calendar, Download, TrendingUp, Package, Percent, Box as BoxIcon, Leaf, Wind, Database } from 'lucide-react'
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
@@ -11,6 +11,7 @@ import StatCard from '@/components/dashboard/StatCard'
 
 const COLORS = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444']
 const SUCCESS_COLORS = ['#10b981', '#ef4444']
+const RISK_COLORS = { Low: '#10b981', Medium: '#f59e0b', High: '#ef4444' }
 
 export default function AnalyticsClient({ allOptimizations }: { allOptimizations: any[] }) {
   const [dateRange, setDateRange] = useState(30) // days
@@ -37,6 +38,23 @@ export default function AnalyticsClient({ allOptimizations }: { allOptimizations
     }
   })
   const mostUsedBox = Object.entries(boxCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A'
+
+  // NEW KPIs
+  const totalVolumeSaved = filteredData.reduce((acc, o) => {
+    if (o.status !== 'completed' || !o.ai_response?.volume_saved_cm3) return acc
+    return acc + o.ai_response.volume_saved_cm3
+  }, 0)
+  
+  const avgSustainability = productsOptimized > 0
+    ? filteredData.reduce((acc, o) => acc + (o.ai_response?.sustainabilityScore || 0), 0) / productsOptimized
+    : 0
+    
+  const carbonReducedKg = totalVolumeSaved * 0.0006
+  
+  const dimWeightReduction = filteredData.reduce((acc, o) => {
+    if (o.status !== 'completed' || !o.ai_response?.dim_weight_reduction_kg) return acc
+    return acc + o.ai_response.dim_weight_reduction_kg
+  }, 0)
 
   // Charts Data
   
@@ -81,6 +99,36 @@ export default function AnalyticsClient({ allOptimizations }: { allOptimizations
       { name: 'Failed', value: failed }
     ].filter(d => d.value > 0)
   }, [filteredData])
+  
+  // 4. Packaging Material Distribution (Pie)
+  const materialDist = useMemo(() => {
+    const counts: Record<string, number> = {}
+    filteredData.forEach(o => {
+      if (o.status === 'completed' && o.ai_response?.recommended_box?.material) {
+        const mat = o.ai_response.recommended_box.material
+        counts[mat] = (counts[mat] || 0) + 1
+      }
+    })
+    return Object.entries(counts).map(([name, value]) => ({ name, value }))
+  }, [filteredData])
+  
+  // 5. Damage Risk Distribution by Week (Stacked Bar)
+  const riskDist = useMemo(() => {
+    const byWeek: Record<string, { Low: number, Medium: number, High: number }> = {}
+    filteredData.forEach(o => {
+      if (o.status === 'completed' && o.ai_response?.damageRisk) {
+        const d = new Date(o.created_at)
+        const week = `${d.getFullYear()}-W${Math.ceil((d.getDate() - 1 - d.getDay()) / 7) + 1}`
+        if (!byWeek[week]) byWeek[week] = { Low: 0, Medium: 0, High: 0 }
+        
+        const risk = o.ai_response.damageRisk as 'Low' | 'Medium' | 'High'
+        if (byWeek[week][risk] !== undefined) {
+          byWeek[week][risk]++
+        }
+      }
+    })
+    return Object.entries(byWeek).map(([week, risks]) => ({ week, ...risks }))
+  }, [filteredData])
 
   // Export CSV
   const handleExport = () => {
@@ -111,7 +159,7 @@ export default function AnalyticsClient({ allOptimizations }: { allOptimizations
   }
 
   return (
-    <div className="space-y-6 fade-in">
+    <div className="space-y-6 fade-in pb-12">
       {/* Header controls */}
       <div className="flex flex-wrap items-center justify-between gap-4 glass p-4 rounded-2xl border border-white/5">
         <div className="flex items-center gap-2">
@@ -154,6 +202,14 @@ export default function AnalyticsClient({ allOptimizations }: { allOptimizations
             </div>
           </div>
         </div>
+      </div>
+      
+      {/* NEW Sustainability KPI Summary */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4" id="sustainability">
+        <StatCard label="Volume Saved (cm³)" value={totalVolumeSaved} icon={<Database className="w-5 h-5 text-cyan-400" />} color="cyan" isNumber />
+        <StatCard label="Avg Sustainability" value={avgSustainability} icon={<Leaf className="w-5 h-5 text-green-400" />} color="green" isNumber />
+        <StatCard label="Carbon Reduced (kg)" value={carbonReducedKg} icon={<Wind className="w-5 h-5 text-green-400" />} color="green" isNumber />
+        <StatCard label="DIM Weight Saved" value={dimWeightReduction} icon={<Package className="w-5 h-5 text-amber-400" />} color="amber" isNumber />
       </div>
 
       {/* Charts */}
@@ -238,7 +294,86 @@ export default function AnalyticsClient({ allOptimizations }: { allOptimizations
             )}
           </div>
         </div>
+        
+        {/* Packaging Material Distribution */}
+        <div className="glass p-6 rounded-2xl border border-white/5">
+          <h3 className="text-sm font-semibold text-gray-300 mb-6">Packaging Material Distribution</h3>
+          <div className="h-64">
+            {materialDist.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={materialDist}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {materialDist.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', borderRadius: '12px' }}
+                  />
+                  <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '12px' }}/>
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-500">No data available for this period.</div>
+            )}
+          </div>
+        </div>
+        
+        {/* Damage Risk Distribution */}
+        <div className="glass p-6 rounded-2xl border border-white/5 col-span-1 lg:col-span-2">
+          <h3 className="text-sm font-semibold text-gray-300 mb-6">Damage Risk Distribution by Week</h3>
+          <div className="h-64">
+            {riskDist.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={riskDist} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                  <XAxis dataKey="week" stroke="#ffffff50" fontSize={12} />
+                  <YAxis stroke="#ffffff50" fontSize={12} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', borderRadius: '12px' }}
+                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                  />
+                  <Legend />
+                  <Bar dataKey="Low" stackId="a" fill={RISK_COLORS.Low} radius={[0, 0, 4, 4]} />
+                  <Bar dataKey="Medium" stackId="a" fill={RISK_COLORS.Medium} />
+                  <Bar dataKey="High" stackId="a" fill={RISK_COLORS.High} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-500">No data available for this period.</div>
+            )}
+          </div>
+        </div>
 
+      </div>
+      
+      {/* Sustainability Report Bottom Card */}
+      <div className="glass p-8 rounded-2xl border border-white/5 bg-gradient-to-r from-emerald-900/20 to-teal-900/20">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <h3 className="text-xl font-bold text-emerald-400 mb-2 flex items-center gap-2">
+              <Leaf className="w-6 h-6" /> PackVision Sustainability Report
+            </h3>
+            <p className="text-sm text-emerald-200/70 max-w-2xl">
+              By optimizing package sizes, you've significantly reduced corrugated cardboard waste and lowered shipping carbon emissions. 
+              {carbonReducedKg > 0 && ` Your offset equals approx ${(carbonReducedKg / 22).toFixed(1)} trees planted.`}
+            </p>
+          </div>
+          <button 
+            onClick={() => toast('PDF export coming soon')}
+            className="whitespace-nowrap px-6 py-3 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-sm hover:bg-emerald-500/30 transition-all"
+          >
+            Download PDF Report
+          </button>
+        </div>
       </div>
     </div>
   )

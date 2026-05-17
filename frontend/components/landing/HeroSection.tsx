@@ -85,19 +85,18 @@ export function HeroSection() {
             </StaggerItem>
 
             <StaggerItem>
-              <h1 className="text-7xl md:text-[110px] font-bold font-syne tracking-tighter mb-8 leading-[0.85]">
-                AI-<br />
+              <h1 className="text-7xl md:text-[90px] font-bold font-syne tracking-tighter mb-8 leading-[0.95]">
+                The AI Brain<br />
+                Behind Modern<br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00FFD1] via-[#00d4b0] to-[#185FA5] animate-gradient-x">
-                  Driven
+                  Fulfillment
                 </span>
-                <br />
-                Packaging
               </h1>
             </StaggerItem>
 
             <StaggerItem>
               <p className="text-2xl text-gray-500 max-w-xl mb-14 font-medium leading-relaxed">
-                Stop shipping air. PackIQ uses advanced spatial AI to minimize DIM weight and automate selection.
+                Reduce packaging waste. Cut shipping costs. Optimize every shipment — automatically.
               </p>
             </StaggerItem>
 
@@ -118,6 +117,16 @@ export function HeroSection() {
                   </div>
                   Watch Demo
                 </button>
+              </div>
+            </StaggerItem>
+            
+            <StaggerItem>
+              <div className="flex flex-wrap items-center gap-4 mt-12">
+                {['🤖 AI-Powered Engine', '📦 3D Box Visualization', '💰 Avg 23% Cost Reduction'].map(badge => (
+                  <div key={badge} className="bg-white/[0.02] border border-white/10 px-4 py-2 rounded-full text-[11px] font-bold text-gray-400">
+                    {badge}
+                  </div>
+                ))}
               </div>
             </StaggerItem>
           </div>
