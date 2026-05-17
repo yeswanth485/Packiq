@@ -12,11 +12,47 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Box3DViewer from '@/components/dashboard/Box3DViewer'
 
 const FALLBACK_BOXES = [
-  { id: 'amz-a1', name: 'Amazon A1', length_cm: 15.2, width_cm: 10.1, height_cm:  8.5, material: 'Corrugated', category: 'Standard', supplier: 'Amazon', cost_usd: 0.45 },
-  { id: 'amz-a3', name: 'Amazon A3', length_cm: 22.8, width_cm: 15.2, height_cm: 10.1, material: 'Corrugated', category: 'Standard', supplier: 'Amazon', cost_usd: 0.65 },
-  { id: 'flp-f2', name: 'Flipkart F2', length_cm: 25.0, width_cm: 20.0, height_cm: 15.0, material: 'Double Wall', category: 'Heavy Duty', supplier: 'Flipkart', cost_usd: 1.20 },
-  { id: 'zep-b1', name: 'Zepto Grocery Bag', length_cm: 35.0, width_cm: 20.0, height_cm: 15.0, material: 'Recycled Paper', category: 'Grocery', supplier: 'Zepto', cost_usd: 0.15 },
-  { id: 'ups-m', name: 'UPS Medium', length_cm: 30.0, width_cm: 20.0, height_cm: 20.0, material: 'Corrugated', category: 'Standard', supplier: 'UPS', cost_usd: 1.10 }
+  // 1. Extra Small Envelopes & Flap Mailers
+  { id: 'mailer-xs1', name: 'Premium XS Flap Enveloper',  length_cm: 15.2, width_cm: 10.2, height_cm:  2.0, material: 'Kraft Paper', category: 'Mailer', supplier: 'EcoPack', cost_usd: 0.12 },
+  { id: 'mailer-xs2', name: 'Document Kraft Envelope S',  length_cm: 18.0, width_cm: 12.0, height_cm:  2.0, material: 'Kraft Paper', category: 'Mailer', supplier: 'EcoPack', cost_usd: 0.15 },
+  { id: 'mailer-xs3', name: 'Document Kraft Envelope M',  length_cm: 20.0, width_cm: 15.0, height_cm:  2.5, material: 'Kraft Paper', category: 'Mailer', supplier: 'EcoPack', cost_usd: 0.18 },
+  
+  // 2. Small Envelopes & Bubble Mailers
+  { id: 'mailer-sm1', name: 'Eco-Bubble Mailer S',        length_cm: 22.0, width_cm: 16.0, height_cm:  3.0, material: 'Compostable', category: 'Mailer', supplier: 'EcoPack', cost_usd: 0.22 },
+  { id: 'mailer-sm2', name: 'Eco-Bubble Mailer M',        length_cm: 25.0, width_cm: 18.0, height_cm:  3.5, material: 'Compostable', category: 'Mailer', supplier: 'EcoPack', cost_usd: 0.26 },
+  { id: 'mailer-sm3', name: 'Eco-Bubble Mailer L',        length_cm: 28.0, width_cm: 20.0, height_cm:  4.0, material: 'Compostable', category: 'Mailer', supplier: 'EcoPack', cost_usd: 0.30 },
+
+  // 3. USPS / FedEx Standard Small Boxes
+  { id: 'usps-sm',    name: 'USPS Small Flat Rate Box',   length_cm: 21.9, width_cm: 14.3, height_cm:  4.8, material: 'Corrugated', category: 'Standard', supplier: 'USPS', cost_usd: 0.35 },
+  { id: 'box-xs-cub', name: 'Micro Cube Box XS',          length_cm: 10.0, width_cm: 10.0, height_cm: 10.0, material: 'Corrugated', category: 'Standard', supplier: 'Generic', cost_usd: 0.25 },
+  { id: 'box-sm-cub', name: 'Mini Cube Box S',            length_cm: 15.0, width_cm: 15.0, height_cm: 15.0, material: 'Corrugated', category: 'Standard', supplier: 'Generic', cost_usd: 0.32 },
+  { id: 'box-s1',     name: 'Courier Box S1',             length_cm: 20.0, width_cm: 15.0, height_cm: 10.0, material: 'Corrugated', category: 'Standard', supplier: 'Courier', cost_usd: 0.38 },
+  { id: 'box-s2',     name: 'Courier Box S2',             length_cm: 20.0, width_cm: 20.0, height_cm: 15.0, material: 'Corrugated', category: 'Standard', supplier: 'Courier', cost_usd: 0.44 },
+
+  // 4. Medium Boxes & Packing Cartons
+  { id: 'box-m1',     name: 'Fulfillment Box M1',         length_cm: 25.0, width_cm: 20.0, height_cm: 15.0, material: 'Corrugated', category: 'Standard', supplier: 'FulfillCo', cost_usd: 0.48 },
+  { id: 'box-m2',     name: 'Fulfillment Box M2',         length_cm: 30.0, width_cm: 20.0, height_cm: 15.0, material: 'Corrugated', category: 'Standard', supplier: 'FulfillCo', cost_usd: 0.55 },
+  { id: 'box-m3',     name: 'Fulfillment Box M3',         length_cm: 30.0, width_cm: 25.0, height_cm: 20.0, material: 'Corrugated', category: 'Standard', supplier: 'FulfillCo', cost_usd: 0.62 },
+  { id: 'box-md-cub', name: 'Standard Cube Box M1',       length_cm: 20.0, width_cm: 20.0, height_cm: 20.0, material: 'Corrugated', category: 'Standard', supplier: 'Generic', cost_usd: 0.46 },
+  { id: 'box-md-cu2', name: 'Standard Cube Box M2',       length_cm: 25.0, width_cm: 25.0, height_cm: 25.0, material: 'Corrugated', category: 'Standard', supplier: 'Generic', cost_usd: 0.58 },
+  { id: 'usps-md1',   name: 'USPS Medium Flat Rate 1',    length_cm: 28.0, width_cm: 22.0, height_cm: 15.0, material: 'Corrugated', category: 'Standard', supplier: 'USPS', cost_usd: 0.60 },
+  { id: 'usps-md2',   name: 'USPS Medium Flat Rate 2',    length_cm: 35.0, width_cm: 30.0, height_cm: 12.0, material: 'Corrugated', category: 'Standard', supplier: 'USPS', cost_usd: 0.68 },
+
+  // 5. Large Carton Boxes
+  { id: 'box-l1',     name: 'Enterprise Box L1',          length_cm: 35.0, width_cm: 25.0, height_cm: 20.0, material: 'Corrugated', category: 'Standard', supplier: 'Generic', cost_usd: 0.72 },
+  { id: 'box-l2',     name: 'Enterprise Box L2',          length_cm: 35.0, width_cm: 30.0, height_cm: 25.0, material: 'Corrugated', category: 'Standard', supplier: 'Generic', cost_usd: 0.80 },
+  { id: 'box-l3',     name: 'Enterprise Box L3',          length_cm: 40.0, width_cm: 30.0, height_cm: 20.0, material: 'Corrugated', category: 'Standard', supplier: 'Generic', cost_usd: 0.88 },
+  { id: 'box-lg-cub', name: 'Master Cube Box L',          length_cm: 30.0, width_cm: 30.0, height_cm: 30.0, material: 'Corrugated', category: 'Standard', supplier: 'Generic', cost_usd: 0.78 },
+  { id: 'usps-lg',    name: 'USPS Large Flat Rate Box',   length_cm: 31.0, width_cm: 31.0, height_cm: 14.0, material: 'Corrugated', category: 'Standard', supplier: 'USPS', cost_usd: 0.75 },
+  { id: 'fedex-lg',   name: 'FedEx Standard Large Box',   length_cm: 45.0, width_cm: 35.0, height_cm: 25.0, material: 'Corrugated', category: 'Standard', supplier: 'FedEx', cost_usd: 1.05 },
+
+  // 6. Extra Large & Heavy Duty Double-Wall Cartons
+  { id: 'box-xl1',    name: 'Master Box XL1',             length_cm: 45.0, width_cm: 40.0, height_cm: 30.0, material: 'Corrugated', category: 'Standard', supplier: 'Generic', cost_usd: 1.25 },
+  { id: 'box-xl2',    name: 'Master Box XL2',             length_cm: 50.0, width_cm: 40.0, height_cm: 30.0, material: 'Corrugated', category: 'Standard', supplier: 'Generic', cost_usd: 1.45 },
+  { id: 'box-xl-cub', name: 'Industrial Cube Box XL',     length_cm: 40.0, width_cm: 40.0, height_cm: 40.0, material: 'Corrugated', category: 'Standard', supplier: 'Generic', cost_usd: 1.38 },
+  { id: 'dw-hd1',     name: 'Heavy Duty DW Double-Wall S',length_cm: 30.0, width_cm: 25.0, height_cm: 20.0, material: 'Double Wall', category: 'Heavy Duty', supplier: 'Generic', cost_usd: 1.10 },
+  { id: 'dw-hd2',     name: 'Heavy Duty DW Double-Wall M',length_cm: 40.0, width_cm: 40.0, height_cm: 30.0, material: 'Double Wall', category: 'Heavy Duty', supplier: 'Generic', cost_usd: 1.65 },
+  { id: 'dw-hd3',     name: 'Heavy Duty DW Double-Wall L',length_cm: 50.0, width_cm: 50.0, height_cm: 40.0, material: 'Double Wall', category: 'Heavy Duty', supplier: 'Generic', cost_usd: 2.25 },
 ]
 
 export default function CatalogPage() {

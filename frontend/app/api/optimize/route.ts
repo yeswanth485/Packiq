@@ -26,16 +26,47 @@ function checkRateLimit(userId: string) {
 
 // ─── Default Box Catalog ──────────────────────────────────────────────────
 const DEFAULT_CATALOG = [
-  { id: 'amz-a1', name: 'Amazon A1 (XS)',         sku: 'AMZ-A1', lengthCm: 15.2, widthCm: 10.2, heightCm:  5.1, maxWeightKg:  2, costUsd: 0.35, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
-  { id: 'amz-a2', name: 'Amazon A2 (S)',          sku: 'AMZ-A2', lengthCm: 20.3, widthCm: 15.2, heightCm: 10.2, maxWeightKg:  5, costUsd: 0.55, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
-  { id: 'amz-a3', name: 'Amazon A3 (M)',          sku: 'AMZ-A3', lengthCm: 30.5, widthCm: 20.3, heightCm: 15.2, maxWeightKg:  8, costUsd: 0.75, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
-  { id: 'amz-a4', name: 'Amazon A4 (L)',          sku: 'AMZ-A4', lengthCm: 35.6, widthCm: 25.4, heightCm: 20.3, maxWeightKg: 12, costUsd: 0.95, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
-  { id: 'amz-a5', name: 'Amazon A5 (XL)',         sku: 'AMZ-A5', lengthCm: 45.7, widthCm: 35.6, heightCm: 25.4, maxWeightKg: 20, costUsd: 1.35, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
-  { id: 'amz-m1', name: 'Amazon Mailer S1',       sku: 'AMZ-M1', lengthCm: 20.0, widthCm: 12.0, heightCm:  2.0, maxWeightKg:  1, costUsd: 0.20, material: 'Kraft Paper', ecoCertified: true,  doubleWall: false },
-  { id: 'gen-c1', name: 'Generic Cube (S)',       sku: 'GEN-C1', lengthCm: 10.0, widthCm: 10.0, heightCm: 10.0, maxWeightKg:  2, costUsd: 0.30, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
-  { id: 'dw-001', name: 'Heavy Duty DW',          sku: 'DW-001', lengthCm: 30.0, widthCm: 25.0, heightCm: 20.0, maxWeightKg: 15, costUsd: 1.20, material: 'Corrugated',  ecoCertified: false, doubleWall: true  },
-  { id: 'fk-s1',  name: 'Flipkart S1',            sku: 'FK-S1',  lengthCm: 18.0, widthCm: 12.0, heightCm:  8.0, maxWeightKg:  5, costUsd: 0.40, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
-  { id: 'fk-m1',  name: 'Flipkart M1',            sku: 'FK-M1',  lengthCm: 28.0, widthCm: 18.0, heightCm: 12.0, maxWeightKg:  8, costUsd: 0.70, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  // 1. Extra Small Envelopes & Flap Mailers
+  { id: 'mailer-xs1', name: 'Premium XS Flap Enveloper',  sku: 'MLR-XS1', lengthCm: 15.2, widthCm: 10.2, heightCm:  2.0, maxWeightKg:  1, costUsd: 0.12, material: 'Kraft Paper', ecoCertified: true,  doubleWall: false },
+  { id: 'mailer-xs2', name: 'Document Kraft Envelope S',  sku: 'MLR-XS2', lengthCm: 18.0, widthCm: 12.0, heightCm:  2.0, maxWeightKg:  1.5, costUsd: 0.15, material: 'Kraft Paper', ecoCertified: true,  doubleWall: false },
+  { id: 'mailer-xs3', name: 'Document Kraft Envelope M',  sku: 'MLR-XS3', lengthCm: 20.0, widthCm: 15.0, heightCm:  2.5, maxWeightKg:  2, costUsd: 0.18, material: 'Kraft Paper', ecoCertified: true,  doubleWall: false },
+  
+  // 2. Small Envelopes & Bubble Mailers
+  { id: 'mailer-sm1', name: 'Eco-Bubble Mailer S',        sku: 'MLR-SM1', lengthCm: 22.0, widthCm: 16.0, heightCm:  3.0, maxWeightKg:  2, costUsd: 0.22, material: 'Compostable', ecoCertified: true,  doubleWall: false },
+  { id: 'mailer-sm2', name: 'Eco-Bubble Mailer M',        sku: 'MLR-SM2', lengthCm: 25.0, widthCm: 18.0, heightCm:  3.5, maxWeightKg:  3, costUsd: 0.26, material: 'Compostable', ecoCertified: true,  doubleWall: false },
+  { id: 'mailer-sm3', name: 'Eco-Bubble Mailer L',        sku: 'MLR-SM3', lengthCm: 28.0, widthCm: 20.0, heightCm:  4.0, maxWeightKg:  4, costUsd: 0.30, material: 'Compostable', ecoCertified: true,  doubleWall: false },
+
+  // 3. USPS / FedEx Standard Small Boxes
+  { id: 'usps-sm',    name: 'USPS Small Flat Rate Box',   sku: 'USPS-SM', lengthCm: 21.9, widthCm: 14.3, heightCm:  4.8, maxWeightKg:  5, costUsd: 0.35, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'box-xs-cub', name: 'Micro Cube Box XS',          sku: 'BX-XSC',  lengthCm: 10.0, widthCm: 10.0, heightCm: 10.0, maxWeightKg:  2, costUsd: 0.25, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'box-sm-cub', name: 'Mini Cube Box S',            sku: 'BX-SMC',  lengthCm: 15.0, widthCm: 15.0, heightCm: 15.0, maxWeightKg:  4, costUsd: 0.32, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'box-s1',     name: 'Courier Box S1',             sku: 'BX-S1',   lengthCm: 20.0, widthCm: 15.0, heightCm: 10.0, maxWeightKg:  5, costUsd: 0.38, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'box-s2',     name: 'Courier Box S2',             sku: 'BX-S2',   lengthCm: 20.0, widthCm: 20.0, heightCm: 15.0, maxWeightKg:  6, costUsd: 0.44, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+
+  // 4. Medium Boxes & Packing Cartons
+  { id: 'box-m1',     name: 'Fulfillment Box M1',         sku: 'BX-M1',   lengthCm: 25.0, widthCm: 20.0, heightCm: 15.0, maxWeightKg:  8, costUsd: 0.48, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'box-m2',     name: 'Fulfillment Box M2',         sku: 'BX-M2',   lengthCm: 30.0, widthCm: 20.0, heightCm: 15.0, maxWeightKg: 10, costUsd: 0.55, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'box-m3',     name: 'Fulfillment Box M3',         sku: 'BX-M3',   lengthCm: 30.0, widthCm: 25.0, heightCm: 20.0, maxWeightKg: 12, costUsd: 0.62, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'box-md-cub', name: 'Standard Cube Box M1',       sku: 'BX-MDC1', lengthCm: 20.0, widthCm: 20.0, heightCm: 20.0, maxWeightKg:  8, costUsd: 0.46, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'box-md-cu2', name: 'Standard Cube Box M2',       sku: 'BX-MDC2', lengthCm: 25.0, widthCm: 25.0, heightCm: 25.0, maxWeightKg: 10, costUsd: 0.58, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'usps-md1',   name: 'USPS Medium Flat Rate 1',    sku: 'USPS-MD1',lengthCm: 28.0, widthCm: 22.0, heightCm: 15.0, maxWeightKg:  8, costUsd: 0.60, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'usps-md2',   name: 'USPS Medium Flat Rate 2',    sku: 'USPS-MD2',lengthCm: 35.0, widthCm: 30.0, heightCm: 12.0, maxWeightKg: 10, costUsd: 0.68, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+
+  // 5. Large Carton Boxes
+  { id: 'box-l1',     name: 'Enterprise Box L1',          sku: 'BX-L1',   lengthCm: 35.0, widthCm: 25.0, heightCm: 20.0, maxWeightKg: 15, costUsd: 0.72, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'box-l2',     name: 'Enterprise Box L2',          sku: 'BX-L2',   lengthCm: 35.0, widthCm: 30.0, heightCm: 25.0, maxWeightKg: 18, costUsd: 0.80, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'box-l3',     name: 'Enterprise Box L3',          sku: 'BX-L3',   lengthCm: 40.0, widthCm: 30.0, heightCm: 20.0, maxWeightKg: 20, costUsd: 0.88, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'box-lg-cub', name: 'Master Cube Box L',          sku: 'BX-LGC',  lengthCm: 30.0, widthCm: 30.0, heightCm: 30.0, maxWeightKg: 18, costUsd: 0.78, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'usps-lg',    name: 'USPS Large Flat Rate Box',   sku: 'USPS-LG', lengthCm: 31.0, widthCm: 31.0, heightCm: 14.0, maxWeightKg: 15, costUsd: 0.75, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'fedex-lg',   name: 'FedEx Standard Large Box',   sku: 'FDX-LG',  lengthCm: 45.0, widthCm: 35.0, heightCm: 25.0, maxWeightKg: 25, costUsd: 1.05, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+
+  // 6. Extra Large & Heavy Duty Double-Wall Cartons
+  { id: 'box-xl1',    name: 'Master Box XL1',             sku: 'BX-XL1',  lengthCm: 45.0, widthCm: 40.0, heightCm: 30.0, maxWeightKg: 30, costUsd: 1.25, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'box-xl2',    name: 'Master Box XL2',             sku: 'BX-XL2',  lengthCm: 50.0, widthCm: 40.0, heightCm: 30.0, maxWeightKg: 35, costUsd: 1.45, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'box-xl-cub', name: 'Industrial Cube Box XL',     sku: 'BX-XLC',  lengthCm: 40.0, widthCm: 40.0, heightCm: 40.0, maxWeightKg: 35, costUsd: 1.38, material: 'Corrugated',  ecoCertified: true,  doubleWall: false },
+  { id: 'dw-hd1',     name: 'Heavy Duty DW Double-Wall S',sku: 'DW-S1',   lengthCm: 30.0, widthCm: 25.0, heightCm: 20.0, maxWeightKg: 25, costUsd: 1.10, material: 'Corrugated',  ecoCertified: false, doubleWall: true  },
+  { id: 'dw-hd2',     name: 'Heavy Duty DW Double-Wall M',sku: 'DW-M1',   lengthCm: 40.0, widthCm: 40.0, heightCm: 30.0, maxWeightKg: 40, costUsd: 1.65, material: 'Corrugated',  ecoCertified: false, doubleWall: true  },
+  { id: 'dw-hd3',     name: 'Heavy Duty DW Double-Wall L',sku: 'DW-L1',   lengthCm: 50.0, widthCm: 50.0, heightCm: 40.0, maxWeightKg: 50, costUsd: 2.25, material: 'Corrugated',  ecoCertified: false, doubleWall: true  },
 ]
 
 // ─── Flexible column value finder ────────────────────────────────────────
@@ -245,8 +276,45 @@ export async function POST(req: Request) {
       }
 
       try {
-        // Check cache first
+        const isBulk = products.length > 1
         const prodDimStr = `${engineInput.lengthCm}x${engineInput.widthCm}x${engineInput.heightCm}`
+
+        if (isBulk) {
+          // Bulk uploads skip external network/LLM dependencies for sub-millisecond local speed
+          const rec = runHeuristicOptimization(engineInput)
+          if (!rec) {
+            return {
+              product_id: engineInput.productId,
+              product_name: engineInput.productName,
+              error: 'No suitable smaller box found in catalog',
+              status: 'no_smaller_box_available',
+            }
+          }
+          const response = mapRecommendationToResponse(rec, engineInput)
+
+          // Persist to DB asynchronously inside a safe IIFE to bypass write blocking latency
+          ;(async () => {
+            try {
+              await supabase.from('optimizations').insert({
+                user_id: user.id,
+                status: 'completed',
+                product_snapshot: { ...p, product_dims: prodDimStr },
+                ai_response: rec,
+                recommended_box: rec.recommendedBoxName,
+                cost_savings_usd: rec.savings,
+                efficiency_score: rec.finalScore,
+                space_utilization: rec.spaceUtilization,
+                ai_model: 'PackVision Heuristic v2.0',
+              } as any)
+            } catch (dbErr) {
+              console.warn('[DB] Insert failed asynchronously (non-fatal):', dbErr)
+            }
+          })()
+
+          return response
+        }
+
+        // Single-product: Check cache first
         const { data: cached } = await supabase
           .from('optimizations')
           .select('*')

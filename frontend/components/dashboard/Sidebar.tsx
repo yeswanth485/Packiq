@@ -30,7 +30,7 @@ const navItems = [
   { href: '/dashboard/products',    label: 'Products',          icon: Database },
   { href: '/dashboard/orders',      label: 'Orders',            icon: ShoppingCart },
   { href: '/dashboard/analytics',   label: 'Analytics',         icon: TrendingUp },
-  { href: '/dashboard/analytics#sustainability', label: 'Sustainability', icon: Leaf },
+  { href: '/dashboard/sustainability', label: 'Sustainability', icon: Leaf },
   { href: '/dashboard/catalog',     label: 'Box Catalog',       icon: Box },
   { href: '/dashboard/subscription',label: 'Subscription',      icon: CreditCard },
   { href: '/dashboard/settings',    label: 'Settings',          icon: Settings },

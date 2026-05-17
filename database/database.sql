@@ -161,6 +161,42 @@ begin
     full_name = coalesce(excluded.full_name, public.profiles.full_name),
     avatar_url = coalesce(excluded.avatar_url, public.profiles.avatar_url),
     updated_at = now();
+
+  -- Seed the box catalog for the new user with 30 industry-standard sizes
+  insert into public.box_catalog (user_id, name, sku, length_cm, width_cm, height_cm, max_weight_kg, cost_usd, material, eco_certified, double_wall)
+  values
+    (new.id, 'Premium XS Flap Enveloper', 'MLR-XS1', 15.2, 10.2, 2.0, 1.0, 0.12, 'Kraft Paper', true, false),
+    (new.id, 'Document Kraft Envelope S', 'MLR-XS2', 18.0, 12.0, 2.0, 1.5, 0.15, 'Kraft Paper', true, false),
+    (new.id, 'Document Kraft Envelope M', 'MLR-XS3', 20.0, 15.0, 2.5, 2.0, 0.18, 'Kraft Paper', true, false),
+    (new.id, 'Eco-Bubble Mailer S', 'MLR-SM1', 22.0, 16.0, 3.0, 2.0, 0.22, 'Compostable', true, false),
+    (new.id, 'Eco-Bubble Mailer M', 'MLR-SM2', 25.0, 18.0, 3.5, 3.0, 0.26, 'Compostable', true, false),
+    (new.id, 'Eco-Bubble Mailer L', 'MLR-SM3', 28.0, 20.0, 4.0, 4.0, 0.30, 'Compostable', true, false),
+    (new.id, 'USPS Small Flat Rate Box', 'USPS-SM', 21.9, 14.3, 4.8, 5.0, 0.35, 'Corrugated', true, false),
+    (new.id, 'Micro Cube Box XS', 'BX-XSC', 10.0, 10.0, 10.0, 2.0, 0.25, 'Corrugated', true, false),
+    (new.id, 'Mini Cube Box S', 'BX-SMC', 15.0, 15.0, 15.0, 4.0, 0.32, 'Corrugated', true, false),
+    (new.id, 'Courier Box S1', 'BX-S1', 20.0, 15.0, 10.0, 5.0, 0.38, 'Corrugated', true, false),
+    (new.id, 'Courier Box S2', 'BX-S2', 20.0, 20.0, 15.0, 6.0, 0.44, 'Corrugated', true, false),
+    (new.id, 'Fulfillment Box M1', 'BX-M1', 25.0, 20.0, 15.0, 8.0, 0.48, 'Corrugated', true, false),
+    (new.id, 'Fulfillment Box M2', 'BX-M2', 30.0, 20.0, 15.0, 10.0, 0.55, 'Corrugated', true, false),
+    (new.id, 'Fulfillment Box M3', 'BX-M3', 30.0, 25.0, 20.0, 12.0, 0.62, 'Corrugated', true, false),
+    (new.id, 'Standard Cube Box M1', 'BX-MDC1', 20.0, 20.0, 20.0, 8.0, 0.46, 'Corrugated', true, false),
+    (new.id, 'Standard Cube Box M2', 'BX-MDC2', 25.0, 25.0, 25.0, 10.0, 0.58, 'Corrugated', true, false),
+    (new.id, 'USPS Medium Flat Rate 1', 'USPS-MD1', 28.0, 22.0, 15.0, 8.0, 0.60, 'Corrugated', true, false),
+    (new.id, 'USPS Medium Flat Rate 2', 'USPS-MD2', 35.0, 30.0, 12.0, 10.0, 0.68, 'Corrugated', true, false),
+    (new.id, 'Enterprise Box L1', 'BX-L1', 35.0, 25.0, 20.0, 15.0, 0.72, 'Corrugated', true, false),
+    (new.id, 'Enterprise Box L2', 'BX-L2', 35.0, 30.0, 25.0, 18.0, 0.80, 'Corrugated', true, false),
+    (new.id, 'Enterprise Box L3', 'BX-L3', 40.0, 30.0, 20.0, 20.0, 0.88, 'Corrugated', true, false),
+    (new.id, 'Master Cube Box L', 'BX-LGC', 30.0, 30.0, 30.0, 18.0, 0.78, 'Corrugated', true, false),
+    (new.id, 'USPS Large Flat Rate Box', 'USPS-LG', 31.0, 31.0, 14.0, 15.0, 0.75, 'Corrugated', true, false),
+    (new.id, 'FedEx Standard Large Box', 'FDX-LG', 45.0, 35.0, 25.0, 25.0, 1.05, 'Corrugated', true, false),
+    (new.id, 'Master Box XL1', 'BX-XL1', 45.0, 40.0, 30.0, 30.0, 1.25, 'Corrugated', true, false),
+    (new.id, 'Master Box XL2', 'BX-XL2', 50.0, 40.0, 30.0, 35.0, 1.45, 'Corrugated', true, false),
+    (new.id, 'Industrial Cube Box XL', 'BX-XLC', 40.0, 40.0, 40.0, 35.0, 1.38, 'Corrugated', true, false),
+    (new.id, 'Heavy Duty DW Double-Wall S', 'DW-S1', 30.0, 25.0, 20.0, 25.0, 1.10, 'Corrugated', false, true),
+    (new.id, 'Heavy Duty DW Double-Wall M', 'DW-M1', 40.0, 40.0, 30.0, 40.0, 1.65, 'Corrugated', false, true),
+    (new.id, 'Heavy Duty DW Double-Wall L', 'DW-L1', 50.0, 50.0, 40.0, 50.0, 2.25, 'Corrugated', false, true)
+  on conflict do nothing;
+
   return new;
 exception
   when others then
