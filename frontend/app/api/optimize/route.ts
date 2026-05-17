@@ -78,9 +78,9 @@ function findValue(p: any, ...keys: string[]): string {
     if (p[k] !== undefined && p[k] !== null && p[k] !== '') return String(p[k])
   }
   // Then try case-insensitive + normalized matching against all row keys
-  const normalizedKeys = keys.map(k => k.toLowerCase().replace(/[\s_\-]+/g, ''))
+  const normalizedKeys = keys.map(k => k.toLowerCase().replace(/[^a-z0-9]/g, ''))
   for (const rowKey of Object.keys(p)) {
-    const normalized = rowKey.toLowerCase().replace(/[\s_\-]+/g, '')
+    const normalized = rowKey.toLowerCase().replace(/[^a-z0-9]/g, '')
     for (const target of normalizedKeys) {
       // Match if normalized key contains or equals the target
       if (normalized === target || normalized.startsWith(target) || normalized.includes(target)) {

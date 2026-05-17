@@ -146,12 +146,12 @@ export default function SettingsPage() {
       <div className="flex flex-col md:flex-row gap-8 min-h-[600px]">
         
         {/* Sidebar */}
-        <div className="w-full md:w-[240px] flex md:flex-col gap-1 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0">
+        <div className="w-full md:w-[220px] flex md:flex-col gap-1 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0">
           {CATEGORIES.map((cat) => (
             <button 
               key={cat.id}
               onClick={() => setActiveTab(cat.id)}
-              className={`flex items-center gap-3 px-5 py-3.5 rounded-xl text-sm font-bold transition-all shrink-0 md:shrink ${
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs font-bold transition-all shrink-0 md:shrink ${
                 activeTab === cat.id 
                   ? 'bg-white/10 text-white border-l-2 border-[#4361EE]' 
                   : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border-l-2 border-transparent'
