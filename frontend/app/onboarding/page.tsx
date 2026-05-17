@@ -74,17 +74,21 @@ export default function OnboardingWizard() {
     sustainabilityMode: false,
   })
 
-  // Prefill from signup
+  // Prefill from signup & prevent back-routing if onboarding already finished
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        // You could try fetching existing profile data here if needed
         const { data: profile } = await (supabase as any)
           .from('profiles')
-          .select('company')
+          .select('company, onboarding_completed')
           .eq('id', user.id)
           .single()
+        
+        if (profile?.onboarding_completed) {
+          router.push('/dashboard')
+          return
+        }
         
         if (profile?.company) {
           setData(prev => ({ ...prev, companyName: profile.company }))

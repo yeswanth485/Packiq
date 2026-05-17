@@ -41,38 +41,24 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 3. Handle Authenticated User Routing
+  // 3. Handle Authenticated User Routing (database-free session metadata check)
   if (user) {
     // Skip for API/Static
     if (pathname.startsWith('/api/') || pathname.startsWith('/_next/')) {
       return supabaseResponse
     }
 
-    // Check Onboarding status: check user metadata first for instant routing, fallback to DB if not found
-    let onboardingCompleted = !!user.user_metadata?.onboarding_completed
-    
-    if (!onboardingCompleted) {
-      try {
-        const { data: profile } = await (supabase.from('profiles') as any)
-          .select('onboarding_completed')
-          .eq('id', user.id)
-          .single()
-        
-        onboardingCompleted = !!profile?.onboarding_completed
-      } catch (e) {
-        onboardingCompleted = false
-      }
-    }
-
-    // Redirect to Onboarding if not done (exempting root landing page '/')
-    if (!onboardingCompleted && pathname !== '/' && !pathname.startsWith('/onboarding') && !pathname.startsWith('/auth')) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/onboarding'
-      return NextResponse.redirect(url)
-    }
+    const onboardingCompleted = !!user.user_metadata?.onboarding_completed
 
     // Redirect to Dashboard if done and visiting Landing ('/') or Auth pages
     if (onboardingCompleted && (pathname === '/' || pathname.startsWith('/auth'))) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
+
+    // Redirect to Dashboard if trying to access auth pages
+    if (pathname.startsWith('/auth')) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)
