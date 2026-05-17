@@ -124,6 +124,8 @@ create policy "profiles_select" on public.profiles
   for select using (auth.uid() = id);
 create policy "profiles_update" on public.profiles
   for update using (auth.uid() = id);
+create policy "profiles_insert" on public.profiles
+  for insert with check (auth.uid() = id);
 
 -- box_catalog (users fully manage their own catalog)
 create policy "box_catalog_all" on public.box_catalog

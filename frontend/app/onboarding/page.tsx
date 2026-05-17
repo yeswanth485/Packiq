@@ -86,7 +86,7 @@ export default function OnboardingWizard() {
           .single()
         
         if (profile?.onboarding_completed) {
-          router.push('/dashboard')
+          window.location.href = '/dashboard'
           return
         }
         
@@ -116,7 +116,9 @@ export default function OnboardingWizard() {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (user) {
-      const { error } = await (supabase.from('profiles') as any).update({
+      const { error } = await (supabase.from('profiles') as any).upsert({
+        id: user.id,
+        email: user.email,
         company: data.companyName,
         industry: data.industry,
         company_size: data.companySize,
@@ -130,7 +132,7 @@ export default function OnboardingWizard() {
         optimization_goal: data.optimizationGoal,
         sustainability_mode: data.sustainabilityMode,
         onboarding_completed: true
-      }).eq('id', user.id)
+      }, { onConflict: 'id' })
 
       if (error) {
         console.error('Failed to update profile:', error)
@@ -153,7 +155,7 @@ export default function OnboardingWizard() {
       })
 
       setTimeout(() => {
-        router.push('/dashboard')
+        window.location.href = '/dashboard'
       }, 1500)
     } else {
       setLoading(false)
