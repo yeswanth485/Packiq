@@ -171,9 +171,10 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
                   )
                 }
 
-                const fragility = product.fragility || 'Low'
-                const voidPct = o.ai_response?.void_reduction || o.ai_response?.voidVolumePercent || (100 - (o.space_utilization || o.efficiency_score || 0))
+                const fragility = o.ai_response?.damage_risk || (product.fragile ? 'High' : 'Low')
+                const voidPct = o.ai_response?.void_reduction !== undefined ? o.ai_response.void_reduction : (100 - (o.space_utilization || o.ai_response?.space_utilization || 0))
                 const reasoning = o.ai_response?.reasoning || 'No details provided.'
+                const modelUsed = o.ai_model || 'XGBoost ML Scorer v2.1'
 
                 return (
                   <tr key={o.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
@@ -183,8 +184,9 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
                     </td>
                     <td className="px-6 py-4 text-gray-400 text-xs">{product.current_box_size || product.current_box_name || 'Unknown'}</td>
                     <td className="px-6 py-4 text-indigo-400 font-medium text-xs">
-                      {o.recommended_box || '—'}
+                      <div className="font-bold">{o.recommended_box || '—'}</div>
                       <div className="text-[10px] text-gray-500 max-w-[200px] truncate" title={reasoning}>{reasoning}</div>
+                      <div className="text-[10px] text-[#00FFD1] mt-0.5 font-mono uppercase tracking-tighter">{modelUsed}</div>
                     </td>
                     <td className="px-6 py-4 text-gray-400 text-xs">{product.length_cm}x{product.width_cm}x{product.height_cm} cm</td>
                     <td className="px-6 py-4">
