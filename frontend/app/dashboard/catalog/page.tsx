@@ -82,6 +82,27 @@ export default function CatalogPage() {
     return boxes.filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
   }, [searchQuery, boxes])
 
+  const handleSeedCatalog = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/box-catalog/seed', { method: 'POST' })
+      if (!res.ok) throw new Error('Failed to seed catalog')
+      const data = await res.json()
+      if (data.inserted) {
+        toast.success(`Successfully added ${data.inserted} standard boxes to your catalog!`)
+        // Refresh boxes
+        const { data: newBoxes } = await supabase.from('box_catalog').select('*')
+        if (newBoxes) setBoxes(newBoxes)
+      } else if (data.message) {
+        toast.info(data.message)
+      }
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-20">
       
@@ -100,6 +121,9 @@ export default function CatalogPage() {
               <List className="w-4 h-4" />
             </button>
           </div>
+          <button onClick={handleSeedCatalog} disabled={loading} className="bg-white/5 border border-white/10 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50">
+            Seed Standard Boxes
+          </button>
           <button onClick={() => setIsModalOpen(true)} className="bg-[#00FFD1] text-[#0A0A0F] px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-[0_0_20px_rgba(0,255,209,0.2)] flex items-center gap-2 hover:scale-105 transition-all">
             <Plus className="w-4 h-4" /> Add Item
           </button>

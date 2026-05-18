@@ -34,6 +34,7 @@ const navItems = [
   { href: '/dashboard/labels',      label: 'Labels',            icon: Tag },
   { href: '/dashboard/analytics',   label: 'Analytics',         icon: TrendingUp },
   { href: '/dashboard/sustainability', label: 'Sustainability', icon: Leaf },
+  { href: '/dashboard/catalog',     label: 'Box Catalog',       icon: Box },
   { href: '/dashboard/settings',    label: 'Settings',          icon: Settings },
 ]
 

@@ -124,12 +124,14 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
                   <>
                     <th className="px-6 py-4 text-left">Old Box</th>
                     <th className="px-6 py-4 text-left">New Box</th>
+                    <th className="px-6 py-4 text-left">Dimensions</th>
+                    <th className="px-6 py-4 text-left">Fragility</th>
+                    <th className="px-6 py-4 text-right">Void %</th>
                     <th className="px-6 py-4 text-right">Old Cost</th>
                     <th className="px-6 py-4 text-right">New Cost</th>
                     <th className="px-6 py-4 text-right cursor-pointer hover:text-white transition-colors group">
                       <div className="flex items-center justify-end gap-1">Savings <ArrowUpDown className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
                     </th>
-                    <th className="px-6 py-4 text-right">Efficiency</th>
                     <th className="px-6 py-4 text-center">Actions</th>
                   </>
                 ) : (
@@ -169,26 +171,41 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
                   )
                 }
 
+                const fragility = product.fragility || 'Low'
+                const voidPct = o.ai_response?.void_reduction || o.ai_response?.voidVolumePercent || (100 - (o.space_utilization || o.efficiency_score || 0))
+                const reasoning = o.ai_response?.reasoning || 'No details provided.'
+
                 return (
                   <tr key={o.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                     <td className="px-6 py-4">
                       <div className="text-gray-200 font-medium">{product.name || 'Unknown'}</div>
                       <div className="text-xs text-gray-500">{product.product_id || product.sku || o.id.slice(0, 8)}</div>
                     </td>
-                    <td className="px-6 py-4 text-gray-400">{product.current_box_size || 'Unknown'}</td>
-                    <td className="px-6 py-4 text-indigo-400">{o.recommended_box || '—'}</td>
+                    <td className="px-6 py-4 text-gray-400 text-xs">{product.current_box_size || product.current_box_name || 'Unknown'}</td>
+                    <td className="px-6 py-4 text-indigo-400 font-medium text-xs">
+                      {o.recommended_box || '—'}
+                      <div className="text-[10px] text-gray-500 max-w-[200px] truncate" title={reasoning}>{reasoning}</div>
+                    </td>
+                    <td className="px-6 py-4 text-gray-400 text-xs">{product.length_cm}x{product.width_cm}x{product.height_cm} cm</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded text-[10px] uppercase font-bold ${
+                        fragility.toLowerCase() === 'high' || fragility.toLowerCase() === 'extreme' 
+                          ? 'bg-red-500/20 text-red-400' 
+                          : fragility.toLowerCase() === 'medium' ? 'bg-amber-500/20 text-amber-400' : 'bg-green-500/20 text-green-400'
+                      }`}>
+                        {fragility}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className={`px-2 py-1 rounded text-[10px] font-bold ${
+                        voidPct <= 15 ? 'bg-green-500/20 text-green-400' : voidPct <= 30 ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'
+                      }`}>
+                        {Math.max(0, voidPct).toFixed(1)}% Void
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-right text-gray-400">${oldCost.toFixed(2)}</td>
                     <td className="px-6 py-4 text-right text-gray-200">${newCost.toFixed(2)}</td>
                     <td className="px-6 py-4 text-right text-green-400 font-medium">+${savings.toFixed(2)}</td>
-                    <td className="px-6 py-4 text-right">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                        o.efficiency_score >= 80 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 
-                        o.efficiency_score >= 60 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 
-                        'bg-red-500/10 text-red-400 border border-red-500/20'
-                      }`}>
-                        {o.efficiency_score}%
-                      </span>
-                    </td>
                     <td className="px-6 py-4 text-center">
                       <button 
                         onClick={() => setSelectedOpt(o)}

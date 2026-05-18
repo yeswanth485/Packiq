@@ -94,6 +94,10 @@ export default function ResultsSlideOver({ isOpen, onClose, data }: ResultsSlide
                       <p className="text-xs text-gray-500">Dimensions (L x W x H)</p>
                       <p className="text-sm font-medium text-gray-300">{before.length_cm || before.breadth_cm} x {before.width_cm} x {before.height_cm} cm</p>
                     </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Fragility Risk</p>
+                      <p className="text-sm font-medium text-gray-300 capitalize">{before.fragility || 'Low'}</p>
+                    </div>
                   </div>
                 </div>
 
@@ -112,6 +116,10 @@ export default function ResultsSlideOver({ isOpen, onClose, data }: ResultsSlide
                     <div>
                       <p className="text-xs text-gray-500">New Cost</p>
                       <p className="text-sm font-medium text-green-400">${Number(after.new_cost_usd || 0).toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Void Volume (Space Left)</p>
+                      <p className="text-sm font-medium text-green-400">{after.void_reduction || after.voidVolumePercent || (100 - (data.efficiency_score || 0))}%</p>
                     </div>
                     <div className="flex justify-between items-end">
                       <div>

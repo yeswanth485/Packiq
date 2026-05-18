@@ -107,8 +107,12 @@ export default function LoginPage() {
         router.push('/dashboard')
       }
     } catch (err: any) {
-      setError(err.message)
-      toast.error(err.message)
+      let msg = err.message
+      if (msg.includes('Email not confirmed')) {
+        msg = 'Please check your inbox and verify your email address to log in.'
+      }
+      setError(msg)
+      toast.error(msg)
       setLoading(false)
     }
   }

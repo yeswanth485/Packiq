@@ -26,6 +26,9 @@ export interface ProductAssignment {
   savingsUsd?: number
   baselineCost?: number
   optimizedCost?: number
+  reasoning?: string
+  utilizationPercent?: number
+  voidVolumePercent?: number
 }
 
 export interface OptimizationResult {
@@ -120,6 +123,13 @@ export function runFFDOptimization(items: any[], catalog: BoxSpec[]): Optimizati
       const itemVol = (item.length_cm || 0) * (item.width_cm || 0) * (item.height_cm || 0)
       const boxVol = bestBox.length_cm * bestBox.width_cm * bestBox.height_cm
       const util = boxVol > 0 ? (itemVol / boxVol) * 100 : 0
+      const voidPct = 100 - util
+
+      const costText = baselineCost > 0 
+        ? `Previous cost was $${baselineCost.toFixed(2)}, new cost is $${bestBox.cost.toFixed(2)}.`
+        : `New cost is $${bestBox.cost.toFixed(2)}.`
+        
+      const reasoning = `Selected Box '${bestBox.name}'. Minimized void space to ${voidPct.toFixed(1)}%. ${costText}`
 
       totalSavingsUsd += savings
       totalUtil += util
@@ -131,15 +141,32 @@ export function runFFDOptimization(items: any[], catalog: BoxSpec[]): Optimizati
         success: true,
         savingsUsd: savings,
         baselineCost,
-        optimizedCost: bestBox.cost
+        optimizedCost: bestBox.cost,
+        utilizationPercent: util,
+        voidVolumePercent: voidPct,
+        reasoning
       })
     } else {
       failedCount++
+      const failReason = buildFailureReason(item, catalog)
+      
+      let failDetail = `Failed: ${failReason}. `
+      if (failReason === 'Overweight') {
+        const maxWeight = Math.max(...catalog.map(b => b.weight_limit_kg))
+        failDetail += `Product weight (${item.weight_kg || 0}kg) exceeds largest available box weight limit (${maxWeight}kg).`
+      } else if (failReason === 'Dimensions Too Large') {
+        const maxL = Math.max(...catalog.map(b => b.length_cm))
+        const maxW = Math.max(...catalog.map(b => b.width_cm))
+        const maxH = Math.max(...catalog.map(b => b.height_cm))
+        failDetail += `Product dims (${item.length_cm}x${item.width_cm}x${item.height_cm}) exceed max catalog dims (${maxL}x${maxW}x${maxH}).`
+      }
+
       assignments.push({
         item,
         success: false,
-        failureReason: buildFailureReason(item, catalog),
+        failureReason: failReason,
         baselineCost,
+        reasoning: failDetail
       })
     }
   })
