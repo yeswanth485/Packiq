@@ -114,8 +114,8 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
       </div>
 
       {/* Table */}
-      <div className="glass rounded-2xl border border-white/5 overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="glass rounded-2xl border border-white/5 overflow-hidden w-full max-w-full">
+        <div className="overflow-x-auto w-full">
           <table className="w-full text-sm whitespace-nowrap">
             <thead>
               <tr className="text-xs text-gray-500 uppercase tracking-widest border-b border-white/5 bg-white/[0.02]">
@@ -147,9 +147,9 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
             <tbody>
               {filteredData.map((o) => {
                 const product = o.product_snapshot || {}
-                const oldCost = Number(product.current_cost_usd || 0)
-                const newCost = Number(o.ai_response?.new_cost_usd || 0)
-                const savings = Number(o.cost_savings_usd || 0)
+                const oldCost = Number(o.ai_response?.baselineCost || product.current_cost_usd || 0)
+                const newCost = Number(o.ai_response?.totalCost || o.total_cost || 0)
+                const savings = Number(o.cost_savings_usd || o.ai_response?.savings || 0)
                 
                 if (activeTab === 'failed') {
                   const reason = o.error || o.ai_response?.reasoning || 'No suitable box found in catalog'
