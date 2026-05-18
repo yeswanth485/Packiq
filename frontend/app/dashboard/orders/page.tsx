@@ -55,7 +55,7 @@ export default function OrdersPage() {
       </div>
 
       {/* Main Table Container */}
-      <div className="glass rounded-[40px] overflow-hidden">
+      <div className="glass rounded-[40px] overflow-hidden w-full max-w-full">
         {/* Toolbar */}
         <div className="p-6 border-b border-white/5 flex flex-col md:flex-row gap-4 items-center">
           <div className="relative flex-1 group w-full">
@@ -75,7 +75,7 @@ export default function OrdersPage() {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto w-full">
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-[#0A0A0F] sticky top-0 z-10">
               <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5">

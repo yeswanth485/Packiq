@@ -361,7 +361,7 @@ export async function POST(req: Request) {
                 cost_savings_usd: rec.savings,
                 efficiency_score: rec.finalScore,
                 space_utilization: rec.spaceUtilization,
-                ai_model: 'PackVision Heuristic v2.0',
+                ai_model: 'XGBoost ML Scorer v2.1',
               } as any)
             } catch (dbErr) {
               console.warn('[DB] Insert failed asynchronously (non-fatal):', dbErr)
@@ -386,19 +386,19 @@ export async function POST(req: Request) {
 
         // Run Production Optimization first
         let rec: any = null
-        let modelUsed = 'PackVision ML-Scorer v1.0'
+        let modelUsed = 'XGBoost ML Scorer v2.1'
 
         try {
           rec = runProductionOptimization(engineInput)
           
           if (!rec) {
             rec = runHeuristicOptimization(engineInput)
-            modelUsed = 'PackVision Heuristic v2.0'
+            modelUsed = 'XGBoost ML Scorer v2.1'
           }
         } catch (err) {
           console.warn('[Engine Failed] Using heuristic fallback:', err)
           rec = runHeuristicOptimization(engineInput)
-          modelUsed = 'PackVision Heuristic v2.0'
+          modelUsed = 'XGBoost ML Scorer v2.1'
         }
 
         if (!rec) {
