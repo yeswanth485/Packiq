@@ -152,8 +152,8 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
                 const savings = Number(o.cost_savings_usd || 0)
                 
                 if (activeTab === 'failed') {
-                  const reason = o.error || 'Unknown Error'
-                  let fix = 'Check catalog configuration'
+                  const reason = o.error || o.ai_response?.reasoning || 'No suitable box found in catalog'
+                  let fix = 'Check catalog configuration or seed default boxes'
                   if (reason.includes('heavy') || reason.includes('weight')) fix = 'Add boxes with higher weight limits'
                   else if (reason.includes('large') || reason.includes('dimensions')) fix = 'Add larger boxes to catalog'
 
