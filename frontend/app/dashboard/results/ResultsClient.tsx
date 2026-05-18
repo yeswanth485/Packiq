@@ -15,9 +15,14 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [savingsFilter, setSavingsFilter] = useState('all') // all, >1, >5
   const [selectedOpt, setSelectedOpt] = useState<any | null>(null)
+  const [activeTab, setActiveTab] = useState<'successful' | 'failed'>('successful')
   
   const filteredData = useMemo(() => {
     return optimizations.filter(o => {
+      const isFailed = o.status === 'error' || o.error !== null
+      if (activeTab === 'successful' && isFailed) return false
+      if (activeTab === 'failed' && !isFailed) return false
+
       const name = (o.product_snapshot?.name || '').toLowerCase()
       const matchesSearch = name.includes(searchTerm.toLowerCase())
       
@@ -27,7 +32,7 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
       
       return matchesSearch && matchesSavings
     })
-  }, [optimizations, searchTerm, savingsFilter])
+  }, [optimizations, searchTerm, savingsFilter, activeTab])
 
   // Chart Data preparation
   const chartDataSavings = useMemo(() => {
@@ -62,6 +67,21 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
 
   return (
     <div className="space-y-8 fade-in">
+      <div className="flex gap-4 p-1 bg-white/[0.03] border border-white/5 rounded-2xl w-fit">
+        <button 
+          onClick={() => setActiveTab('successful')}
+          className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'successful' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'text-gray-500 hover:text-white'}`}
+        >
+          Successful Optimizations
+        </button>
+        <button 
+          onClick={() => setActiveTab('failed')}
+          className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'failed' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'text-gray-500 hover:text-white'}`}
+        >
+          Why Not Optimized ⚠
+        </button>
+      </div>
+
       {/* Filters */}
       <div className="glass p-4 rounded-2xl border border-white/5 flex flex-wrap gap-4 items-center justify-between">
         <div className="flex items-center gap-4 flex-1">
@@ -100,15 +120,26 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
             <thead>
               <tr className="text-xs text-gray-500 uppercase tracking-widest border-b border-white/5 bg-white/[0.02]">
                 <th className="px-6 py-4 text-left">Product</th>
-                <th className="px-6 py-4 text-left">Old Box</th>
-                <th className="px-6 py-4 text-left">New Box</th>
-                <th className="px-6 py-4 text-right">Old Cost</th>
-                <th className="px-6 py-4 text-right">New Cost</th>
-                <th className="px-6 py-4 text-right cursor-pointer hover:text-white transition-colors group">
-                  <div className="flex items-center justify-end gap-1">Savings <ArrowUpDown className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
-                </th>
-                <th className="px-6 py-4 text-right">Efficiency</th>
-                <th className="px-6 py-4 text-center">Actions</th>
+                {activeTab === 'successful' ? (
+                  <>
+                    <th className="px-6 py-4 text-left">Old Box</th>
+                    <th className="px-6 py-4 text-left">New Box</th>
+                    <th className="px-6 py-4 text-right">Old Cost</th>
+                    <th className="px-6 py-4 text-right">New Cost</th>
+                    <th className="px-6 py-4 text-right cursor-pointer hover:text-white transition-colors group">
+                      <div className="flex items-center justify-end gap-1">Savings <ArrowUpDown className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
+                    </th>
+                    <th className="px-6 py-4 text-right">Efficiency</th>
+                    <th className="px-6 py-4 text-center">Actions</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="px-6 py-4 text-left">Dimensions</th>
+                    <th className="px-6 py-4 text-left">Weight</th>
+                    <th className="px-6 py-4 text-left">Failure Reason</th>
+                    <th className="px-6 py-4 text-left">Suggested Fix</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -118,6 +149,26 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
                 const newCost = Number(o.ai_response?.new_cost_usd || 0)
                 const savings = Number(o.cost_savings_usd || 0)
                 
+                if (activeTab === 'failed') {
+                  const reason = o.error || 'Unknown Error'
+                  let fix = 'Check catalog configuration'
+                  if (reason.includes('heavy') || reason.includes('weight')) fix = 'Add boxes with higher weight limits'
+                  else if (reason.includes('large') || reason.includes('dimensions')) fix = 'Add larger boxes to catalog'
+
+                  return (
+                    <tr key={o.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="text-gray-200 font-medium">{product.name || o.product_id || 'Unknown'}</div>
+                        <div className="text-xs text-gray-500">{product.product_id || o.product_id || o.id.slice(0, 8)}</div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-400">{product.length_cm}x{product.width_cm}x{product.height_cm}</td>
+                      <td className="px-6 py-4 text-gray-400">{product.weight_kg}kg</td>
+                      <td className="px-6 py-4 text-red-400 font-medium">⚠ {reason}</td>
+                      <td className="px-6 py-4 text-indigo-400 font-medium">{fix}</td>
+                    </tr>
+                  )
+                }
+
                 return (
                   <tr key={o.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                     <td className="px-6 py-4">

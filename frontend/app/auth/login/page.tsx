@@ -61,6 +61,8 @@ export default function LoginPage() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [featureIndex, setFeatureIndex] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+  const [resetSent, setResetSent] = useState(false)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -72,6 +74,7 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError(null)
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
@@ -98,9 +101,36 @@ export default function LoginPage() {
       setIsSuccess(true)
       await new Promise(r => setTimeout(r, 800))
 
-      router.push('/dashboard')
+      if (profile && !profile.onboarding_completed) {
+        router.push('/onboarding')
+      } else {
+        router.push('/dashboard')
+      }
     } catch (err: any) {
+      setError(err.message)
       toast.error(err.message)
+      setLoading(false)
+    }
+  }
+
+  const handleResetPassword = async () => {
+    if (!formData.email) {
+      setError("Please enter your email to reset password.")
+      return
+    }
+    setLoading(true)
+    setError(null)
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      })
+      if (error) throw error
+      setResetSent(true)
+      toast.success("Password reset link sent to your email.")
+    } catch (err: any) {
+      setError(err.message)
+      toast.error(err.message)
+    } finally {
       setLoading(false)
     }
   }
@@ -196,6 +226,17 @@ export default function LoginPage() {
               <div className="flex-1 h-px bg-white/5" />
             </div>
 
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl text-xs font-bold text-center">
+                {error}
+              </div>
+            )}
+            {resetSent && (
+              <div className="bg-green-500/10 border border-green-500/20 text-green-400 p-4 rounded-2xl text-xs font-bold text-center">
+                Check your email for a reset link.
+              </div>
+            )}
+
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-1">Work Email</label>
@@ -213,7 +254,7 @@ export default function LoginPage() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center px-1">
                   <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em]">Password</label>
-                  <Link href="#" className="text-[10px] text-[#00FFD1] hover:underline font-black uppercase tracking-[0.2em]">Forgot?</Link>
+                  <button type="button" onClick={handleResetPassword} className="text-[10px] text-[#00FFD1] hover:underline font-black uppercase tracking-[0.2em]">Forgot?</button>
                 </div>
                 <div className="relative group">
                   <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-700 group-focus-within:text-[#00FFD1] transition-colors" />

@@ -9,15 +9,11 @@ export default async function ResultsPage() {
     return <div>Unauthorized</div>
   }
 
-  // Fetch all completed optimizations for the user
+  // Fetch all optimizations for the user
   const { data: optimizations, error } = await supabase
     .from('optimizations')
-    .select(`
-      *,
-      box_catalog_data:box_id(*)
-    `)
+    .select(`*`)
     .eq('user_id', user.id)
-    .eq('status', 'completed')
     .order('created_at', { ascending: false })
 
   if (error) {

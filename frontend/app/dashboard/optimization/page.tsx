@@ -10,8 +10,7 @@ import { toast } from 'sonner'
 import { useOptimizationStore, OptimizationResult } from '@/lib/store/optimizationStore'
 import { useRouter } from 'next/navigation'
 import Box3DViewer from '@/components/dashboard/Box3DViewer'
-import Papa from 'papaparse'
-import * as XLSX from 'xlsx'
+import { parseFile, ParseResult, generateCSVTemplate } from '@/lib/fileParser'
 
 export default function OptimizationPage() {
   const [activeTab, setActiveTab] = useState<'manual' | 'bulk'>('manual')
@@ -42,6 +41,7 @@ export default function OptimizationPage() {
 
   const [processingStep, setProcessingStep] = useState(0)
   const [totalItems, setTotalItems] = useState(0)
+  const [parseResult, setParseResult] = useState<ParseResult | null>(null)
 
   const steps = [
     "Validating product dimensions...",
@@ -58,20 +58,7 @@ export default function OptimizationPage() {
 
   // ── CSV Template download ─────────────────────────────────────────
   const downloadTemplate = () => {
-    const headers = 'product_name,product_id,product L*W*H,weight_kg,fragility,quantity,zone,shipping_method,box L*W*H,box_price,category'
-    const rows = [
-      'iPhone 15 Pro,IPH-15P,14x7x8,0.24,medium,1,2,standard,20x15x12,0.75,electronics',
-      'Cotton T-Shirt,TSH-M-BLK,30x25x3,0.18,low,10,1,standard,35x30x10,0.40,clothing',
-      'Glass Vase,VAS-001,18x18x35,1.2,extreme,1,4,express,25x25x45,1.20,fragile',
-    ]
-    const csv = [headers, ...rows].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href = url
-    a.download = 'packvision_template.csv'
-    a.click()
-    URL.revokeObjectURL(url)
+    generateCSVTemplate()
   }
 
   const handleManualOptimize = async () => {
@@ -133,27 +120,15 @@ export default function OptimizationPage() {
     }
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    const extension = file.name.split('.').pop()?.toLowerCase()
-    const reader = new FileReader()
-
-    if (extension === 'csv') {
-      Papa.parse(file, {
-        header: true, skipEmptyLines: true,
-        complete: (res) => processBulkData(res.data)
-      })
-    } else if (extension === 'xlsx' || extension === 'xls') {
-      reader.onload = (evt) => {
-        const wb = XLSX.read(evt.target?.result, { type: 'binary' })
-        const ws = wb.Sheets[wb.SheetNames[0]]
-        processBulkData(XLSX.utils.sheet_to_json(ws))
-      }
-      reader.readAsBinaryString(file)
-    } else {
-      toast.error('Unsupported file format. Please use CSV or Excel.')
+    try {
+      const result = await parseFile(file)
+      setParseResult(result)
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to parse file')
     }
   }
 
@@ -383,24 +358,91 @@ export default function OptimizationPage() {
                 </motion.div>
               ) : (
                 <motion.div key="bulk" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-                  <div 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-white/10 rounded-[32px] p-12 text-center hover:border-[#00FFD1]/50 hover:bg-[#00FFD1]/5 transition-all cursor-pointer group"
-                  >
-                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv,.xlsx,.xls" className="hidden" />
-                    <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-                      <UploadCloud className="w-8 h-8 text-[#00FFD1]" />
+                  
+                  {!parseResult ? (
+                    <>
+                      <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed border-white/10 rounded-[32px] p-12 text-center hover:border-[#00FFD1]/50 hover:bg-[#00FFD1]/5 transition-all cursor-pointer group"
+                      >
+                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv,.xlsx,.xls" className="hidden" />
+                        <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+                          <UploadCloud className="w-8 h-8 text-[#00FFD1]" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">Upload Inventory Sheet</h3>
+                        <p className="text-gray-500 text-xs mb-8">Supports CSV and Excel. Includes dims, weight, fragility, and zone for bulk processing.</p>
+                      </div>
+                      <button
+                        onClick={downloadTemplate}
+                        className="w-full py-3 bg-white/[0.03] border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white hover:border-[#00FFD1]/30 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Download className="w-4 h-4" /> Download CSV Template
+                      </button>
+                    </>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="p-4 bg-white/[0.02] border border-white/10 rounded-2xl flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-bold text-white flex items-center gap-2">
+                            <FileSpreadsheet className="w-5 h-5 text-[#00FFD1]" />
+                            {parseResult.validCount} products ready
+                          </p>
+                          {parseResult.invalidCount > 0 && (
+                            <p className="text-xs text-yellow-500 mt-1">
+                              {parseResult.invalidCount} invalid rows skipped
+                            </p>
+                          )}
+                        </div>
+                        <button 
+                          onClick={() => setParseResult(null)}
+                          className="text-xs text-gray-500 hover:text-white transition-colors"
+                        >
+                          Clear
+                        </button>
+                      </div>
+
+                      <div className="bg-white/[0.02] border border-white/5 rounded-2xl overflow-hidden max-h-[300px] overflow-y-auto">
+                        <table className="w-full text-left text-sm text-gray-400">
+                          <thead className="text-[10px] uppercase tracking-widest bg-white/[0.02] sticky top-0">
+                            <tr>
+                              <th className="px-4 py-3">ID / Name</th>
+                              <th className="px-4 py-3">Dimensions</th>
+                              <th className="px-4 py-3">Weight</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/5">
+                            {parseResult.data.slice(0, 10).map((p, i) => (
+                              <tr key={i}>
+                                <td className="px-4 py-3 text-white">
+                                  {p.product_id}<br/>
+                                  <span className="text-xs text-gray-500">{p.product_name}</span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  {p.length_cm}x{p.width_cm}x{p.height_cm}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {p.weight_kg}kg
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {parseResult.data.length > 10 && (
+                          <div className="p-3 text-center text-xs text-gray-500 bg-white/[0.02] border-t border-white/5">
+                            + {parseResult.data.length - 10} more rows
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => processBulkData(parseResult.data)}
+                        className="w-full bg-[#00FFD1] text-[#0A0A0F] py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(0,255,209,0.2)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                      >
+                        <Brain className="w-4 h-4" /> Run Batch Optimization
+                      </button>
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">Upload Inventory Sheet</h3>
-                    <p className="text-gray-500 text-xs mb-8">Supports CSV and Excel. Includes dims, weight, fragility, and zone for bulk processing.</p>
-                  </div>
-                  {/* Template download */}
-                  <button
-                    onClick={downloadTemplate}
-                    className="w-full py-3 bg-white/[0.03] border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white hover:border-[#00FFD1]/30 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Download className="w-4 h-4" /> Download CSV Template
-                  </button>
+                  )}
+
                 </motion.div>
               )}
             </AnimatePresence>

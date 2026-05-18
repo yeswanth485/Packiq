@@ -20,11 +20,21 @@ export async function GET(request: Request) {
       const { data: { user } } = await supabase.auth.getUser()
       
       if (user) {
-        const { data: profile } = await supabase
+        let { data: profile } = await supabase
           .from('profiles')
           .select('onboarding_completed')
           .eq('id', user.id)
           .single()
+
+        if (!profile) {
+           await (supabase as any).from('profiles').insert({
+              id: user.id,
+              email: user.email,
+              full_name: user.user_metadata?.full_name || '',
+              onboarding_completed: false
+           })
+           profile = { onboarding_completed: false } as any
+        }
 
         if (profile && (profile as any).onboarding_completed) {
           return NextResponse.redirect(`${origin}/dashboard`)

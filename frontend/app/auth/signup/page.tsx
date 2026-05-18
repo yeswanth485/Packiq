@@ -62,12 +62,32 @@ export default function SignupPage() {
     industry: '',
     lineSpeed: '',
     phone: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   })
+  const [serverError, setServerError] = useState<string | null>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setServerError(null)
+    setErrors({})
+
+    const newErrors: Record<string, string> = {}
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match."
+    }
+    if (formData.phone && !/^\+?[1-9]\d{1,14}$/.test(formData.phone)) {
+      newErrors.phone = "Please use a valid E.164 format (e.g., +1234567890)."
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      setLoading(false)
+      return
+    }
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
@@ -83,9 +103,24 @@ export default function SignupPage() {
         }
       })
       if (error) throw error
-      toast.success('Account created! Please check your email.')
+
+      if (data.user) {
+         // Create profile explicitly
+         await (supabase as any).from('profiles').insert({
+            id: data.user.id,
+            email: data.user.email,
+            full_name: formData.fullName,
+            company: formData.companyName,
+            industry: formData.industry,
+            mobile: formData.phone,
+            onboarding_completed: false
+         })
+      }
+
+      toast.success('Account created! Let us set up your workspace.')
       router.push('/onboarding')
     } catch (err: any) {
+      setServerError(err.message)
       toast.error(err.message)
       setLoading(false)
     }
@@ -138,7 +173,12 @@ export default function SignupPage() {
             </div>
           </div>
 
-          <form onSubmit={step === 1 ? (e) => { e.preventDefault(); setStep(2) } : handleSignup} className="space-y-8">
+            <form onSubmit={step === 1 ? (e) => { e.preventDefault(); setStep(2) } : handleSignup} className="space-y-8">
+              {serverError && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl text-xs font-bold text-center">
+                  {serverError}
+                </div>
+              )}
             <AnimatePresence mode="wait">
               {step === 1 ? (
                 <motion.div key="s1" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 30 }} className="space-y-8">
@@ -186,8 +226,9 @@ export default function SignupPage() {
                     <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-1">Mobile Number</label>
                     <div className="relative group">
                       <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-700 group-focus-within:text-[#00FFD1] transition-colors" />
-                      <input type="tel" required placeholder="+91 98765 43210" className="w-full h-14 bg-white/[0.02] border border-white/10 rounded-2xl pl-14 text-white text-sm focus:border-[#00FFD1] outline-none" onChange={e => setFormData({...formData, phone: e.target.value})} />
+                      <input type="tel" required placeholder="+91 98765 43210" className={`w-full h-14 bg-white/[0.02] border ${errors.phone ? 'border-red-500 focus:border-red-500' : 'border-white/10 focus:border-[#00FFD1]'} rounded-2xl pl-14 text-white text-sm outline-none`} onChange={e => setFormData({...formData, phone: e.target.value})} />
                     </div>
+                    {errors.phone && <p className="text-[10px] text-red-400 font-bold px-1">{errors.phone}</p>}
                   </div>
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-1">Password</label>
@@ -195,6 +236,14 @@ export default function SignupPage() {
                       <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-700 group-focus-within:text-[#00FFD1] transition-colors" />
                       <input type="password" required placeholder="••••••••" className="w-full h-14 bg-white/[0.02] border border-white/10 rounded-2xl pl-14 text-white text-sm focus:border-[#00FFD1] outline-none" onChange={e => setFormData({...formData, password: e.target.value})} />
                     </div>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-1">Confirm Password</label>
+                    <div className="relative group">
+                      <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-700 group-focus-within:text-[#00FFD1] transition-colors" />
+                      <input type="password" required placeholder="••••••••" className={`w-full h-14 bg-white/[0.02] border ${errors.confirmPassword ? 'border-red-500 focus:border-red-500' : 'border-white/10 focus:border-[#00FFD1]'} rounded-2xl pl-14 text-white text-sm outline-none`} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} />
+                    </div>
+                    {errors.confirmPassword && <p className="text-[10px] text-red-400 font-bold px-1">{errors.confirmPassword}</p>}
                   </div>
                 </motion.div>
               )}

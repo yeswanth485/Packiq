@@ -8,15 +8,18 @@ import {
   Link as LinkIcon, Palette, AlertTriangle, 
   Mail, Phone, Globe, Trash2, LogOut, 
   ChevronRight, CheckCircle2, ShieldCheck,
-  Smartphone as PhoneIcon, Plus, Info, X, Upload
+  Smartphone as PhoneIcon, Plus, Info, X, Upload, Box, CreditCard, Download
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
+import { generateCSVTemplate } from '@/lib/fileParser'
 
 // --- CATEGORIES ---
 const CATEGORIES = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'company', label: 'Company', icon: Building },
+  { id: 'catalog', label: 'Box Catalog', icon: Box },
+  { id: 'billing', label: 'Billing & Plan', icon: CreditCard },
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'integrations', label: 'Integrations', icon: LinkIcon },
@@ -78,6 +81,8 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
+  const [boxCatalog, setBoxCatalog] = useState<any[]>([])
+  const [userId, setUserId] = useState<string | null>(null)
 
   const [formData, setFormData] = useState<any>({
     full_name: 'John Doe',
@@ -95,28 +100,58 @@ export default function SettingsPage() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        setUserId(user.id)
         const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
         const profile = data as any
         setFormData((prev: any) => ({
           ...prev,
           full_name: profile?.full_name || user.user_metadata?.full_name || 'Admin',
           email: user.email || 'admin@example.com',
-          company_name: profile?.company || 'Enterprise'
+          company_name: profile?.company || 'Enterprise',
+          phone: profile?.mobile || '+1 (555) 000-0000',
+          industry: profile?.industry || 'Logistics',
+          plan: profile?.plan || 'Starter'
         }))
+
+        // Load box catalog
+        const { data: boxes } = await supabase.from('box_catalog').select('*').eq('user_id', user.id).order('created_at')
+        if (boxes) setBoxCatalog(boxes)
       }
       setLoading(false)
     }
     getUser()
   }, [])
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaving(true)
-    setTimeout(() => {
-      setSaving(false)
-      setSaved(true)
-      setIsDirty(false)
-      setTimeout(() => setSaved(false), 2000)
-    }, 1000)
+    if (userId) {
+      const supabase = createClient()
+      const { error } = await (supabase as any).from('profiles').update({
+        full_name: formData.full_name,
+        company: formData.company_name,
+        mobile: formData.phone,
+        industry: formData.industry,
+        notification_prefs: formData.notifications,
+        plan: formData.plan
+      }).eq('id', userId)
+
+      if (error) {
+        toast.error('Failed to save profile: ' + error.message)
+      } else {
+        toast.success('Profile updated!')
+        setIsDirty(false)
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2000)
+      }
+    }
+    setSaving(false)
+  }
+
+  const handleBoxUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Basic CSV reading for box catalog (placeholder for complete file parser)
+    const file = e.target.files?.[0]
+    if (!file) return
+    toast.success('Box catalog processing not fully implemented in frontend yet.')
   }
 
   const updateForm = (key: string, value: any) => {
@@ -319,6 +354,120 @@ export default function SettingsPage() {
                   <div className="flex justify-end pt-4">
                      <SaveButton saving={saving} saved={saved} onClick={handleSave} />
                   </div>
+                </div>
+              )}
+
+              {/* Box Catalog Panel */}
+              {activeTab === 'catalog' && (
+                <div className="space-y-8">
+                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                      <div className="flex items-center gap-4">
+                         <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                            <Box className="w-8 h-8" />
+                         </div>
+                         <div>
+                            <h3 className="text-xl font-bold text-white mb-1">Box Catalog</h3>
+                            <p className="text-xs text-gray-500">Manage standard sizes for the optimization engine.</p>
+                         </div>
+                      </div>
+                      <div className="flex gap-3">
+                         <button onClick={() => generateCSVTemplate()} className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold transition-all border border-white/10">
+                            <Download className="w-4 h-4" /> Template
+                         </button>
+                         <label className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg cursor-pointer">
+                            <Upload className="w-4 h-4" /> Upload CSV
+                            <input type="file" accept=".csv" className="hidden" onChange={handleBoxUpload} />
+                         </label>
+                      </div>
+                   </div>
+
+                   <div className="bg-[#0A0A0F] border border-white/5 rounded-2xl overflow-hidden">
+                      <table className="w-full text-left text-sm text-gray-400">
+                         <thead className="text-[10px] uppercase tracking-widest bg-white/[0.02] border-b border-white/5">
+                            <tr>
+                               <th className="px-6 py-4 text-white">Box Name / SKU</th>
+                               <th className="px-6 py-4 text-white">Dimensions (cm)</th>
+                               <th className="px-6 py-4 text-white">Max Wt.</th>
+                               <th className="px-6 py-4 text-white">Cost</th>
+                               <th className="px-6 py-4 text-right">Actions</th>
+                            </tr>
+                         </thead>
+                         <tbody className="divide-y divide-white/5">
+                            {boxCatalog.length === 0 ? (
+                               <tr>
+                                  <td colSpan={5} className="px-6 py-12 text-center">
+                                     <p className="text-gray-500 mb-4">No boxes found. Start by uploading your catalog.</p>
+                                     <button className="text-[#00FFD1] hover:underline text-xs font-bold uppercase tracking-widest">Add Default Industry Boxes</button>
+                                  </td>
+                               </tr>
+                            ) : (
+                               boxCatalog.map((box, i) => (
+                                 <tr key={i} className="hover:bg-white/[0.02]">
+                                    <td className="px-6 py-4 font-medium text-gray-200">
+                                       {box.name}<br/>
+                                       <span className="text-xs text-gray-500">{box.sku || 'N/A'}</span>
+                                    </td>
+                                    <td className="px-6 py-4">{box.length_cm} x {box.width_cm} x {box.height_cm}</td>
+                                    <td className="px-6 py-4">{box.max_weight_kg || box.weight_limit_kg} kg</td>
+                                    <td className="px-6 py-4 text-green-400">${box.cost_usd || box.cost}</td>
+                                    <td className="px-6 py-4 text-right">
+                                       <button className="text-gray-500 hover:text-red-400 transition-colors"><Trash2 className="w-4 h-4 inline" /></button>
+                                    </td>
+                                 </tr>
+                               ))
+                            )}
+                         </tbody>
+                      </table>
+                   </div>
+                </div>
+              )}
+
+              {/* Billing Panel */}
+              {activeTab === 'billing' && (
+                <div className="space-y-8">
+                   <h3 className="text-xl font-bold text-white mb-6">Billing & Plan</h3>
+                   
+                   <div className="grid md:grid-cols-2 gap-6">
+                      <div className="p-8 bg-gradient-to-br from-indigo-900/40 to-[#0A0A0F] border border-indigo-500/20 rounded-3xl relative overflow-hidden">
+                         <div className="absolute top-0 right-0 p-6 opacity-10">
+                            <CreditCard className="w-32 h-32" />
+                         </div>
+                         <h4 className="text-sm font-bold text-indigo-400 mb-1 uppercase tracking-widest">Current Plan</h4>
+                         <p className="text-4xl font-black text-white mb-6">{formData.plan}</p>
+                         <ul className="space-y-3 mb-8 text-sm text-gray-400">
+                            <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-indigo-400" /> Up to 50,000 optimizations/mo</li>
+                            <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-indigo-400" /> API Access</li>
+                            <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-indigo-400" /> Standard Support</li>
+                         </ul>
+                         <button className="bg-white text-[#0A0A0F] hover:bg-gray-200 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg">
+                            Upgrade to Enterprise
+                         </button>
+                      </div>
+
+                      <div className="space-y-6">
+                         <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl">
+                            <h4 className="text-sm font-bold text-white mb-4">Payment Method</h4>
+                            <div className="flex items-center gap-4 p-4 bg-black/40 rounded-2xl border border-white/5">
+                               <div className="w-12 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold italic text-xs">VISA</div>
+                               <div>
+                                  <p className="text-sm font-bold text-white">•••• •••• •••• 4242</p>
+                                  <p className="text-xs text-gray-500">Expires 12/28</p>
+                               </div>
+                               <button className="ml-auto text-xs text-indigo-400 hover:text-white transition-colors">Edit</button>
+                            </div>
+                         </div>
+                         <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl">
+                            <h4 className="text-sm font-bold text-white mb-4">Optimization Usage</h4>
+                            <div className="flex justify-between text-xs text-gray-400 mb-2">
+                               <span>12,450 / 50,000</span>
+                               <span>25%</span>
+                            </div>
+                            <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
+                               <div className="h-full bg-indigo-500 w-[25%]" />
+                            </div>
+                         </div>
+                      </div>
+                   </div>
                 </div>
               )}
 

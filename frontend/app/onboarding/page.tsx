@@ -104,7 +104,7 @@ export default function OnboardingWizard() {
   }
 
   const handleNext = () => {
-    if (step < 4) setStep(step + 1)
+    if (step < 5) setStep(step + 1)
   }
 
   const handleBack = () => {
@@ -228,12 +228,12 @@ export default function OnboardingWizard() {
           <motion.div 
             className="absolute top-4 left-[10%] h-[2px] bg-blue-500 -z-10 origin-left"
             initial={{ width: '0%' }}
-            animate={{ width: `${((step - 1) / 3) * 80}%` }}
+            animate={{ width: `${((step - 1) / 4) * 80}%` }}
             transition={{ duration: 0.4, ease: 'easeInOut' }}
           />
           
           <div className="flex justify-between">
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="flex flex-col items-center">
                 <div 
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
@@ -250,7 +250,8 @@ export default function OnboardingWizard() {
                   {i === 1 && 'Company'}
                   {i === 2 && 'Scale'}
                   {i === 3 && 'Preferences'}
-                  {i === 4 && 'Review'}
+                  {i === 4 && 'Catalog'}
+                  {i === 5 && 'Review'}
                 </span>
               </div>
             ))}
@@ -550,8 +551,37 @@ export default function OnboardingWizard() {
                 </div>
               )}
 
-              {/* STEP 4: Review & Launch */}
+              {/* STEP 4: Box Catalog Setup */}
               {step === 4 && (
+                <div className="space-y-6 flex flex-col items-center text-center pt-8">
+                   <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-4 border border-blue-500/20">
+                     <Box className="w-8 h-8 text-blue-400" />
+                   </div>
+                   <h3 className="text-xl font-bold text-white">Setup Your Box Catalog</h3>
+                   <p className="text-sm text-zinc-400 max-w-sm">PackIQ optimizes shipments against your specific box sizes. You can use our default industry catalog or set it up later in Settings.</p>
+                   
+                   <div className="w-full max-w-md space-y-4 mt-8">
+                      <button onClick={() => setStep(5)} className="w-full bg-blue-600/20 border border-blue-500/50 hover:bg-blue-600/30 text-blue-300 p-4 rounded-xl flex items-center justify-between transition-all group">
+                         <div className="text-left">
+                            <h4 className="font-bold text-sm">Start with Default Catalog</h4>
+                            <p className="text-xs text-blue-400/70 mt-1">15 standard industry box sizes</p>
+                         </div>
+                         <CheckCircle2 className="w-5 h-5 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                      
+                      <button onClick={() => setStep(5)} className="w-full bg-zinc-900/50 border border-zinc-700/50 hover:bg-zinc-800/80 text-zinc-300 p-4 rounded-xl flex items-center justify-between transition-all group">
+                         <div className="text-left">
+                            <h4 className="font-bold text-sm">I'll configure it later</h4>
+                            <p className="text-xs text-zinc-500 mt-1">Upload CSV in Settings</p>
+                         </div>
+                         <ChevronRight className="w-5 h-5 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
+                      </button>
+                   </div>
+                </div>
+              )}
+
+              {/* STEP 5: Review & Launch */}
+              {step === 5 && (
                 <div className="space-y-6">
                   <div className="bg-black/40 border border-white/5 rounded-xl p-5 space-y-4 text-sm backdrop-blur-sm">
                     <h3 className="font-semibold text-white border-b border-white/10 pb-2 flex justify-between">
@@ -604,7 +634,7 @@ export default function OnboardingWizard() {
             Back
           </button>
           
-          {step < 4 ? (
+          {step < 5 ? (
             <button
               onClick={handleNext}
               className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-lg font-medium shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] flex-1 sm:flex-none"
