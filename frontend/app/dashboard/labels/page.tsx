@@ -107,6 +107,40 @@ const mapSingleToOptimizationResult = (opt: any): OptimizationResult => {
   }
 }
 
+function getShippingAddress(productId: string) {
+  let hash = 0
+  const cleanId = productId || 'default'
+  for (let i = 0; i < cleanId.length; i++) {
+    hash = cleanId.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const addresses = [
+    { name: "John Miller", line1: "742 Evergreen Terrace", line2: "Springfield, OR 97477" },
+    { name: "Sarah Jenkins", line1: "893 Maple Avenue", line2: "Austin, TX 78701" },
+    { name: "David Chen", line1: "1204 Pine Crescent", line2: "Seattle, WA 98101" },
+    { name: "Robert Taylor", line1: "455 Oak Boulevard", line2: "Chicago, IL 60611" },
+    { name: "Emily Watson", line1: "210 River Road", line2: "Miami, FL 33101" },
+    { name: "Michael Vance", line1: "3305 Hilltop Drive", line2: "Denver, CO 80202" },
+  ]
+  const index = Math.abs(hash) % addresses.length
+  return addresses[index]
+}
+
+function getTrackingNumber(productId: string, carrierName: string) {
+  let hash = 0
+  const cleanId = productId || 'default'
+  for (let i = 0; i < cleanId.length; i++) {
+    hash = cleanId.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const prefix = carrierName.toLowerCase().includes('fedex') ? '4812' : '1Z'
+  const suffix = Math.abs(hash).toString().substring(0, 10).padEnd(10, '7')
+  
+  if (prefix === '1Z') {
+    return `1Z 999 AA1 01 ${suffix.substring(0, 4)} ${suffix.substring(4, 8)}`
+  } else {
+    return `4812 ${suffix.substring(0, 4)} ${suffix.substring(4, 8)}`
+  }
+}
+
 export default function LabelsPage() {
   const { results: storeOrders } = useOptimizationStore()
   const [dbOrders, setDbOrders] = useState<OptimizationResult[]>([])
@@ -167,6 +201,18 @@ export default function LabelsPage() {
       o.product_id?.toLowerCase().includes(searchQuery.toLowerCase())
     )
   }, [readyToShip, searchQuery])
+
+  useEffect(() => {
+    if (filtered.length > 0) {
+      const exists = filtered.some(o => o.product_id === selectedLabel?.product_id)
+      if (!exists) {
+        const first = filtered[0]
+        setSelectedLabel({ ...first, carrier: getCarrier(first.product_id) })
+      }
+    } else {
+      setSelectedLabel(null)
+    }
+  }, [filtered, selectedLabel])
 
   const carriers = [
     { name: 'FedEx Express', logo: 'F', color: 'bg-[#4D148C]' },
@@ -271,14 +317,14 @@ export default function LabelsPage() {
                     <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">Label Generated</span>
                   </div>
                   <p className="text-xs font-mono text-gray-500 flex items-center gap-2">
-                    <Hash className="w-3 h-3" /> TRK-{Math.random().toString(36).substr(2, 9).toUpperCase()}
+                    <Hash className="w-3 h-3" /> {getTrackingNumber(selectedLabel.product_id, selectedLabel.carrier.name)}
                   </p>
                 </div>
 
                 <div className="flex-1 flex flex-col xl:flex-row gap-8 overflow-y-auto no-scrollbar">
                   
                   {/* The Physical Label Representation */}
-                  <div className="w-full xl:w-[400px] shrink-0 bg-white rounded-xl shadow-2xl p-6 flex flex-col justify-between text-black relative">
+                  <div className="w-full xl:w-[400px] h-[550px] min-h-[550px] shrink-0 bg-white rounded-xl shadow-2xl p-6 flex flex-col justify-between text-black relative">
                     <div className="absolute top-0 right-0 w-16 h-16 bg-gray-100 rounded-bl-[40px]" />
                     
                     <div>
@@ -302,7 +348,11 @@ export default function LabelsPage() {
                         </div>
                         <div className="border-l-2 border-black pl-4">
                           <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">To</p>
-                          <p className="text-lg font-black uppercase leading-tight mt-0.5">Jane Doe<br/>456 Receiving Dock<br/>New York, NY 10001</p>
+                          <p className="text-lg font-black uppercase leading-tight mt-0.5">
+                            {getShippingAddress(selectedLabel.product_id).name}<br/>
+                            {getShippingAddress(selectedLabel.product_id).line1}<br/>
+                            {getShippingAddress(selectedLabel.product_id).line2}
+                          </p>
                         </div>
                       </div>
 
@@ -310,7 +360,9 @@ export default function LabelsPage() {
                       <div className="grid grid-cols-2 gap-4 border-y-2 border-black py-4 mb-6">
                         <div>
                           <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Weight</p>
-                          <p className="text-sm font-black">2.5 LBS</p>
+                          <p className="text-sm font-black">
+                            {((selectedLabel.product_weight || 0.5) * 2.2).toFixed(1)} LBS
+                          </p>
                         </div>
                         <div>
                           <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Dimensions</p>
@@ -335,7 +387,9 @@ export default function LabelsPage() {
                       {/* Fake Barcode */}
                       <div className="flex-1 ml-6 h-20 flex flex-col justify-end">
                         <div className="w-full h-12 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IndoaXRlIi8+PHBhdGggZD0iTTEwLDBWMTAwaDVWMHptMTAsMFYxMDBoMlYwem01LDBWMTAwaDhWMHptMTUsMFYxMDBoM1Ywem01LDBWMTAwaDVWMHoiIGZpbGw9ImJsYWNrIi8+PC9zdmc+')] bg-repeat-x opacity-90" />
-                        <p className="text-[10px] font-mono text-center font-bold mt-1 tracking-[0.2em]">1Z 999 AA1 01 2345 6784</p>
+                        <p className="text-[10px] font-mono text-center font-bold mt-1 tracking-[0.1em] truncate">
+                          {getTrackingNumber(selectedLabel.product_id, selectedLabel.carrier.name)}
+                        </p>
                       </div>
                     </div>
                   </div>

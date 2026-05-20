@@ -43,6 +43,8 @@ export default function OptimizationPage() {
   const [processingStep, setProcessingStep] = useState(0)
   const [totalItems, setTotalItems] = useState(0)
   const [parseResult, setParseResult] = useState<ParseResult | null>(null)
+  const [quotaExceededError, setQuotaExceededError] = useState<string | null>(null)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   const steps = [
     "Validating product dimensions...",
@@ -102,6 +104,12 @@ export default function OptimizationPage() {
 
       const data = await res.json()
 
+      if (res.status === 403 || data.error === 'QUOTA_EXCEEDED') {
+        setQuotaExceededError(data.message || 'Subscription limit exceeded. Please upgrade.')
+        setShowUpgradeModal(true)
+        throw new Error(data.message || 'Subscription limit exceeded')
+      }
+
       if (!res.ok || data.error) throw new Error(data.error || 'Failed to optimize')
 
       if (data.results && data.results[0] && data.results[0].status !== 'error') {
@@ -158,8 +166,15 @@ export default function OptimizationPage() {
         })
       })
 
-      if (!res.ok) throw new Error(`Optimization failed (HTTP ${res.status})`)
       const resData = await res.json()
+
+      if (res.status === 403 || resData.error === 'QUOTA_EXCEEDED') {
+        setQuotaExceededError(resData.message || 'Subscription limit exceeded. Please upgrade.')
+        setShowUpgradeModal(true)
+        throw new Error(resData.message || 'Subscription limit exceeded')
+      }
+
+      if (!res.ok) throw new Error(`Optimization failed (HTTP ${res.status})`)
 
       if (resData.results) {
         const processedResults = resData.results.map((r: any) => ({
@@ -643,6 +658,56 @@ export default function OptimizationPage() {
                 View Detailed Results
               </button>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Subscription Quota Exceeded Modal */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] bg-[#0A0A0F]/95 backdrop-blur-2xl flex items-center justify-center p-6"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="max-w-md w-full glass p-8 rounded-[40px] border border-white/10 text-center relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                <Zap className="w-32 h-32 text-red-500" />
+              </div>
+
+              <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertTriangle className="w-8 h-8 text-red-500" />
+              </div>
+
+              <h3 className="text-2xl font-bold text-white uppercase tracking-tighter mb-3">Limit Exceeded</h3>
+              <p className="text-sm text-gray-400 leading-relaxed mb-8">
+                {quotaExceededError || "You have reached the optimization limit for your current subscription plan. Upgrade now to unlock higher volumes, priority processing, and advanced XGBoost model recommendations."}
+              </p>
+
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={() => {
+                    setShowUpgradeModal(false)
+                    router.push('/dashboard/subscription')
+                  }}
+                  className="w-full bg-[#00FFD1] text-[#0A0A0F] py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(0,255,209,0.3)]"
+                >
+                  Upgrade Subscription
+                </button>
+                <button 
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="w-full bg-white/5 hover:bg-white/10 text-gray-400 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

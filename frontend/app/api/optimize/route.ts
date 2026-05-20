@@ -295,6 +295,37 @@ export async function POST(req: Request) {
     const rl = checkRateLimit(user.id)
     if (!rl.allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
 
+    // 1. Fetch user profile plan details
+    const { data: profile } = await (supabase as any)
+      .from('profiles')
+      .select('plan')
+      .eq('id', user.id)
+      .single()
+
+    const plan = (profile as any)?.plan || 'free'
+    
+    // Quota Limit Rules: Free (20), Starter (100), Growth (500), Enterprise (Unlimited)
+    let limit = 20
+    if (plan === 'starter') limit = 100
+    if (plan === 'growth') limit = 500
+    if (plan === 'enterprise') limit = 9999999
+    
+    // 2. Query total optimizations count in the database
+    const { count } = await supabase
+      .from('optimizations')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      
+    const currentUsage = count || 0
+    if (currentUsage >= limit) {
+      return NextResponse.json({
+        error: 'QUOTA_EXCEEDED',
+        message: `Subscription limit exceeded. You have used ${currentUsage} of your ${limit} allotted optimizations under the ${plan.toUpperCase()} plan. Please upgrade your plan in the Subscriptions tab to continue optimizing.`,
+        limit,
+        usage: currentUsage
+      }, { status: 403 })
+    }
+
     const body = await req.json().catch(() => null)
     if (!body || !Array.isArray(body.products)) {
       return NextResponse.json({ error: 'Invalid request: products array required' }, { status: 400 })

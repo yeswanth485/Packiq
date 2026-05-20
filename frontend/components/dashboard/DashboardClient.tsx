@@ -22,16 +22,44 @@ export default function DashboardClient() {
 
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [lastAnalysis, setLastAnalysis] = useState<any>(null)
-  const { dbStats, profileData, isLoading } = useDashboardData()
+  const { dbStats, profileData, rawOptimizations, isLoading } = useDashboardData()
+
+  const mergedResults = useMemo(() => {
+    const list = [...optResults] as any[]
+    const ids = new Set(list.map(r => r.product_id || (r as any).id))
+    rawOptimizations.forEach(o => {
+      const oid = (o as any).product_id || (o as any).id
+      if (!ids.has(oid)) {
+        list.push(o)
+      }
+    })
+    return list
+  }, [optResults, rawOptimizations])
 
   const stats = useMemo(() => {
-    const total = optResults.length
-    const successful = optResults.filter(i => i.status === 'success').length
+    const total = mergedResults.length
+    const successful = mergedResults.filter(i => i.status === 'success' || i.status === 'completed').length
+    const totalSavedCalc = mergedResults.reduce((acc, i) => acc + (i.savings || i.cost_savings_usd || 0), 0)
     const avgEfficiency = total > 0
-      ? optResults.reduce((acc, i) => acc + (i.void_reduction || 0), 0) / total
+      ? mergedResults.reduce((acc, i) => acc + (i.void_reduction || i.space_utilization || 0), 0) / total
       : 0
-    return { total, successful, totalSaved, avgEfficiency }
-  }, [optResults, totalSaved])
+    return { total, successful, totalSaved: totalSavedCalc, avgEfficiency }
+  }, [mergedResults])
+
+  const totalCarbonSaved = useMemo(() => {
+    return mergedResults.reduce((acc, i) => acc + (i.co2_savings_kg || (i.savings * 0.4) || 0), 0)
+  }, [mergedResults])
+
+  const totalDimWeightSaved = useMemo(() => {
+    return mergedResults.reduce((acc, i) => acc + (i.dim_weight_reduction || (i.savings * 0.2) || 0), 0)
+  }, [mergedResults])
+  
+  const totalSustainability = useMemo(() => {
+    if (mergedResults.length === 0) return 0
+    const count = mergedResults.filter(i => i.status === 'success' || i.status === 'completed').length
+    if (count === 0) return 0
+    return Math.round(mergedResults.reduce((acc, i) => acc + (i.sustainability_score || 90), 0) / count)
+  }, [mergedResults])
 
   // Merge DB stats with session stats (session wins if available)
   const displaySavings = stats.totalSaved > 0 ? stats.totalSaved : (dbStats?.totalSavingsDb ?? 0)
@@ -41,27 +69,30 @@ export default function DashboardClient() {
     { label: 'Units Optimized',   value: displayRuns,                suffix: '',  icon: Package,    color: '#00FFD1' },
     { label: 'Total Saved ($)',   value: displaySavings,             suffix: '',  icon: DollarSign, color: '#22c55e', decimals: 2 },
     { label: 'Avg Efficiency',    value: dbStats?.avgEfficiency ?? stats.avgEfficiency, suffix: '%', icon: TrendingUp,  color: '#4361EE', decimals: 1 },
-    { label: 'Sustainability',    value: avgSustainabilityScore,     suffix: '',  icon: Leaf,       color: '#10b981' },
-    { label: 'DIM Weight Saved',  value: dimWeightSaved,             suffix: 'kg',icon: Weight,     color: '#F59E0B', decimals: 2 },
-    { label: 'Carbon Saved',      value: carbonSavedKg,             suffix: 'kg CO₂', icon: Zap,  color: '#8b5cf6', decimals: 3 },
+    { label: 'Sustainability',    value: totalSustainability || avgSustainabilityScore, suffix: '',  icon: Leaf,       color: '#10b981' },
+    { label: 'DIM Weight Saved',  value: totalDimWeightSaved || dimWeightSaved,             suffix: 'kg',icon: Weight,     color: '#F59E0B', decimals: 2 },
+    { label: 'Carbon Saved',      value: totalCarbonSaved || carbonSavedKg,             suffix: 'kg CO₂', icon: Zap,  color: '#8b5cf6', decimals: 3 },
   ]
 
   const chartData = useMemo(() => {
-    if (optResults.length === 0) return []
-    return optResults.slice(-20).map(r => ({
+    if (mergedResults.length === 0) return []
+    return mergedResults.slice(-20).map(r => ({
       name: (r.product_name || 'Item').substring(0, 8),
-      savings: Number((r.savings || 0).toFixed(2)),
+      savings: Number((r.savings || r.cost_savings_usd || 0).toFixed(2)),
     }))
-  }, [optResults])
+  }, [mergedResults])
 
   const wasteChartData = useMemo(() => {
-    if (optResults.length === 0) return []
-    return optResults.slice(-15).map(r => ({
-      name: (r.product_name || 'Item').substring(0, 8),
-      voidReduction: r.void_reduction || 0,
-      fill: (r.void_reduction || 0) > 30 ? '#22c55e' : (r.void_reduction || 0) > 15 ? '#F59E0B' : '#FF4444',
-    }))
-  }, [optResults])
+    if (mergedResults.length === 0) return []
+    return mergedResults.slice(-15).map(r => {
+      const vRed = r.void_reduction || (100 - (r.space_utilization || 80)) || 0
+      return {
+        name: (r.product_name || 'Item').substring(0, 8),
+        voidReduction: vRed,
+        fill: vRed > 30 ? '#22c55e' : vRed > 15 ? '#F59E0B' : '#FF4444',
+      }
+    })
+  }, [mergedResults])
 
   const runAIAnalysis = async () => {
     setIsAnalyzing(true)
@@ -71,7 +102,7 @@ export default function DashboardClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           line_id: 'optimization-history',
-          data_sample: optResults.slice(0, 10),
+          data_sample: mergedResults.slice(0, 10),
         }),
       })
       const data = await res.json()
@@ -174,9 +205,9 @@ export default function DashboardClient() {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   <AnimatePresence initial={false}>
-                    {optResults.slice(-50).reverse().map((item, idx) => (
+                    {mergedResults.slice(-50).reverse().map((item, idx) => (
                       <motion.tr
-                        key={`${item.product_id}-${idx}`}
+                        key={`${item.product_id || item.id}-${idx}`}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         className="hover:bg-white/[0.02] transition-colors"
@@ -184,13 +215,13 @@ export default function DashboardClient() {
                         <td className="px-6 py-4 font-mono font-bold text-gray-300">{item.product_name || 'Unknown'}</td>
                         <td className="px-6 py-4 text-gray-500 text-xs">{item.original_box || '—'}</td>
                         <td className="px-6 py-4 font-mono text-[#00FFD1] text-xs">{item.optimized_box || 'No Change'}</td>
-                        <td className="px-6 py-4 text-green-400 font-bold">+${(item.savings || 0).toFixed(2)}</td>
+                        <td className="px-6 py-4 text-green-400 font-bold">+${(item.savings || item.cost_savings_usd || 0).toFixed(2)}</td>
                       </motion.tr>
                     ))}
                   </AnimatePresence>
                 </tbody>
               </table>
-              {optResults.length === 0 && (
+              {mergedResults.length === 0 && (
                 <div className="p-20 text-center text-gray-600 italic">No optimizations yet. Upload a CSV or run manual optimization.</div>
               )}
             </div>

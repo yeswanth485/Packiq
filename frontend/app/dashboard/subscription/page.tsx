@@ -9,6 +9,7 @@ import {
   ChevronRight, ArrowUpRight, HelpCircle, CheckCircle2
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useDashboardData } from '@/lib/hooks/useDashboardData'
 
 // --- MOCK DATA ---
 
@@ -87,13 +88,27 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function SubscriptionPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
-  const [usage, setUsage] = useState(0)
+  const { dbStats, profileData, isLoading } = useDashboardData()
 
-  useEffect(() => {
-    // Animate usage bar on load
-    const timer = setTimeout(() => setUsage(82), 500)
-    return () => clearTimeout(timer)
-  }, [])
+  const activePlan = profileData?.plan || 'free'
+  const totalRuns = dbStats?.totalRuns || 0
+
+  const planLimits: Record<string, number> = {
+    free: 20,
+    starter: 100,
+    growth: 500,
+    enterprise: 9999999
+  }
+  const planNames: Record<string, string> = {
+    free: 'Free Plan',
+    starter: 'Starter Plan',
+    growth: 'Growth Plan',
+    enterprise: 'Enterprise Plan'
+  }
+
+  const limit = planLimits[activePlan] || 20
+  const planDisplayName = planNames[activePlan] || 'Free Plan'
+  const usagePercentage = limit === 9999999 ? 0 : Math.min(100, Math.round((totalRuns / limit) * 100))
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-10 pb-24 px-4 md:px-0">
@@ -119,7 +134,7 @@ export default function SubscriptionPage() {
           <div className="space-y-4 flex-1">
             <div className="flex items-center gap-3">
               <span className="bg-[#4361EE]/20 text-[#4361EE] px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border border-[#4361EE]/30 shadow-[0_0_15px_rgba(67,97,238,0.2)]">
-                Growth Plan
+                {planDisplayName}
               </span>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -134,7 +149,7 @@ export default function SubscriptionPage() {
                </div>
                <div>
                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1">Billing Cycle</p>
-                 <p className="text-sm font-bold text-white">Monthly</p>
+                 <p className="text-sm font-bold text-white">{billingCycle === 'annual' ? 'Annual' : 'Monthly'}</p>
                </div>
                <div>
                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1">Seats Used</p>
@@ -145,18 +160,22 @@ export default function SubscriptionPage() {
 
           <div className="w-full lg:w-1/3 space-y-3">
              <div className="flex justify-between items-end">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Monthly Shipment Usage</p>
-                <p className="text-xs font-black text-white">410 / 500</p>
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Optimization Usage</p>
+                <p className="text-xs font-black text-white">
+                  {totalRuns} / {limit === 9999999 ? 'Unlimited' : limit}
+                </p>
              </div>
              <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }}
-                  animate={{ width: `${usage}%` }}
+                  animate={{ width: `${usagePercentage}%` }}
                   transition={{ duration: 1.5, ease: 'easeOut' }}
                   className="h-full bg-gradient-to-r from-[#4361EE] to-[#4895EF] rounded-full shadow-[0_0_10px_rgba(67,97,238,0.5)]"
                 />
              </div>
-             <p className="text-[10px] text-gray-600 italic">82% of your monthly quota used. Resets in 9 days.</p>
+             <p className="text-[10px] text-gray-600 italic">
+               {limit === 9999999 ? 'Unlimited' : `${usagePercentage}%`} of your plan quota used. Resets in 9 days.
+             </p>
           </div>
 
           <div className="flex gap-3 w-full lg:w-auto">

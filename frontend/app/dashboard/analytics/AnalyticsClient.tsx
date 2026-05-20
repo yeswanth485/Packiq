@@ -19,12 +19,21 @@ export default function AnalyticsClient({ allOptimizations }: { allOptimizations
   const { results: optResults } = useOptimizationStore()
 
   const optimizationsToUse = useMemo(() => {
-    if (allOptimizations && allOptimizations.length > 0) {
-      return allOptimizations
-    }
+    // Start with database optimizations
+    const dbList = (allOptimizations || []).map(o => ({
+      id: o.product_snapshot?.product_id || o.product_id || o.id,
+      created_at: o.created_at,
+      status: o.status,
+      recommended_box: o.recommended_box || 'N/A',
+      cost_savings_usd: o.cost_savings_usd || 0,
+      efficiency_score: o.efficiency_score || 0,
+      product_snapshot: o.product_snapshot || {},
+      ai_response: o.ai_response || {}
+    }))
 
-    // Map Zustand results to standard DB schema format for seamless fallback
-    return optResults.map((r, index) => ({
+    // Merge session optimizations
+    const dbIds = new Set(dbList.map(d => d.id))
+    const mappedSession = optResults.map((r, index) => ({
       id: r.product_id || `opt-${index}`,
       created_at: new Date().toISOString(),
       status: r.status === 'error' ? 'failed' : 'completed',
@@ -46,6 +55,14 @@ export default function AnalyticsClient({ allOptimizations }: { allOptimizations
         new_cost_usd: r.total_cost || 0
       }
     }))
+
+    mappedSession.forEach(s => {
+      if (!dbIds.has(s.id)) {
+        dbList.push(s)
+      }
+    })
+
+    return dbList
   }, [allOptimizations, optResults])
 
   const filteredData = useMemo(() => {

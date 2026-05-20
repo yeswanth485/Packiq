@@ -6,6 +6,7 @@ import { HowItWorksSection } from '@/components/landing/HowItWorksSection'
 import { MetricsShowcase } from '@/components/landing/MetricsShowcase'
 import { PricingSection } from '@/components/landing/PricingSection'
 import { FinalCTASection, Footer } from '@/components/landing/FinalCTASection'
+import { InteractiveSimulator } from '@/components/landing/InteractiveSimulator'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Menu, X, Boxes } from 'lucide-react'
@@ -138,6 +139,9 @@ export default function LandingPage() {
 
         {/* How It Works — 4 steps */}
         <HowItWorksSection />
+
+        {/* AI-Powered Interactive Simulator */}
+        <InteractiveSimulator />
 
         {/* Trusted Suppliers Section */}
         <section id="suppliers" className="py-40 px-6 bg-[#0A0A0F] relative overflow-hidden">

@@ -9,20 +9,34 @@ import {
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
 import { CountUpNumber } from '@/components/animations'
+import { useDashboardData } from '@/lib/hooks/useDashboardData'
 
 const ECO_COLORS = ['#10B981', '#059669', '#34D399', '#6EE7B7', '#A7F3D0']
 
 export default function SustainabilityPage() {
   const { results: optResults } = useOptimizationStore()
+  const { dbStats, rawOptimizations, isLoading } = useDashboardData()
   
   // Eco-Simulator States
   const [biodegradableTape, setBiodegradableTape] = useState(true)
   const [recycledMailers, setRecycledMailers] = useState(true)
   const [carbonOffsetCouriers, setCarbonOffsetCouriers] = useState(false)
 
+  const mergedResults = useMemo(() => {
+    const list = [...optResults] as any[]
+    const ids = new Set(list.map(r => r.product_id || (r as any).id))
+    rawOptimizations.forEach(o => {
+      const oid = (o as any).product_id || (o as any).id
+      if (!ids.has(oid)) {
+        list.push(o)
+      }
+    })
+    return list
+  }, [optResults, rawOptimizations])
+
   // Real data calculations
   const stats = useMemo(() => {
-    if (!optResults || optResults.length === 0) {
+    if (!mergedResults || mergedResults.length === 0) {
       return {
         totalVolumeSavedCm3: 845200,
         carbonReducedKg: 507.12,
@@ -39,9 +53,10 @@ export default function SustainabilityPage() {
     }
 
     // Accumulate total volume saved
-    const totalVolumeSaved = optResults.reduce((acc, o) => {
-      if (o.status === 'error' || !o.volume_saved_cm3) return acc
-      return acc + o.volume_saved_cm3
+    const totalVolumeSaved = mergedResults.reduce((acc, o) => {
+      if (o.status === 'error' || o.status === 'failed') return acc
+      const vSaved = o.volume_saved_cm3 || (o.savings ? o.savings * 3500 : 0) || 0
+      return acc + vSaved
     }, 0)
 
     // Baseline fallback if volume saved is 0 (to make UI always look premium)
@@ -51,7 +66,7 @@ export default function SustainabilityPage() {
     const cardboardM2 = activeVolume * 0.00018 // approx surface area based on volume
 
     // Calculate avg eco score
-    const completed = optResults.filter(o => o.status !== 'error')
+    const completed = mergedResults.filter(o => o.status !== 'error' && o.status !== 'failed')
     const avgScore = completed.length > 0
       ? completed.reduce((acc, o) => acc + (o.sustainability_score || 80), 0) / completed.length
       : 84
