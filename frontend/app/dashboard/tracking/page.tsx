@@ -17,7 +17,7 @@ export default function TrackingPage() {
   const [selectedShipment, setSelectedShipment] = useState<any | null>(null)
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-20">
+    <div className="max-w-[1200px] w-full mx-auto space-y-6 pb-20 px-4 md:px-0">
       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>

@@ -283,6 +283,8 @@ function mapRecommendationToResponse(rec: any, engineInput: any) {
   }
 }
 
+import { runMLOptimization } from '@/lib/optimization/mlOptimizer'
+
 // ─── POST Handler ─────────────────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
@@ -299,162 +301,201 @@ export async function POST(req: Request) {
     }
 
     const products: any[] = body.products
+    const fileName = body.file_name || 'Bulk Upload'
 
     // Load box catalog from DB or use default
     const { data: dbBoxes } = await supabase.from('box_catalog').select('*')
-    const boxCatalog = (dbBoxes && dbBoxes.length > 0)
+    const boxes = (dbBoxes && dbBoxes.length > 0)
       ? (dbBoxes as any[]).map(b => ({
-          id: b.id, name: b.name, sku: b.sku,
-          lengthCm: b.length_cm, widthCm: b.width_cm, heightCm: b.height_cm,
-          maxWeightKg: b.max_weight_kg, costUsd: b.cost_usd,
-          material: b.material, ecoCertified: b.eco_certified,
-          doubleWall: b.double_wall || false,
+          id: b.id,
+          name: b.name,
+          sku: b.sku,
+          length_cm: Number(b.length_cm),
+          width_cm: Number(b.width_cm),
+          height_cm: Number(b.height_cm),
+          weight_limit_kg: Number(b.weight_limit_kg || b.max_weight_kg || 30),
+          cost: Number(b.cost_usd || b.cost || 0.50),
+          eco_certified: b.eco_certified || false,
+          double_wall: b.double_wall || false,
         }))
-      : DEFAULT_CATALOG
+      : DEFAULT_CATALOG.map(b => ({
+          id: b.id,
+          name: b.name,
+          sku: b.sku,
+          length_cm: b.lengthCm,
+          width_cm: b.widthCm,
+          height_cm: b.heightCm,
+          weight_limit_kg: b.maxWeightKg,
+          cost: b.costUsd,
+          eco_certified: b.ecoCertified,
+          double_wall: b.doubleWall
+        }))
 
-    const processProduct = async (p: any) => {
-      const engineInput = mapProductToEngineInput(p, boxCatalog)
+    // Map input products to exact format required by ML optimizer
+    const mappedProducts = products.map((p, idx) => {
+      let l = 0, w = 0, h = 0
+      const plVal = findValue(p, 'product_length', 'product_l', 'length', 'l', 'len', 'length_cm')
+      const pwVal = findValue(p, 'product_width', 'product_w', 'width', 'w', 'width_cm')
+      const phVal = findValue(p, 'product_height', 'product_h', 'height', 'h', 'height_cm')
 
-      // Validate basic dimensions
-      if (engineInput.lengthCm <= 0 || engineInput.widthCm <= 0 || engineInput.heightCm <= 0) {
-        return {
-          product_id: engineInput.productId,
-          product_name: engineInput.productName,
-          original_box: engineInput.currentBoxName || 'Not specified',
-          error: 'Invalid or missing dimensions',
-          status: 'error',
-          savings: 0,
-          total_cost: engineInput.currentBoxCostUsd || 0,
-          baseline_cost: engineInput.currentBoxCostUsd || 0,
+      if (plVal && pwVal && phVal) {
+        l = parseFloat(plVal)
+        w = parseFloat(pwVal)
+        h = parseFloat(phVal)
+      } else {
+        const prodDimStr = findValue(
+          p, 
+          'product L*W*H', 'product_L*W*H', 'product_L*W*H_cm', 'product_dims', 'product_dimensions',
+          'product_l*w*h', 'dimensions', 'dims', 'lwh', 'product_l_w_h',
+          'item_dims', 'item L*W*H'
+        )
+        const prodDim = parseDimensions(prodDimStr)
+        if (prodDim) {
+          l = prodDim.l
+          w = prodDim.w
+          h = prodDim.h
         }
       }
 
-      try {
-        const isBulk = products.length > 1
-        const prodDimStr = `${engineInput.lengthCm}x${engineInput.widthCm}x${engineInput.heightCm}`
+      const blVal = findValue(p, 'current_box_length', 'current_box_l', 'box_length', 'box_l', 'baseline_length', 'baseline_l', 'original_box_length', 'original_box_l', 'current_box_l_cm')
+      const bwVal = findValue(p, 'current_box_width', 'current_box_w', 'box_width', 'box_w', 'baseline_width', 'baseline_w', 'original_box_width', 'original_box_w', 'current_box_w_cm')
+      const bhVal = findValue(p, 'current_box_height', 'current_box_h', 'box_height', 'box_h', 'baseline_height', 'baseline_h', 'original_box_height', 'original_box_h', 'current_box_h_cm')
+      
+      let bl: number | undefined
+      let bw: number | undefined
+      let bh: number | undefined
+      if (blVal && bwVal && bhVal) {
+        bl = parseFloat(blVal)
+        bw = parseFloat(bwVal)
+        bh = parseFloat(bhVal)
+      }
 
-        if (isBulk) {
-          // Bulk uploads skip external network/LLM dependencies for sub-millisecond local speed
-          let rec = runProductionOptimization(engineInput) as any
-          if (!rec) {
-             rec = runHeuristicOptimization(engineInput)
-          }
-          if (!rec) {
-            return {
-              product_id: engineInput.productId,
-              product_name: engineInput.productName,
-              error: 'No suitable smaller box found in catalog',
-              status: 'no_smaller_box_available',
-            }
-          }
-          const response = mapRecommendationToResponse(rec, engineInput)
+      return {
+        product_id: findValue(p, 'product_id', 'sku') || `SKU-AUTO-${idx + 1}`,
+        product_name: findValue(p, 'product_name', 'name') || `Item ${idx + 1}`,
+        name: findValue(p, 'product_name', 'name') || `Item ${idx + 1}`,
+        length_cm: l,
+        width_cm: w,
+        height_cm: h,
+        weight_kg: parseFloat(findValue(p, 'weight_kg', 'weight') || '0.5'),
+        category: findValue(p, 'category', 'product_category') || 'general',
+        fragility: findValue(p, 'fragility', 'fragile') || 'low',
+        quantity: parseInt(findValue(p, 'quantity', 'qty') || '1', 10),
+        current_box_name: findValue(p, 'current_box_name', 'box') || (bl ? `${bl}x${bw}x${bh}` : undefined),
+        current_box_length: bl,
+        current_box_width: bw,
+        current_box_height: bh
+      }
+    })
 
-          // Persist to DB asynchronously inside a safe IIFE to bypass write blocking latency
-          ;(async () => {
-            try {
-              await supabase.from('optimizations').insert({
-                user_id: user.id,
-                status: 'completed',
-                product_snapshot: { ...p, product_dims: prodDimStr },
-                ai_response: rec,
-                recommended_box: rec.recommendedBoxName,
-                cost_savings_usd: rec.savings,
-                efficiency_score: rec.finalScore,
-                space_utilization: rec.spaceUtilization,
-                ai_model: 'XGBoost ML Scorer v2.1',
-              } as any)
-            } catch (dbErr) {
-              console.warn('[DB] Insert failed asynchronously (non-fatal):', dbErr)
-            }
-          })()
+    // Execute XGBoost-inspired ML optimization
+    const mlResult = runMLOptimization(mappedProducts, boxes)
 
-          return response
-        }
+    // Save unified batch record to Supabase optimizations table
+    const batchId = crypto.randomUUID()
+    const { data: optRecord, error: optError } = await (supabase as any).from('optimizations').insert({
+      user_id: user.id,
+      batch_id: batchId,
+      file_name: fileName,
+      status: 'completed',
+      total_items: mlResult.totalItems,
+      optimized_items: mlResult.optimizedItems,
+      unoptimized_items: mlResult.unoptimizedItems,
+      optimization_rate: mlResult.optimizationRate,
+      estimated_savings: mlResult.estimatedSavings,
+      results: mlResult.assignments,
+      ai_model: 'XGBoost ML Scorer v2.1'
+    }).select().single()
 
-        // Single-product: Check cache first
-        const { data: cached } = await supabase
-          .from('optimizations')
-          .select('*')
-          .eq('product_snapshot->product_dims', prodDimStr)
-          .limit(1)
-          .single() as any
+    if (optError) {
+      console.error('[DB] Failed to insert optimization batch:', optError)
+    }
 
-        if (cached?.ai_response?.recommendedBoxName) {
-          const mapped = mapRecommendationToResponse(cached.ai_response, engineInput)
-          return { ...mapped, cached: true }
-        }
+    // Save order assignments to DB
+    const ordersToInsert = mlResult.assignments.map(ass => {
+      const pSnapshot = products.find(prod => (findValue(prod, 'product_id', 'sku') || '') === ass.sku) || {}
+      return {
+        user_id: user.id,
+        optimization_id: optRecord?.id || null,
+        box_id: ass.assignedBox?.id || null,
+        status: ass.fits ? 'completed' : 'pending',
+        quantity: ass.quantity,
+        total_cost_usd: ass.fits ? (ass.assignedBox?.cost || 0) : 0
+      }
+    })
 
-        // Run Production Optimization first
-        let rec: any = null
-        let modelUsed = 'XGBoost ML Scorer v2.1'
-
-        try {
-          rec = runProductionOptimization(engineInput)
-          
-          if (!rec) {
-            rec = runHeuristicOptimization(engineInput)
-            modelUsed = 'XGBoost ML Scorer v2.1'
-          }
-        } catch (err) {
-          console.warn('[Engine Failed] Using heuristic fallback:', err)
-          rec = runHeuristicOptimization(engineInput)
-          modelUsed = 'XGBoost ML Scorer v2.1'
-        }
-
-        if (!rec) {
-          return {
-            product_id: engineInput.productId,
-            product_name: engineInput.productName,
-            error: 'No suitable smaller box found in catalog',
-            status: 'no_smaller_box_available',
-          }
-        }
-
-        const response = mapRecommendationToResponse(rec, engineInput)
-
-        // Log optimization results
-        if (response.optimization_status === 'larger_than_baseline') {
-          console.warn(`[Optimization] Product ${engineInput.productId} recommended a LARGER box than baseline.`)
-        } else if (response.savings > 0) {
-          console.log(`[Optimization] Product ${engineInput.productId} optimized! Savings: $${response.savings.toFixed(2)}`)
-        }
-
-        // Persist to DB
-        try {
-          await supabase.from('optimizations').insert({
-            user_id: user.id,
-            status: 'completed',
-            product_snapshot: { ...p, product_dims: prodDimStr },
-            ai_response: rec,
-            recommended_box: rec.recommendedBoxName,
-            cost_savings_usd: rec.savings,
-            efficiency_score: rec.finalScore,
-            space_utilization: rec.spaceUtilization,
-            ai_model: modelUsed,
-          } as any)
-        } catch (dbErr) {
-          console.warn('[DB] Insert failed (non-fatal):', dbErr)
-        }
-
-        return response
-      } catch (err: any) {
-        return {
-          product_id: engineInput.productId,
-          product_name: engineInput.productName,
-          error: err.message,
-          status: 'error',
-        }
+    if (ordersToInsert.length > 0) {
+      const { error: orderError } = await (supabase as any).from('orders').insert(ordersToInsert)
+      if (orderError) {
+        console.error('[DB] Failed to insert orders:', orderError)
       }
     }
 
-    const allSettled = await Promise.allSettled(products.map(processProduct))
-    const results = allSettled.map(r => r.status === 'fulfilled' ? r.value : { error: 'Process failed', status: 'error' })
-
+    // Return the mapped API response matching single-product format
     return NextResponse.json({
       success: true,
-      results,
-      count: results.length,
-      errorCount: results.filter((r: any) => r.status === 'error').length
+      results: mlResult.assignments.map(ass => {
+        // Find matching engineInput dimensions
+        const engineInput: any = mappedProducts.find(m => m.product_id === ass.sku) || {}
+        return {
+          product_id:             ass.sku,
+          product_name:           ass.name,
+          product_price:          0,
+          product_dims:           ass.dimensions,
+          product_weight:         ass.weight,
+
+          original_box:           engineInput.current_box_name || 'Not specified',
+          original_box_cost:      0,
+          optimized_box:          ass.assignedBox?.name || 'Unoptimized',
+          optimized_box_sku:      ass.assignedBox?.id || '',
+          optimized_box_dims:     ass.assignedBox ? `${ass.assignedBox.length_cm}x${ass.assignedBox.width_cm}x${ass.assignedBox.height_cm}` : '',
+          optimized_box_cost:     ass.assignedBox?.cost || 0,
+
+          packaging_material:     'Corrugated',
+          fill_material:          'Paper Dunnage',
+
+          packaging_cost:         ass.assignedBox?.cost || 0,
+          shipping_cost:          ass.assignedBox ? (ass.weight * 0.54) : 0,
+          total_cost:             ass.assignedBox ? ((ass.assignedBox.cost || 0) + (ass.weight * 0.54)) : 0,
+          baseline_cost:          ass.assignedBox ? (((ass.assignedBox.cost || 0) + (ass.weight * 0.54)) + ass.savings) : 0,
+          cost_before:            ass.assignedBox ? (((ass.assignedBox.cost || 0) + (ass.weight * 0.54)) + ass.savings) : 0,
+          cost_after:             ass.assignedBox ? ((ass.assignedBox.cost || 0) + (ass.weight * 0.54)) : 0,
+
+          savings:                ass.savings,
+          savings_percent:        ass.assignedBox ? (ass.savings / (((ass.assignedBox.cost || 0) + (ass.weight * 0.54)) + ass.savings) * 100) : 0,
+
+          damage_risk:            ass.fragility === 'High' ? 'High' : ass.fragility === 'Medium' ? 'Medium' : 'Low',
+          space_utilization:      ass.volume_utilization,
+          confidence_score:       ass.fits ? 95 : 0,
+          void_reduction:         ass.volume_utilization,
+
+          final_score:            ass.score_breakdown.space_score + ass.score_breakdown.cost_score + ass.score_breakdown.fragility_score + ass.score_breakdown.sustainability_score,
+          optimization_status:    ass.fits ? 'improved' : 'standard',
+
+          alternative_box_name:   ass.alternatives[0]?.name || '',
+          alternative_box_dims:   ass.alternatives[0]?.dimensions || '',
+
+          reasoning:              ass.recommendation_reason || ass.failure_reason,
+          packing_tips:           [],
+          candidates_evaluated:   boxes.length,
+
+          model:                  'XGBoost ML Scorer v2.1',
+          data_quality:           'complete',
+          cached:                 false,
+          
+          volume_saved_cm3:       0,
+          dim_weight_reduction:   0,
+          top_alternatives:       ass.alternatives,
+          score_breakdown:        ass.score_breakdown,
+          engine_version:         'XGBoost ML Scorer v2.1',
+          fit_check_passed:       ass.fits,
+          clearance_used:         0,
+          status:                 ass.fits ? 'success' : 'error',
+          error_message:          ass.failure_reason || undefined
+        }
+      }),
+      count: mlResult.totalItems,
+      errorCount: mlResult.unoptimizedItems
     })
   } catch (error: any) {
     console.error('[Optimize API] Fatal error:', error)

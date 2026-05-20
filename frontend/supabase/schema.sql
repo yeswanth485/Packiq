@@ -160,6 +160,12 @@ CREATE TABLE IF NOT EXISTS optimizations (
   space_utilization   DECIMAL DEFAULT 0,
   co2_savings_kg      DECIMAL DEFAULT 0,
   ai_model            TEXT DEFAULT 'PackVision Heuristic v2.0',
+  total_items         INTEGER DEFAULT 0,
+  optimized_items     INTEGER DEFAULT 0,
+  unoptimized_items   INTEGER DEFAULT 0,
+  optimization_rate   DECIMAL DEFAULT 0,
+  estimated_savings   DECIMAL DEFAULT 0,
+  results             JSONB DEFAULT '[]'::jsonb,
   created_at          TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -168,6 +174,12 @@ BEGIN
   BEGIN ALTER TABLE optimizations ADD COLUMN batch_id UUID; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE optimizations ADD COLUMN file_name TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE optimizations ADD COLUMN co2_savings_kg DECIMAL DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE optimizations ADD COLUMN total_items INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE optimizations ADD COLUMN optimized_items INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE optimizations ADD COLUMN unoptimized_items INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE optimizations ADD COLUMN optimization_rate DECIMAL DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE optimizations ADD COLUMN estimated_savings DECIMAL DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE optimizations ADD COLUMN results JSONB DEFAULT '[]'::jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END;
 END $$;
 
 ALTER TABLE optimizations ENABLE ROW LEVEL SECURITY;

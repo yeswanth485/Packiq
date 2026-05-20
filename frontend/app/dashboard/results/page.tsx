@@ -21,7 +21,7 @@ export default async function ResultsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-[1200px] w-full mx-auto space-y-6 pb-20 px-4 md:px-0">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white mb-2">Optimization Results</h1>
         <p className="text-gray-400 text-sm">Review your AI-powered packaging recommendations and savings.</p>

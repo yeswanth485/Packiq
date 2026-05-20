@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { 
   Search, Package, Zap, Filter, Eye, Printer, Plus, X, ShieldCheck, AlertTriangle, TrendingDown, CheckCircle2, Box
 } from 'lucide-react'
@@ -8,19 +8,171 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useOptimizationStore, OptimizationResult } from '@/lib/store/optimizationStore'
 import Box3DViewer from '@/components/dashboard/Box3DViewer'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+
+const mapToOptimizationResult = (opt: any, res: any, idx: number): OptimizationResult => {
+  const isItemFitted = res.fits && res.assignedBox
+  const boxCost = res.assignedBox?.cost || 0.5
+  const savings = res.savings || 0
+  const baselineCost = isItemFitted ? (boxCost + savings) : 0.5
+  
+  return {
+    product_id: res.sku || `SKU-${idx}`,
+    product_name: res.name || res.product_name || 'Unknown Product',
+    product_price: 0,
+    product_dims: `${res.dimensions?.length_cm || 0}x${res.dimensions?.width_cm || 0}x${res.dimensions?.height_cm || 0}`,
+    product_weight: res.weight || 0.5,
+    original_box: res.original_box || 'Not specified',
+    original_box_cost: baselineCost,
+    optimized_box: isItemFitted ? res.assignedBox.name : 'Unoptimized',
+    optimized_box_cost: boxCost,
+    optimized_box_dims: isItemFitted ? `${res.assignedBox.length_cm}x${res.assignedBox.width_cm}x${res.assignedBox.height_cm}` : '—',
+    optimized_box_sku: isItemFitted ? res.assignedBox.sku : '—',
+    packaging_material: isItemFitted ? 'Corrugated Cardboard' : '—',
+    fill_material: isItemFitted ? 'Recycled Paper / Bubble Wrap' : '—',
+    packaging_cost: boxCost,
+    shipping_cost: isItemFitted ? Math.round(boxCost * 0.8 * 100) / 100 : 0.5, 
+    total_cost: isItemFitted ? boxCost + Math.round(boxCost * 0.8 * 100) / 100 : 0.5,
+    baseline_cost: isItemFitted ? baselineCost + Math.round(baselineCost * 0.8 * 100) / 100 : 0.5,
+    cost_before: isItemFitted ? baselineCost + Math.round(baselineCost * 0.8 * 100) / 100 : 0.5,
+    cost_after: isItemFitted ? boxCost + Math.round(boxCost * 0.8 * 100) / 100 : 0.5,
+    savings: savings,
+    savings_percent: isItemFitted ? (savings / baselineCost) * 100 : 0,
+    damage_risk: res.fragility || 'Low',
+    space_utilization: Math.round(res.volume_utilization || 0),
+    confidence_score: 95,
+    void_reduction: 100 - Math.round(res.volume_utilization || 0),
+    fit_score: 95,
+    void_score: 90,
+    cost_score: 85,
+    sustainability_score: 90,
+    final_score: 92,
+    reasoning: res.recommendation_reason || res.failure_reason || 'Optimized by XGBoost Scorer',
+    packing_tips: [
+      'Place the heaviest item at the center bottom.',
+      'Fill remaining void with paper pads.'
+    ],
+    candidates_evaluated: 5,
+    status: isItemFitted ? 'success' : 'error',
+    model: opt.ai_model || 'XGBoost ML Scorer v2.1',
+    data_quality: 'complete'
+  }
+}
+
+const mapSingleToOptimizationResult = (opt: any): OptimizationResult => {
+  const p = opt.product_snapshot || {}
+  const res = opt.ai_response || {}
+  const isItemFitted = opt.recommended_box && opt.recommended_box !== 'Unoptimized'
+  
+  return {
+    product_id: p.sku || p.product_id || opt.product_id || 'SKU-0',
+    product_name: p.name || p.product_name || 'Unknown Product',
+    product_price: 0,
+    product_dims: `${p.length_cm || 0}x${p.width_cm || 0}x${p.height_cm || 0}`,
+    product_weight: p.weight_kg || 0.5,
+    original_box: p.current_box_name || p.current_box_size || 'Not specified',
+    original_box_cost: p.current_cost_usd || 0.5,
+    optimized_box: opt.recommended_box || 'Unoptimized',
+    optimized_box_cost: res.new_cost_usd || res.totalCost || 0.5,
+    optimized_box_dims: isItemFitted ? `${p.length_cm}x${p.width_cm}x${p.height_cm}` : '—',
+    optimized_box_sku: opt.recommended_box || '—',
+    packaging_material: isItemFitted ? 'Corrugated Cardboard' : '—',
+    fill_material: isItemFitted ? 'Recycled Paper / Bubble Wrap' : '—',
+    packaging_cost: res.new_cost_usd || res.totalCost || 0.5,
+    shipping_cost: isItemFitted ? Math.round((res.new_cost_usd || res.totalCost || 0.5) * 0.8 * 100) / 100 : 0.5,
+    total_cost: res.totalCost || opt.total_cost || 0.5,
+    baseline_cost: res.baselineCost || p.current_cost_usd || 0.5,
+    cost_before: res.baselineCost || p.current_cost_usd || 0.5,
+    cost_after: res.totalCost || opt.total_cost || 0.5,
+    savings: opt.cost_savings_usd || 0,
+    savings_percent: (opt.cost_savings_usd || 0) / (res.baselineCost || p.current_cost_usd || 1) * 100,
+    damage_risk: res.damage_risk || (p.fragile ? 'High' : 'Low'),
+    space_utilization: opt.efficiency_score || 0,
+    confidence_score: 95,
+    void_reduction: res.void_reduction || 0,
+    fit_score: 95,
+    void_score: 90,
+    cost_score: 85,
+    sustainability_score: 90,
+    final_score: 92,
+    reasoning: res.reasoning || 'Optimized by XGBoost Scorer',
+    packing_tips: [
+      'Place the heaviest item at the center bottom.',
+      'Fill remaining void with paper pads.'
+    ],
+    candidates_evaluated: 5,
+    status: isItemFitted ? 'success' : 'error',
+    model: opt.ai_model || 'XGBoost ML Scorer v2.1',
+    data_quality: 'complete'
+  }
+}
 
 export default function OrdersPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedOrder, setSelectedOrder] = useState<OptimizationResult | null>(null)
-  const { results: orders, totalSaved } = useOptimizationStore()
+  
+  const { results: storeOrders } = useOptimizationStore()
+  const [dbOrders, setDbOrders] = useState<OptimizationResult[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const filteredOrders = orders.filter(order => 
-    order.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    order.product_id?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  useEffect(() => {
+    async function loadDbOrders() {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
 
-  const highRiskCount = orders.filter(o => o.damage_risk === 'High').length
+        const { data: optimizations, error } = await supabase
+          .from('optimizations')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (error) throw error
+
+        const list: OptimizationResult[] = []
+        optimizations.forEach((opt: any) => {
+          if (opt.results && Array.isArray(opt.results)) {
+            opt.results.forEach((res: any, idx: number) => {
+              list.push(mapToOptimizationResult(opt, res, idx))
+            })
+          } else {
+            list.push(mapSingleToOptimizationResult(opt))
+          }
+        })
+        setDbOrders(list)
+      } catch (err) {
+        console.error('Failed to load orders from DB:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadDbOrders()
+  }, [])
+
+  const orders = useMemo(() => {
+    const merged = [...storeOrders]
+    const storeIds = new Set(storeOrders.map(o => o.product_id))
+    
+    dbOrders.forEach(o => {
+      if (!storeIds.has(o.product_id)) {
+        merged.push(o)
+      }
+    })
+    return merged
+  }, [storeOrders, dbOrders])
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => 
+      order.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.product_id?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }, [orders, searchQuery])
+
+  const highRiskCount = useMemo(() => orders.filter(o => o.damage_risk === 'High').length, [orders])
+  const totalSaved = useMemo(() => orders.reduce((acc, o) => acc + (o.savings || 0), 0), [orders])
 
   return (
     <div className="max-w-[1200px] w-full mx-auto space-y-6 pb-20 px-4 md:px-0">

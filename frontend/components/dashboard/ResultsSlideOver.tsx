@@ -14,6 +14,7 @@ interface OptimizationData {
   efficiency_score: number
   created_at: string
   box_catalog_data?: any
+  ai_model?: string
 }
 
 interface ResultsSlideOverProps {
@@ -139,12 +140,23 @@ export default function ResultsSlideOver({ isOpen, onClose, data }: ResultsSlide
               <div>
                 <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
                   <Quote className="w-4 h-4 text-indigo-400" />
-                  AI Reasoning
+                  AI Reasoning & Method
                 </h3>
-                <div className="glass p-5 rounded-2xl border-l-4 border-indigo-500 bg-indigo-500/5">
+                <div className="glass p-5 rounded-2xl border-l-4 border-indigo-500 bg-indigo-500/5 space-y-3">
                   <p className="text-sm text-indigo-200/80 leading-relaxed italic">
                     "{after.reasoning || 'Based on the dimensions and weight of the product, this box size offers the most optimal space utilization while minimizing material costs.'}"
                   </p>
+                  <div className="pt-2 border-t border-white/5 flex flex-wrap gap-4 text-xs">
+                    <div>
+                      <span className="text-gray-500">Fragility Score:</span> <span className="text-[#00FFD1] font-bold capitalize">{after.damage_risk || before.fragility || 'Low'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Space Left:</span> <span className="text-[#00FFD1] font-bold">{(100 - (data.efficiency_score || 0))}%</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Method:</span> <span className="text-indigo-400 font-mono font-bold">{data.ai_model || 'XGBoost ML Scorer v2.1'}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -181,8 +193,8 @@ export default function ResultsSlideOver({ isOpen, onClose, data }: ResultsSlide
             
             {/* Footer */}
             <div className="p-6 border-t border-white/5 bg-gray-900/50 flex justify-between items-center">
-              <div className="text-xs text-gray-500">
-                Processed with Claude 4 Sonnet
+              <div className="text-xs text-gray-500 font-mono uppercase tracking-wider text-[#00FFD1]">
+                {data.ai_model || 'XGBoost ML Scorer v2.1'}
               </div>
               <div className="flex gap-3">
                 <button onClick={onClose} className="px-6 py-2.5 rounded-xl text-sm font-medium text-white bg-white/10 hover:bg-white/20 transition-colors">

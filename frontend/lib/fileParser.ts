@@ -154,6 +154,7 @@ function processRawData(rows: any[]): ParseResult {
       const product: ParsedProduct = {
         product_id: id,
         product_name: name,
+        name: name,
         length_cm: l,
         width_cm: w,
         height_cm: h,

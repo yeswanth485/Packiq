@@ -17,9 +17,79 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
   const [selectedOpt, setSelectedOpt] = useState<any | null>(null)
   const [activeTab, setActiveTab] = useState<'successful' | 'failed'>('successful')
   
+  const flatOptimizations = useMemo(() => {
+    const list: any[] = []
+    optimizations.forEach(opt => {
+      if (opt.results && Array.isArray(opt.results)) {
+        opt.results.forEach((res: any, idx: number) => {
+          const isItemFitted = res.fits && res.assignedBox
+          list.push({
+            id: `${opt.id}-${res.sku || idx}`,
+            batch_id: opt.batch_id || opt.id,
+            created_at: opt.created_at,
+            file_name: opt.file_name || 'Bulk Upload',
+            ai_model: opt.ai_model || 'XGBoost ML Scorer v2.1',
+            status: isItemFitted ? 'completed' : 'error',
+            error: isItemFitted ? null : (res.failure_reason || 'No suitable box found in catalog'),
+            product_id: res.sku || `SKU-${idx}`,
+            product_snapshot: {
+              name: res.name || res.product_name || 'Unknown Product',
+              product_name: res.name || res.product_name || 'Unknown Product',
+              sku: res.sku || `SKU-${idx}`,
+              product_id: res.sku || `SKU-${idx}`,
+              length_cm: res.dimensions?.length_cm || res.dimensions?.length || 0,
+              width_cm: res.dimensions?.width_cm || res.dimensions?.width || 0,
+              height_cm: res.dimensions?.height_cm || res.dimensions?.height || 0,
+              weight_kg: res.weight || 0.5,
+              fragility: res.fragility || 'Low',
+              current_box_name: res.original_box || 'Not specified',
+              current_box_size: res.original_box || 'Not specified',
+              current_cost_usd: (res.assignedBox?.cost || 0.5) + (res.savings || 0),
+            },
+            recommended_box: isItemFitted ? res.assignedBox.name : 'Unoptimized',
+            cost_savings_usd: res.savings || 0,
+            efficiency_score: Math.round(res.volume_utilization || 0),
+            space_utilization: Math.round(res.volume_utilization || 0),
+            box_catalog_data: isItemFitted ? {
+              id: res.assignedBox.id,
+              name: res.assignedBox.name,
+              sku: res.assignedBox.sku,
+              length_cm: res.assignedBox.length_cm,
+              width_cm: res.assignedBox.width_cm,
+              height_cm: res.assignedBox.height_cm,
+              cost_usd: res.assignedBox.cost,
+            } : null,
+            ai_response: {
+              baselineCost: (res.assignedBox?.cost || 0.5) + (res.savings || 0),
+              totalCost: res.assignedBox?.cost || 0,
+              new_cost_usd: res.assignedBox?.cost || 0,
+              savings: res.savings || 0,
+              damage_risk: res.fragility || 'Low',
+              void_reduction: 100 - Math.round(res.volume_utilization || 0),
+              space_utilization: Math.round(res.volume_utilization || 0),
+              reasoning: res.recommendation_reason || res.failure_reason || 'Selected because it optimized cost and space.',
+              alternatives: res.alternatives || []
+            }
+          })
+        })
+      } else {
+        // Single product run fallback
+        list.push({
+          ...opt,
+          product_snapshot: {
+            ...opt.product_snapshot,
+            name: opt.product_snapshot?.product_name || opt.product_snapshot?.name || 'Unknown Product',
+            product_name: opt.product_snapshot?.product_name || opt.product_snapshot?.name || 'Unknown Product',
+          }
+        })
+      }
+    })
+    return list
+  }, [optimizations])
+
   const filteredData = useMemo(() => {
-    return optimizations.filter(o => {
-      const isFailed = o.status === 'error' || o.error !== null
+    return flatOptimizations.filter(o => {
+      const isFailed = o.status === 'error' || !!o.error || !o.recommended_box || o.recommended_box === 'Unoptimized' || o.recommended_box === 'Error'
       if (activeTab === 'successful' && isFailed) return false
       if (activeTab === 'failed' && !isFailed) return false
 
@@ -32,7 +102,7 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
       
       return matchesSearch && matchesSavings
     })
-  }, [optimizations, searchTerm, savingsFilter, activeTab])
+  }, [flatOptimizations, searchTerm, savingsFilter, activeTab])
 
   // Chart Data preparation
   const chartDataSavings = useMemo(() => {

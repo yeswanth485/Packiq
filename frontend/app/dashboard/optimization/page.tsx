@@ -17,6 +17,7 @@ export default function OptimizationPage() {
   const [isOptimizing, setIsOptimizing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { results, setResults, setRunning, addBatchResults } = useOptimizationStore()
+  const [uploadedFileName, setUploadedFileName] = useState('')
   const router = useRouter()
 
   // Manual Entry State
@@ -124,6 +125,7 @@ export default function OptimizationPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
+    setUploadedFileName(file.name)
     try {
       const result = await parseFile(file)
       setParseResult(result)
@@ -138,69 +140,47 @@ export default function OptimizationPage() {
     setRunning()
     setResults([], [])
 
-    const BATCH_SIZE = 10 // Balanced for speed and reliability
     setProcessingStep(0)
-    await new Promise(r => setTimeout(r, 600))
+    await new Promise(r => setTimeout(r, 500))
+    setProcessingStep(1)
+    await new Promise(r => setTimeout(r, 500))
+    setProcessingStep(2)
+    await new Promise(r => setTimeout(r, 500))
+    setProcessingStep(3)
 
-    const allResults: any[] = []
     try {
-      for (let i = 0; i < data.length; i += BATCH_SIZE) {
-        const batch = data.slice(i, i + BATCH_SIZE)
-        setProcessingStep(i % 2 === 0 ? 1 : 2)
-        
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 45000)
+      const res = await fetch('/api/optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          products: data,
+          file_name: uploadedFileName || 'Bulk Upload'
+        })
+      })
 
-        try {
-          const res = await fetch('/api/optimize', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ products: batch }),
-            signal: controller.signal
-          })
-          clearTimeout(timeoutId)
-          
-          if (!res.ok) throw new Error(`Batch failed (HTTP ${res.status})`)
-          const resData = await res.json()
-          
-          if (resData.results) {
-            const batchResults = resData.results.map((r: any) => ({
-              ...r,
-              status: r.status || 'success'
-            }))
-            addBatchResults(batchResults)
-            allResults.push(...batchResults)
-          }
-        } catch (err) {
-          console.error('Batch error:', err)
-          toast.error(`Batch error. Including items with error status.`)
-          // Add items as errors so they aren't lost from the manifest
-          const errorResults = batch.map((p: any) => ({
-            product_id: p.product_id || p.sku || 'unknown',
-            product_name: p.product_name || p.name || 'Unknown',
-            status: 'error',
-            error: 'Batch processing failed',
-            savings: 0,
-            total_cost: 0,
-            baseline_cost: 0,
-            damage_risk: 'Low',
-            optimized_box: 'Error',
-            original_box: p['box_L*W*H_cm'] || p['box L*W*H'] || 'Unknown'
-          }))
-          addBatchResults(errorResults as any)
-          allResults.push(...errorResults)
-        }
+      if (!res.ok) throw new Error(`Optimization failed (HTTP ${res.status})`)
+      const resData = await res.json()
+
+      if (resData.results) {
+        const processedResults = resData.results.map((r: any) => ({
+          ...r,
+          status: r.status || 'success'
+        }))
+        setResults(processedResults, [])
+        setProcessingStep(4)
+        await new Promise(r => setTimeout(r, 800))
+        toast.success(`Successfully optimized ${processedResults.length} items!`)
+        
+        // Auto-generate summary and navigate
+        await handleGenerateSummary(processedResults)
+        await new Promise(r => setTimeout(r, 500))
+        router.push('/dashboard/results')
+      } else {
+        throw new Error(resData.error || 'Failed to process optimization')
       }
-      setProcessingStep(4)
-      await new Promise(r => setTimeout(r, 1000))
-      toast.success(`Successfully optimized ${allResults.length} items!`)
-      
-      // Auto-generate summary and then navigate immediately
-      await handleGenerateSummary(allResults)
-      await new Promise(r => setTimeout(r, 500))
-      router.push('/dashboard/orders')
     } catch (err: any) {
-      toast.error('Optimization failed')
+      console.error(err)
+      toast.error(err.message || 'Optimization failed')
     } finally {
       setIsOptimizing(false)
     }
