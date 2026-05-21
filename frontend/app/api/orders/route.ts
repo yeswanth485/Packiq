@@ -48,20 +48,22 @@ export async function POST(req: Request) {
       .single()
 
     if (error) throw error
-    // Trigger quick re-analysis of the order's optimization result in the background
-    try {
-      const frontendHost = process.env.NEXT_PUBLIC_FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:3000'
-      // Fire-and-forget to the reanalyze API
-      fetch(`${frontendHost}/api/optimize/reanalyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_ids: [data.id] })
-      }).catch(() => {})
-    } catch (e) {
-      // ignore
-    }
+      const order = data as any
 
-    return NextResponse.json({ order: data })
+      // Trigger quick re-analysis of the order's optimization result in the background
+      try {
+        const frontendHost = process.env.NEXT_PUBLIC_FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:3000'
+        // Fire-and-forget to the reanalyze API
+        fetch(`${frontendHost}/api/optimize/reanalyze`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_ids: [order.id] })
+        }).catch(() => {})
+      } catch (e) {
+        // ignore
+      }
+
+      return NextResponse.json({ order: order })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

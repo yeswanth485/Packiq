@@ -31,7 +31,7 @@ export default function ResultsHistoryPage() {
     if (!latestSessionId) { setLoading(false); return; }
 
     await loadSessionResults(latestSessionId, user.id);
-  }, [supabase]);
+  }, [supabase, loadSessionResults]);
 
   useEffect(() => {
     loadData();
