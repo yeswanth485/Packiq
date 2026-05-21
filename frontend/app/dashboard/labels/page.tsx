@@ -358,12 +358,12 @@ export default function LabelsPage() {
                         const draft = recipientDraft || {};
                         // attempt to persist to optimization_results; if columns don't exist, ignore
                         try {
-                          await supabase.from('optimization_results').update({
+                          await (supabase as any).from('optimization_results').update({
                             recipient_name: draft.name || null,
                             recipient_address: draft.address || null,
                             recipient_city: draft.city || null,
                             recipient_state: draft.state || null,
-                          } as any).eq('id', selected.id)
+                          }).eq('id', selected.id)
                           // persist to localStorage as fallback
                           localStorage.setItem('recipient:' + selected.id, JSON.stringify(draft))
                           toast.success('Recipient saved')
