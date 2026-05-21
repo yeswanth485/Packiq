@@ -27,6 +27,7 @@ export default function LabelsPage() {
   }, [selected])
   const labelRef = useRef<HTMLDivElement>(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -346,11 +347,11 @@ export default function LabelsPage() {
                   {/* Recipient editor */}
                   <div>
                     <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>Recipient</div>
-                    <input placeholder="Recipient name" value={recipientDraft?.name || selected.recipient_name || ''} onChange={e => setRecipientDraft(d => ({ ...(d||{}), name: e.target.value }))} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)', marginBottom: 8 }} />
-                    <input placeholder="Address" value={recipientDraft?.address || selected.recipient_address || ''} onChange={e => setRecipientDraft(d => ({ ...(d||{}), address: e.target.value }))} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)', marginBottom: 8 }} />
+                    <input placeholder="Recipient name" value={recipientDraft?.name || selected.recipient_name || ''} onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), name: e.target.value }))} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)', marginBottom: 8 }} />
+                    <input placeholder="Address" value={recipientDraft?.address || selected.recipient_address || ''} onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), address: e.target.value }))} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)', marginBottom: 8 }} />
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <input placeholder="City" value={recipientDraft?.city || selected.recipient_city || ''} onChange={e => setRecipientDraft(d => ({ ...(d||{}), city: e.target.value }))} style={{ flex: 1, padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)' }} />
-                      <input placeholder="State / ZIP" value={recipientDraft?.state || selected.recipient_state || ''} onChange={e => setRecipientDraft(d => ({ ...(d||{}), state: e.target.value }))} style={{ flex: 1, padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)' }} />
+                      <input placeholder="City" value={recipientDraft?.city || selected.recipient_city || ''} onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), city: e.target.value }))} style={{ flex: 1, padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)' }} />
+                      <input placeholder="State / ZIP" value={recipientDraft?.state || selected.recipient_state || ''} onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), state: e.target.value }))} style={{ flex: 1, padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)' }} />
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                       <button onClick={async () => {

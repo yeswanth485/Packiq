@@ -13,6 +13,7 @@ export default function ResultsHistoryPage() {
   const [savingsFilter, setSavingsFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadData();
   }, []);
