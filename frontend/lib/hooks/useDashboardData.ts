@@ -86,7 +86,7 @@ export function useDashboardData() {
             batch_id: r.session_id,
             created_at: r.created_at,
             file_name: '',
-            ai_model: 'XGBoost ML Scorer v2.1',
+            aiModel: 'XGBoost Extended Version 4.0',
             status: r.is_optimized ? 'success' : 'error',
             error: r.is_optimized ? null : (r.failure_reason || 'No suitable box found'),
             product_id: r.sku,
@@ -122,7 +122,7 @@ export function useDashboardData() {
             reasoning: r.recommendation_reason || r.failure_reason || 'Optimized by ML Scorer',
             packing_tips: ['Place heaviest item at center bottom.', 'Fill void with paper pads.'],
             candidates_evaluated: 5,
-            model: 'XGBoost ML Scorer v2.1',
+            model: 'XGBoost Extended Version 4.0',
             data_quality: 'complete'
           }))
           setRawOptimizations(list)
@@ -142,7 +142,7 @@ export function useDashboardData() {
             totalSavingsDb: parseFloat(totalSavings.toFixed(2)),
             avgEfficiency: parseFloat(avgEff.toFixed(1)),
             runsToday,
-            aiModel: 'XGBoost ML Scorer v2.1',
+            aiModel: 'XGBoost Extended Version 4.0',
           })
         }
       } catch (err) {

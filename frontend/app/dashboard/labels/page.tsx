@@ -51,24 +51,17 @@ export default function LabelsPage() {
       
       setProfile(profileData);
 
-      // Load latest optimization's successful results
-      const { data: latestSession } = await supabase
-        .from('optimization_sessions')
-        .select('id')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+      try {
+        const resSessions = await fetch('/api/dashboard-data?type=sessions');
+        if (!resSessions.ok) throw new Error('Failed to fetch sessions');
+        const { data: sessionList } = await resSessions.json();
+        
+        const latestSession = (sessionList || [])[0];
+        if (!latestSession) { setLoading(false); return; }
 
-      if (!latestSession) { setLoading(false); return; }
-
-      const { data: results } = await supabase
-        .from('optimization_results')
-        .select('*')
-        .eq('session_id', (latestSession as any).id)
-        .eq('user_id', user.id)
-        .eq('is_optimized', true)
-        .order('created_at', { ascending: true });
+        const resResults = await fetch(`/api/dashboard-data?type=results&session_id=${latestSession.id}`);
+        if (!resResults.ok) throw new Error('Failed to fetch results');
+        const { data: results } = await resResults.json();
 
       const formatted = (results || []).map((r: any) => ({
         ...r,
@@ -81,31 +74,23 @@ export default function LabelsPage() {
       
       // Preselect result if result_id present in URL, or default to first
       const params = new URLSearchParams(window.location.search);
-      const resultId = params.get('result_id');
-      if (resultId) {
-        const found = formatted.find((f: any) => f.id === resultId || f.optimization_result_id === resultId);
-        if (found) {
-          setSelected(found);
-        } else {
-          // fetch single result and add to list
-          const { data: single } = await supabase.from('optimization_results').select('*').eq('id', resultId).maybeSingle();
-          if (single) {
-            const s = {
-              ...(single as any),
-              tracking_id: (single as any).tracking_id || ('PKQ-' + ((single as any).sku||'') + '-' + ((single as any).id||'').slice(0,6).toUpperCase()),
-              zone: (single as any).zone || 'ZONE 2',
-              fragility_color_initial: (single as any).fragility_level === 'High' ? '#ef4444' : (single as any).fragility_level === 'Medium' ? '#f59e0b' : '#14b8a6'
-            };
-            setShipments(prev => [s, ...(prev || [])]);
-            setSelected(s);
-          } else if (formatted.length > 0) {
-            setSelected(formatted[0]);
+        if (resultId) {
+          const found = formatted.find((f: any) => f.id === resultId || f.optimization_result_id === resultId);
+          if (found) {
+            setSelected(found);
+          } else {
+            if (formatted.length > 0) {
+              setSelected(formatted[0]);
+            }
           }
+        } else {
+          if (formatted.length > 0) setSelected(formatted[0]);
         }
-      } else {
-        if (formatted.length > 0) setSelected(formatted[0]);
+      } catch (err) {
+        console.error('Labels error:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     load();
   }, [supabase]);
@@ -169,18 +154,18 @@ export default function LabelsPage() {
     win.document.close();
   }
 
-  if (loading) return <div className="p-10 text-center text-teal-400 font-mono animate-pulse">Initializing Print Station...</div>;
+  if (loading) return <div className="p-10 text-center text-[#00FFD1] font-mono animate-pulse">Initializing Print Station...</div>;
 
   return (
-    <div className="p-8 h-[calc(100vh-60px)] flex flex-col text-white" style={{ background: 'linear-gradient(135deg, #020617 0%, #0f172a 100%)' }}>
+    <div className="p-8 h-[calc(100vh-60px)] flex flex-col text-white bg-transparent">
       
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="m-0 text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-emerald-500 tracking-tight">
+          <h1 className="m-0 text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-[#00FFD1] to-emerald-500 tracking-tight">
             Shipping Labels
           </h1>
-          <p className="mt-1 text-teal-200/60 text-sm">
+          <p className="mt-1 text-emerald-200/60 text-sm">
             Generate and print realistic e-commerce carrier labels for {filtered.length} optimized shipments.
           </p>
         </div>
@@ -197,7 +182,7 @@ export default function LabelsPage() {
                 <button
                   key={b.id}
                   onClick={() => setSelectedBrand(b)}
-                  className={`p-2 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-all border ${selectedBrand.id === b.id ? 'bg-teal-500/20 border-teal-500 text-white shadow-[0_0_15px_rgba(20,184,166,0.3)]' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
+                  className={`p-2 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-all border ${selectedBrand.id === b.id ? 'bg-[#00FFD1]/20 border-[#00FFD1] text-white shadow-[0_0_15px_rgba(0,255,209,0.3)]' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
                 >
                   <span className="text-lg">{b.logo}</span>
                   {b.name.split(' ')[0]}
@@ -211,14 +196,14 @@ export default function LabelsPage() {
             <input 
               placeholder="Search tracking or SKU..."
               value={search} onChange={e => setSearch(e.target.value)}
-              className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-teal-500 focus:outline-none mb-3 text-sm"
+              className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-[#00FFD1] focus:outline-none mb-3 text-sm"
             />
             <div className="overflow-y-auto flex-1 pr-2 space-y-2 custom-scrollbar">
               {filtered.map(s => (
                 <div 
                   key={s.id}
                   onClick={() => setSelected(s)}
-                  className={`p-3 rounded-xl cursor-pointer transition-all border ${selected?.id === s.id ? 'bg-teal-500/10 border-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.1)]' : 'bg-slate-800/50 border-transparent hover:bg-slate-800'}`}
+                  className={`p-3 rounded-xl cursor-pointer transition-all border ${selected?.id === s.id ? 'bg-[#00FFD1]/10 border-[#00FFD1] shadow-[0_0_10px_rgba(0,255,209,0.1)]' : 'bg-slate-800/50 border-transparent hover:bg-slate-800'}`}
                 >
                   <div className="flex justify-between items-start mb-1">
                     <div className="font-bold text-sm text-white truncate pr-2">{s.product_name || s.sku}</div>
@@ -226,7 +211,7 @@ export default function LabelsPage() {
                   </div>
                   <div className="text-xs text-slate-500 mb-2">{s.tracking_id}</div>
                   <div className="flex gap-2 text-[10px] font-mono font-bold">
-                    <span className="px-2 py-0.5 bg-slate-700 rounded text-teal-300">📦 {s.new_box_name}</span>
+                    <span className="px-2 py-0.5 bg-slate-700 rounded text-[#00FFD1]">📦 {s.new_box_name}</span>
                     <span className="px-2 py-0.5 bg-slate-700 rounded text-slate-300">{s.zone}</span>
                   </div>
                 </div>
@@ -247,7 +232,7 @@ export default function LabelsPage() {
               {/* Realistic 3D Preview */}
               <div className="relative border-r border-slate-700/50 bg-[#0a0f18]">
                 <div className="absolute top-4 left-4 z-10">
-                  <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded border border-white/10 text-xs font-bold text-teal-400 shadow-lg mb-1">
+                  <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded border border-white/10 text-xs font-bold text-[#00FFD1] shadow-lg mb-1">
                     Realistic Label Preview
                   </div>
                   <div className="text-[10px] text-slate-500 uppercase tracking-widest px-1">
@@ -339,26 +324,26 @@ export default function LabelsPage() {
                       placeholder="Recipient Name" 
                       value={recipientDraft?.name || selected.recipient_name || ''} 
                       onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), name: e.target.value }))} 
-                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white text-sm focus:border-teal-500 focus:outline-none" 
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white text-sm focus:border-[#00FFD1] focus:outline-none" 
                     />
                     <input 
                       placeholder="Street Address" 
                       value={recipientDraft?.address || selected.recipient_address || ''} 
                       onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), address: e.target.value }))} 
-                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white text-sm focus:border-teal-500 focus:outline-none" 
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white text-sm focus:border-[#00FFD1] focus:outline-none" 
                     />
                     <div className="flex gap-2">
                       <input 
                         placeholder="City" 
                         value={recipientDraft?.city || selected.recipient_city || ''} 
                         onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), city: e.target.value }))} 
-                        className="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white text-sm focus:border-teal-500 focus:outline-none w-1/2" 
+                        className="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white text-sm focus:border-[#00FFD1] focus:outline-none w-1/2" 
                       />
                       <input 
                         placeholder="State" 
                         value={recipientDraft?.state || selected.recipient_state || ''} 
                         onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), state: e.target.value }))} 
-                        className="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white text-sm focus:border-teal-500 focus:outline-none w-1/2" 
+                        className="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white text-sm focus:border-[#00FFD1] focus:outline-none w-1/2" 
                       />
                     </div>
                   </div>
@@ -366,7 +351,7 @@ export default function LabelsPage() {
 
                 <button 
                   onClick={printLabel} 
-                  className="w-full py-4 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-900 font-black rounded-xl shadow-[0_0_20px_rgba(20,184,166,0.3)] transform hover:-translate-y-1 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-gradient-to-r from-[#00FFD1] to-emerald-500 hover:from-[#00b392] hover:to-emerald-400 text-slate-900 font-black rounded-xl shadow-[0_0_20px_rgba(0,255,209,0.3)] transform hover:-translate-y-1 transition-all flex items-center justify-center gap-2"
                 >
                   <span className="text-xl">🖨️</span> PRINT LABEL
                 </button>

@@ -15,43 +15,38 @@ export default function ResultsHistoryPage() {
 
   const loadSessionResults = useCallback(async (sessionId: string, userId: string) => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('optimization_results')
-      .select('*')
-      .eq('session_id', sessionId)
-      .eq('user_id', userId)
-      .order('is_optimized', { ascending: false })
-      .order('savings_pct', { ascending: false });
-    
-    if (error) {
-      console.error('Results load error:', error);
-      setLoading(false);
-      return;
+    try {
+      const res = await fetch(`/api/dashboard-data?type=results&session_id=${sessionId}`);
+      if (!res.ok) throw new Error('Failed to fetch results');
+      const { data } = await res.json();
+      setResults(data || []);
+    } catch (err) {
+      console.error('Results load error:', err);
     }
-    
-    setResults(data || []);
     setLoading(false);
-  }, [supabase]);
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    const { data: sessionList } = await supabase
-      .from('optimization_sessions')
-      .select('id, file_name, created_at, total_items, optimized_items, optimization_rate')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
-    
-    if (sessionList) setSessions(sessionList);
+    try {
+      const resSessions = await fetch('/api/dashboard-data?type=sessions');
+      if (!resSessions.ok) throw new Error('Failed to fetch sessions');
+      const { data: sessionList } = await resSessions.json();
+      
+      if (sessionList) setSessions(sessionList);
 
-    const latestSessionId = (sessionList as any[])?.[0]?.id;
-    if (!latestSessionId) { setLoading(false); return; }
+      const latestSessionId = (sessionList as any[])?.[0]?.id;
+      if (!latestSessionId) { setLoading(false); return; }
 
-    setSelectedSession(latestSessionId);
-    await loadSessionResults(latestSessionId, user.id);
+      setSelectedSession(latestSessionId);
+      await loadSessionResults(latestSessionId, user.id);
+    } catch (err) {
+      console.error('Data load error:', err);
+      setLoading(false);
+    }
   }, [supabase, loadSessionResults]);
 
   useEffect(() => {
@@ -77,17 +72,17 @@ export default function ResultsHistoryPage() {
 
   const totalSavings = successItems.reduce((s, r) => s + (r.savings_amount || 0), 0);
 
-  if (loading) return <div className="p-10 text-center text-indigo-400 font-mono animate-pulse">Loading Analytics...</div>;
+  if (loading) return <div className="p-10 text-center text-[#00FFD1] font-mono animate-pulse">Loading Analytics...</div>;
 
   return (
-    <div className="p-8 max-w-full overflow-hidden text-white min-h-screen" style={{ background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)' }}>
+    <div className="p-8 max-w-full overflow-hidden text-white min-h-screen bg-transparent">
       
       {/* Header */}
       <div className="mb-8">
-        <h1 className="m-0 text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-500 tracking-tight">
+        <h1 className="m-0 text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-[#00FFD1] to-blue-500 tracking-tight">
           Optimization History
         </h1>
-        <p className="mt-2 text-indigo-200/60 text-sm">
+        <p className="mt-2 text-blue-200/60 text-sm">
           Deep dive into your AI packaging analysis, savings breakdown, and optimization rationale.
         </p>
       </div>
@@ -101,7 +96,7 @@ export default function ResultsHistoryPage() {
               const { data: { user } } = await supabase.auth.getUser();
               if (user) await loadSessionResults(e.target.value, user.id);
             }}
-            className="px-4 py-3 bg-[#1e1b4b]/60 border border-indigo-500/30 rounded-xl text-indigo-100 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all backdrop-blur-md font-medium"
+            className="px-4 py-3 bg-[#0f172a]/60 border border-[#00FFD1]/30 rounded-xl text-[#00FFD1] focus:outline-none focus:border-[#00FFD1] focus:ring-1 focus:ring-[#00FFD1] transition-all backdrop-blur-md font-medium"
           >
             {sessions.map((s, i) => (
               <option key={s.id} value={s.id} className="bg-slate-900 text-white">
@@ -123,16 +118,16 @@ export default function ResultsHistoryPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex p-1 bg-indigo-900/30 backdrop-blur-md border border-indigo-500/20 rounded-xl w-fit mb-6 shadow-inner">
+      <div className="flex p-1 bg-[#0f172a]/80 backdrop-blur-md border border-[#00FFD1]/20 rounded-xl w-fit mb-6 shadow-inner">
         <button 
           onClick={() => setActiveTab('success')}
-          className={`px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-300 ${activeTab === 'success' ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg' : 'text-indigo-300/70 hover:text-white hover:bg-white/5'}`}
+          className={`px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-300 ${activeTab === 'success' ? 'bg-gradient-to-r from-[#00FFD1] to-[#00b392] text-slate-900 shadow-lg' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}
         >
           OPTIMIZED DETAILS ({successItems.length})
         </button>
         <button 
           onClick={() => setActiveTab('failed')}
-          className={`px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-300 ${activeTab === 'failed' ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-lg' : 'text-indigo-300/70 hover:text-white hover:bg-white/5'}`}
+          className={`px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-300 ${activeTab === 'failed' ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-lg' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}
         >
           WHY NOT OPTIMIZED ⚠ ({failedItems.length})
         </button>
@@ -144,13 +139,13 @@ export default function ResultsHistoryPage() {
           placeholder="Search by SKU or Product Name..." 
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="col-span-1 md:col-span-2 px-4 py-3 bg-[#1e1b4b]/60 border border-indigo-500/30 rounded-xl text-white placeholder-indigo-300/50 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all backdrop-blur-md"
+          className="col-span-1 md:col-span-2 px-4 py-3 bg-[#0f172a]/60 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-[#00FFD1] focus:ring-1 focus:ring-[#00FFD1] transition-all backdrop-blur-md"
         />
         {activeTab === 'success' && (
           <select 
             value={savingsFilter} 
             onChange={e => setSavingsFilter(e.target.value)}
-            className="px-4 py-3 bg-[#1e1b4b]/60 border border-indigo-500/30 rounded-xl text-white focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all backdrop-blur-md"
+            className="px-4 py-3 bg-[#0f172a]/60 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-[#00FFD1] focus:ring-1 focus:ring-[#00FFD1] transition-all backdrop-blur-md"
           >
             <option value="all" className="bg-slate-900">All Savings Ranges</option>
             <option value="high" className="bg-slate-900">High Impact (≥40%)</option>
@@ -191,10 +186,10 @@ export default function ResultsHistoryPage() {
 function StatChip({ label, value, color = 'text-white', glowColor }: any) {
   return (
     <div 
-      className="p-5 rounded-2xl bg-indigo-950/40 backdrop-blur-xl border border-indigo-500/20 relative overflow-hidden group hover:border-indigo-400/50 transition-all duration-300"
+      className="p-5 rounded-2xl bg-slate-800/40 backdrop-blur-xl border border-slate-700 relative overflow-hidden group hover:border-slate-500 transition-all duration-300"
       style={{ boxShadow: `0 8px 32px -8px ${glowColor}` }}
     >
-      <div className="text-xs font-black text-indigo-300/80 tracking-widest uppercase mb-2">{label}</div>
+      <div className="text-xs font-black text-slate-400 tracking-widest uppercase mb-2">{label}</div>
       <div className={`text-3xl font-black tracking-tight ${color}`}>{value}</div>
     </div>
   )
@@ -207,20 +202,20 @@ function DetailedResultCard({ result: r }: { result: any }) {
   const mlScore = Math.min(99, Math.max(10, r.ml_score || Math.round((r.savings_pct || 0) * 1.5 + 50)));
 
   return (
-    <div className="bg-slate-900/40 backdrop-blur-md border border-indigo-500/20 rounded-2xl overflow-hidden hover:border-indigo-500/40 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
+    <div className="bg-slate-900/40 backdrop-blur-md border border-slate-700 rounded-2xl overflow-hidden hover:border-[#00FFD1]/50 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
       {/* Header Bar */}
-      <div className="p-5 border-b border-white/5 flex flex-wrap justify-between items-center bg-gradient-to-r from-indigo-900/30 to-transparent">
+      <div className="p-5 border-b border-white/5 flex flex-wrap justify-between items-center bg-gradient-to-r from-[#00FFD1]/10 to-transparent">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-black text-xl shadow-lg">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#00FFD1] to-blue-500 flex items-center justify-center font-black text-xl text-slate-900 shadow-lg">
             {(r.product_name || r.sku).charAt(0).toUpperCase()}
           </div>
           <div>
             <h3 className="text-lg font-black m-0">{r.product_name || r.sku}</h3>
-            <span className="text-xs text-indigo-300 font-mono tracking-wider">{r.sku}</span>
+            <span className="text-xs text-slate-400 font-mono tracking-wider">{r.sku}</span>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-xs text-indigo-300/70 font-bold uppercase tracking-widest mb-1">Cost Savings</div>
+          <div className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Cost Savings</div>
           <div className={`text-2xl font-black ${savingsColor} flex items-center gap-2`}>
             <span>↓ {r.savings_pct?.toFixed(1) || 0}%</span>
             <span className="text-sm px-2 py-1 bg-white/5 rounded-lg border border-white/10 text-white">
@@ -235,7 +230,7 @@ function DetailedResultCard({ result: r }: { result: any }) {
         
         {/* Box Transformation */}
         <div className="p-6 bg-slate-900/40">
-          <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-4">Box Selection</h4>
+          <h4 className="text-xs font-black text-[#00FFD1] uppercase tracking-widest mb-4">Box Selection</h4>
           <div className="flex items-center gap-4">
             <div className="flex-1 opacity-60">
               <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Baseline</div>
@@ -243,7 +238,7 @@ function DetailedResultCard({ result: r }: { result: any }) {
               <div className="text-xs text-slate-500">{r.old_box_dims}</div>
               <div className="text-xs text-slate-500 mt-1 line-through">₹{r.old_box_cost?.toFixed(2)}</div>
             </div>
-            <div className="text-indigo-500 font-bold">→</div>
+            <div className="text-[#00FFD1] font-bold">→</div>
             <div className="flex-1">
               <div className="text-[10px] uppercase font-bold text-emerald-400 mb-1">Optimized</div>
               <div className="font-bold text-sm text-emerald-300">{r.new_box_name}</div>
@@ -255,7 +250,7 @@ function DetailedResultCard({ result: r }: { result: any }) {
 
         {/* Shipping & Handling */}
         <div className="p-6 bg-slate-900/40">
-          <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-4">Handling & Shipping</h4>
+          <h4 className="text-xs font-black text-[#00FFD1] uppercase tracking-widest mb-4">Handling & Shipping</h4>
           
           <div className="mb-4">
             <div className="flex justify-between text-xs mb-1">
@@ -281,16 +276,16 @@ function DetailedResultCard({ result: r }: { result: any }) {
 
         {/* ML Reasoning */}
         <div className="p-6 bg-slate-900/40">
-          <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-4">Why We Chose This</h4>
+          <h4 className="text-xs font-black text-[#00FFD1] uppercase tracking-widest mb-4">Why We Chose This</h4>
           <p className="text-sm text-slate-300 leading-relaxed mb-4">
             {r.recommendation_reason || `The ${r.new_box_name} offers the optimal balance of minimal volumetric weight and sufficient padding space for a ${r.fragility_level?.toLowerCase()} fragility item.`}
           </p>
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">AI Confidence</span>
             <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500" style={{ width: `${mlScore}%` }} />
+              <div className="h-full bg-gradient-to-r from-blue-500 to-[#00FFD1]" style={{ width: `${mlScore}%` }} />
             </div>
-            <span className="text-xs font-mono font-bold text-indigo-300">{mlScore}%</span>
+            <span className="text-xs font-mono font-bold text-[#00FFD1]">{mlScore}%</span>
           </div>
         </div>
 

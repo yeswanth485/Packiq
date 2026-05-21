@@ -16,16 +16,12 @@ export default function OrdersPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      // Load user orders from orders table
-      const { data: ordersData, error } = await supabase
-        .from('orders')
-        .select('*, product_snapshot, box_snapshot, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      // Load user orders via API (bypasses RLS issues)
+      try {
+        const res = await fetch('/api/dashboard-data?type=orders');
+        if (!res.ok) throw new Error('Failed to fetch');
+        const { data: ordersData } = await res.json();
 
-      if (error) {
-        setOrders([]);
-      } else {
         // normalize to expected shape for UI
         const normalized = (ordersData || []).map((o: any) => ({
           ...o,
@@ -37,7 +33,11 @@ export default function OrdersPage() {
         }));
 
         setOrders(normalized);
+      } catch (err) {
+        console.error('Error loading orders:', err);
+        setOrders([]);
       }
+      
       setLoading(false);
     }
     load();
@@ -61,29 +61,29 @@ export default function OrdersPage() {
       .filter(o => riskFilter === 'all' || o.fragility_level === riskFilter),
   [successOrders, search, riskFilter]);
 
-  if (loading) return <div className="p-10 text-center text-teal-400 font-mono animate-pulse">Loading Manifests...</div>;
+  if (loading) return <div className="p-10 text-center text-[#00FFD1] font-mono animate-pulse">Loading Manifests...</div>;
 
   return (
-    <div className="p-8 max-w-full overflow-hidden text-white min-h-screen" style={{ background: 'linear-gradient(135deg, #050b14 0%, #0a192f 100%)' }}>
+    <div className="p-8 max-w-full overflow-hidden text-white min-h-screen bg-transparent">
       
       {/* Header */}
       <div className="flex flex-wrap justify-between items-start mb-8 gap-4">
         <div>
-          <h1 className="m-0 text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-blue-500 tracking-tight">
+          <h1 className="m-0 text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-[#00FFD1] to-blue-500 tracking-tight">
             Shipment Manifests
           </h1>
           <p className="mt-2 text-blue-200/60 text-sm">
             Manage your AI-optimized order logistics, view 3D packing guides, and generate labels seamlessly.
           </p>
         </div>
-        <button className="px-6 py-3 bg-gradient-to-r from-teal-500 to-teal-400 hover:from-teal-400 hover:to-teal-300 rounded-xl text-slate-900 font-black shadow-[0_0_20px_rgba(20,184,166,0.3)] transition-all transform hover:scale-105 whitespace-nowrap">
+        <button className="px-6 py-3 bg-gradient-to-r from-[#00FFD1] to-[#00b392] hover:from-[#00b392] hover:to-[#008f74] rounded-xl text-slate-900 font-black shadow-[0_0_20px_rgba(0,255,209,0.3)] transition-all transform hover:scale-105 whitespace-nowrap">
           + NEW ORDER
         </button>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <KPICard dot="bg-teal-400" label="PROCESSED" value={allOrders.length} glowColor="rgba(45,212,191,0.15)" />
+        <KPICard dot="bg-[#00FFD1]" label="PROCESSED" value={allOrders.length} glowColor="rgba(0,255,209,0.15)" />
         <KPICard dot="bg-blue-400" label="OPTIMIZED" value={successOrders.length} glowColor="rgba(96,165,250,0.15)" />
         <KPICard dot="bg-amber-400" label="TOTAL SAVED" value={'₹' + totalSaved.toFixed(2)} glowColor="rgba(251,191,36,0.15)" />
         <KPICard dot="bg-rose-500" label="HIGH RISK" value={highRiskCount} valueColor="#f43f5e" glowColor="rgba(244,63,94,0.15)" />
@@ -95,12 +95,12 @@ export default function OrdersPage() {
           placeholder="Search by SKU or Product Name..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="flex-1 px-4 py-3 bg-[#0f172a]/60 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all backdrop-blur-md"
+          className="flex-1 px-4 py-3 bg-[#0f172a]/60 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-[#00FFD1] focus:ring-1 focus:ring-[#00FFD1] transition-all backdrop-blur-md"
         />
         <select
           value={riskFilter}
           onChange={e => setRiskFilter(e.target.value)}
-          className="px-4 py-3 bg-[#0f172a]/60 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-teal-500 transition-all backdrop-blur-md"
+          className="px-4 py-3 bg-[#0f172a]/60 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-[#00FFD1] transition-all backdrop-blur-md"
         >
           <option value="all">All Risk Levels</option>
           <option value="High">High Risk</option>
@@ -182,7 +182,7 @@ function OrderRow({ order }: { order: any }) {
         </td>
         {/* OPTIMIZED BOX */}
         <td className="p-4">
-          <div className="inline-block px-2.5 py-1 rounded-md text-xs font-bold bg-teal-500/10 text-teal-400 border border-teal-500/20">
+          <div className="inline-block px-2.5 py-1 rounded-md text-xs font-bold bg-[#00FFD1]/10 text-[#00FFD1] border border-[#00FFD1]/20">
             📦 {order.new_box_name || 'N/A'}
           </div>
           <div className="text-[10px] text-slate-500 mt-1 font-mono">{order.new_box_dims}</div>
@@ -229,7 +229,7 @@ function OrderRow({ order }: { order: any }) {
               
               <div className="lg:col-span-2 relative h-[400px] w-full rounded-2xl overflow-hidden border border-slate-700 bg-black/50 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
                 <div className="absolute top-4 left-4 z-10 flex gap-2">
-                  <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded border border-white/10 text-xs font-bold text-teal-400 shadow-lg">
+                  <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded border border-white/10 text-xs font-bold text-[#00FFD1] shadow-lg">
                     Interactive 3D Packing Guide
                   </div>
                   <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded border border-white/10 text-xs font-mono text-slate-300">
@@ -248,19 +248,19 @@ function OrderRow({ order }: { order: any }) {
                   <p className="text-xs text-slate-400 font-mono">Dims: {order.length_cm}x{order.width_cm}x{order.height_cm}cm</p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-teal-900/20 border border-teal-500/20">
-                  <h4 className="text-xs font-black text-teal-500/80 uppercase tracking-widest mb-2">AI Packing Strategy</h4>
-                  <ul className="text-xs text-teal-100/70 space-y-2">
+                <div className="p-4 rounded-xl bg-[#00FFD1]/10 border border-[#00FFD1]/20">
+                  <h4 className="text-xs font-black text-[#00FFD1]/80 uppercase tracking-widest mb-2">AI Packing Strategy</h4>
+                  <ul className="text-xs text-[#00FFD1]/70 space-y-2">
                     <li className="flex items-start gap-2">
-                      <span className="text-teal-400 mt-0.5">✓</span>
+                      <span className="text-[#00FFD1] mt-0.5">✓</span>
                       Optimal volumetric fit ({100 - (order.void_percentage || 15)}% utilized)
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-teal-400 mt-0.5">✓</span>
+                      <span className="text-[#00FFD1] mt-0.5">✓</span>
                       {order.fragility_level === 'High' ? 'Heavy dunnage required' : 'Minimal void fill needed'}
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-teal-400 mt-0.5">✓</span>
+                      <span className="text-[#00FFD1] mt-0.5">✓</span>
                       Saved ₹{order.savings_amount?.toFixed(2)} vs baseline
                     </li>
                   </ul>
