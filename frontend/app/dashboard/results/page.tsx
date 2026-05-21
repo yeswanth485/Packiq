@@ -13,6 +13,26 @@ export default function ResultsHistoryPage() {
   const [savingsFilter, setSavingsFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
+  const loadSessionResults = useCallback(async (sessionId: string, userId: string) => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('optimization_results')
+      .select('*')
+      .eq('session_id', sessionId)
+      .eq('user_id', userId)
+      .order('is_optimized', { ascending: false })
+      .order('savings_pct', { ascending: false });
+    
+    if (error) {
+      console.error('Results load error:', error);
+      setLoading(false);
+      return;
+    }
+    
+    setResults(data || []);
+    setLoading(false);
+  }, [supabase]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -36,28 +56,6 @@ export default function ResultsHistoryPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  
-
-  const loadSessionResults = useCallback(async (sessionId: string, userId: string) => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('optimization_results')
-      .select('*')
-      .eq('session_id', sessionId)
-      .eq('user_id', userId)
-      .order('is_optimized', { ascending: false })
-      .order('savings_pct', { ascending: false });
-    
-    if (error) {
-      console.error('Results load error:', error);
-      setLoading(false);
-      return;
-    }
-    
-    setResults(data || []);
-    setLoading(false);
-  }, [supabase]);
 
   const successItems = useMemo(() => 
     results.filter(r => r.is_optimized === true)
