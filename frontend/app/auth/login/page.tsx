@@ -84,7 +84,7 @@ export default function LoginPage() {
 
       // Check onboarding status
       let { data: profile } = await (supabase.from('profiles') as any)
-        .select('onboarding_completed, company')
+        .select('onboarding_complete, company')
         .eq('id', data.user.id)
         .single()
 
@@ -93,7 +93,7 @@ export default function LoginPage() {
         const { data: newProfile, error: createError } = await (supabase.from('profiles') as any).insert({
           id: data.user.id,
           email: data.user.email,
-          onboarding_completed: true
+          onboarding_complete: true
         }).select().single()
         profile = newProfile
       }
@@ -101,7 +101,7 @@ export default function LoginPage() {
       setIsSuccess(true)
       await new Promise(r => setTimeout(r, 800))
 
-      if (profile && !profile.onboarding_completed) {
+      if (profile && !profile.onboarding_complete) {
         router.push('/onboarding')
       } else {
         router.push('/dashboard')

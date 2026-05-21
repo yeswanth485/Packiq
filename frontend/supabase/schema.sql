@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   plan                  TEXT DEFAULT 'starter',
   stripe_customer_id    TEXT,
   notification_prefs    JSONB DEFAULT '{}',
-  onboarding_completed  BOOLEAN DEFAULT FALSE,
+  onboarding_complete  BOOLEAN DEFAULT FALSE,
   created_at            TIMESTAMPTZ DEFAULT NOW(),
   updated_at            TIMESTAMPTZ DEFAULT NOW()
 );
@@ -67,7 +67,7 @@ BEGIN
   BEGIN ALTER TABLE profiles ADD COLUMN plan TEXT DEFAULT 'starter'; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE profiles ADD COLUMN stripe_customer_id TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE profiles ADD COLUMN notification_prefs JSONB DEFAULT '{}'; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN onboarding_completed BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE profiles ADD COLUMN onboarding_complete BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE profiles ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
 END $$;
 

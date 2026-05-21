@@ -81,11 +81,11 @@ export default function OnboardingWizard() {
       if (user) {
         const { data: profile } = await (supabase as any)
           .from('profiles')
-          .select('company, onboarding_completed')
+          .select('company, onboarding_complete')
           .eq('id', user.id)
           .single()
         
-        if (profile?.onboarding_completed) {
+        if (profile?.onboarding_complete) {
           window.location.href = '/dashboard'
           return
         }
@@ -136,7 +136,7 @@ export default function OnboardingWizard() {
         materials: data.materials,
         optimization_goal: data.optimizationGoal,
         sustainability_mode: data.sustainabilityMode,
-        onboarding_completed: true
+        onboarding_complete: true
       }
 
       if (existingProfile) {
@@ -165,7 +165,7 @@ export default function OnboardingWizard() {
 
       // Sync onboarding completion status with auth session metadata for instant routing synchronization
       await supabase.auth.updateUser({
-        data: { onboarding_completed: true }
+        data: { onboarding_complete: true }
       })
 
       // Confetti Burst

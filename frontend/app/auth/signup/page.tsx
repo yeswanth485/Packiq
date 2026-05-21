@@ -113,7 +113,7 @@ export default function SignupPage() {
             company: formData.companyName,
             industry: formData.industry,
             mobile: formData.phone,
-            onboarding_completed: false
+            onboarding_complete: false
          })
       }
 

@@ -21,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     await (supabase.from('profiles') as any).insert({
       id: user.id,
       email: user.email,
-      onboarding_completed: true
+      onboarding_complete: true
     })
     
     const { data: newProfile } = await (supabase.from('profiles') as any)

@@ -20,23 +20,23 @@ export async function GET(request: Request) {
       const { data: { user } } = await supabase.auth.getUser()
       
       if (user) {
-        let { data: profile } = await supabase
-          .from('profiles')
-          .select('onboarding_completed')
-          .eq('id', user.id)
-          .single()
+          let { data: profile } = await supabase
+           .from('profiles')
+           .select('onboarding_complete')
+           .eq('id', user.id)
+           .single()
 
-        if (!profile) {
-           await (supabase as any).from('profiles').insert({
+          if (!profile) {
+            await (supabase as any).from('profiles').insert({
               id: user.id,
               email: user.email,
               full_name: user.user_metadata?.full_name || '',
-              onboarding_completed: false
-           })
-           profile = { onboarding_completed: false } as any
-        }
+              onboarding_complete: false
+            })
+            profile = { onboarding_complete: false } as any
+          }
 
-        if (profile && (profile as any).onboarding_completed) {
+          if (profile && (profile as any).onboarding_complete) {
           return NextResponse.redirect(`${origin}/dashboard`)
         }
       }
