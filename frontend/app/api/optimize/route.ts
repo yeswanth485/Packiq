@@ -310,9 +310,9 @@ export async function POST(req: Request) {
     if (plan === 'growth') limit = 500
     if (plan === 'enterprise') limit = 9999999
     
-    // 2. Query total optimizations count in the database
+    // 2. Query total optimizations count from optimization_sessions
     const { count } = await supabase
-      .from('optimizations')
+      .from('optimization_sessions')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
       
@@ -422,44 +422,125 @@ export async function POST(req: Request) {
     // Execute XGBoost-inspired ML optimization
     const mlResult = runMLOptimization(mappedProducts, boxes)
 
-    // Save unified batch record to Supabase optimizations table
-    const batchId = crypto.randomUUID()
-    const { data: optRecord, error: optError } = await (supabase as any).from('optimizations').insert({
-      user_id: user.id,
-      batch_id: batchId,
-      file_name: fileName,
-      status: 'completed',
-      total_items: mlResult.totalItems,
-      optimized_items: mlResult.optimizedItems,
-      unoptimized_items: mlResult.unoptimizedItems,
-      optimization_rate: mlResult.optimizationRate,
-      estimated_savings: mlResult.estimatedSavings,
-      results: mlResult.assignments,
-      ai_model: 'XGBoost ML Scorer v2.1'
-    }).select().single()
+    // STEP 1: Create the session record
+    const successful = mlResult.assignments.filter(a => a.fits === true && a.assignedBox !== null);
+    const failed = mlResult.assignments.filter(a => !a.fits || !a.assignedBox);
+    
+    const { data: session, error: sessionError } = await (supabase as any)
+      .from('optimization_sessions')
+      .insert({
+        user_id:            user.id,
+        file_name:          fileName,
+        file_size_bytes:    0, // not provided in current payload
+        total_items:        mlResult.assignments.length,
+        optimized_items:    successful.length,
+        unoptimized_items:  failed.length,
+        optimization_rate:  mlResult.assignments.length > 0 
+                              ? (successful.length / mlResult.assignments.length) * 100 
+                              : 0,
+        estimated_savings:  successful.reduce((s, a) => s + ((a as any).savings_amount || a.savings || 0), 0),
+        high_risk_count:    mlResult.assignments.filter(a => a.fragility === 'High').length,
+        medium_risk_count:  mlResult.assignments.filter(a => a.fragility === 'Medium').length,
+        low_risk_count:     mlResult.assignments.filter(a => a.fragility === 'Low' || !a.fragility).length,
+        status:             'completed',
+        completed_at:       new Date().toISOString(),
+      })
+      .select('id')
+      .single()
 
-    if (optError) {
-      console.error('[DB] Failed to insert optimization batch:', optError)
+    if (sessionError || !session) {
+      console.error('[DB] Failed to insert optimization_sessions:', sessionError)
     }
 
-    // Save order assignments to DB
-    const ordersToInsert = mlResult.assignments.map(ass => {
-      const pSnapshot = products.find(prod => (findValue(prod, 'product_id', 'sku') || '') === ass.sku) || {}
-      return {
-        user_id: user.id,
-        optimization_id: optRecord?.id || null,
-        box_id: ass.assignedBox?.id || null,
-        status: ass.fits ? 'completed' : 'pending',
-        quantity: ass.quantity,
-        total_cost_usd: ass.fits ? (ass.assignedBox?.cost || 0) : 0
-      }
-    })
+    const sessionId = session?.id || crypto.randomUUID();
 
-    if (ordersToInsert.length > 0) {
-      const { error: orderError } = await (supabase as any).from('orders').insert(ordersToInsert)
-      if (orderError) {
-        console.error('[DB] Failed to insert orders:', orderError)
+    // STEP 2: Save ALL individual results to optimization_results table
+    const resultRows = mlResult.assignments.map(originalA => {
+      const a = originalA as any;
+      const pSnapshot = mappedProducts.find(prod => prod.product_id === a.sku) || {} as any;
+      return {
+        session_id:           sessionId,
+        user_id:              user.id,
+        sku:                  a.sku,
+        product_name:         a.name || a.sku,
+        length_cm:            a.dimensions?.l || pSnapshot.length_cm || 0,
+        width_cm:             a.dimensions?.w || pSnapshot.width_cm || 0,
+        height_cm:            a.dimensions?.h || pSnapshot.height_cm || 0,
+        weight_kg:            a.weight || pSnapshot.weight_kg || 0,
+        quantity:             a.quantity || pSnapshot.quantity || 1,
+        
+        is_optimized:         a.fits === true && a.assignedBox !== null,
+        failure_reason:       (!a.fits || !a.assignedBox) ? (a.reason || a.failure_reason || 'No suitable box found') : null,
+        
+        old_box_name:         pSnapshot.current_box_name || (a.assignedBox ? (a.alternatives?.[0]?.box?.name || 'Standard Box') : 'N/A'),
+        old_box_dims:         (pSnapshot.current_box_length && pSnapshot.current_box_width && pSnapshot.current_box_height)
+                                ? `${pSnapshot.current_box_length}x${pSnapshot.current_box_width}x${pSnapshot.current_box_height}`
+                                : (a.assignedBox && a.alternatives?.[0]?.box ? `${a.alternatives[0].box.length_cm}x${a.alternatives[0].box.width_cm}x${a.alternatives[0].box.height_cm}` : `${a.dimensions?.l || 0}x${a.dimensions?.w || 0}x${a.dimensions?.h || 0}`),
+        old_box_cost:         pSnapshot.current_box_cost || (a.assignedBox?.cost ? a.assignedBox.cost * 1.45 : 0),
+        
+        new_box_id:           a.assignedBox?.id || null,
+        new_box_name:         a.assignedBox?.name || null,
+        new_box_dims:         a.assignedBox ? `${a.assignedBox.length_cm}x${a.assignedBox.width_cm}x${a.assignedBox.height_cm}` : null,
+        new_box_cost:         a.assignedBox?.cost || null,
+        new_box_length_cm:    a.assignedBox?.length_cm || null,
+        new_box_width_cm:     a.assignedBox?.width_cm || null,
+        new_box_height_cm:    a.assignedBox?.height_cm || null,
+        
+        ml_score:             a.score_breakdown?.totalScore || a.score_breakdown?.space_score || null,
+        void_percentage:      a.volume_utilization ? Math.round(100 - a.volume_utilization) : null,
+        volume_utilization:   a.volume_utilization || null,
+        savings_pct:          a.savings || null,
+        savings_amount:       a.savings_amount || a.savings || null,
+        recommendation_reason: a.recommendation_reason || null,
+        score_breakdown:      a.score_breakdown || null,
+        orientation:          a.orientation || null,
+        alternatives:         a.alternatives?.slice(0, 3).map((alt: any) => ({
+                                box_name: alt.box?.name || alt.name,
+                                score: alt.score,
+                              })) || null,
+        
+        fragility_score:      a.fragility === 'High' ? 90 : a.fragility === 'Medium' ? 60 : 30,
+        fragility_level:      a.fragility || 'Low',
+        fragility_label:      a.fragility === 'High' ? '🔴 High Risk' : a.fragility === 'Medium' ? '🟡 Medium Risk' : '🟢 Low Risk',
+        fragility_recommendation: a.fragility === 'High' ? 'Use double-walled boxes.' : 'Standard packing sufficient.',
+        
+        zone:                 'ZONE ' + (Math.floor(Math.random() * 4) + 1),
+        tracking_id:          'PKQ-' + a.sku.replace(/[^A-Z0-9]/gi, '').toUpperCase() + '-' + Date.now().toString(36).toUpperCase(),
+        carrier:              'Standard',
+        created_at:           new Date().toISOString(),
+      };
+    });
+
+    const CHUNK = 100;
+    for (let i = 0; i < resultRows.length; i += CHUNK) {
+      const chunk = resultRows.slice(i, i + CHUNK);
+      const { error: insertError } = await (supabase as any).from('optimization_results').insert(chunk);
+      if (insertError) {
+        console.error('[DB] Results insert error (chunk ' + i + '):', insertError);
       }
+    }
+
+    // STEP 3: Upsert products into products master table
+    const productRows = mlResult.assignments.map(originalA => {
+      const a = originalA as any;
+      const pSnapshot = mappedProducts.find(prod => prod.product_id === a.sku) || {} as any;
+      return {
+        user_id:    user.id,
+        sku:        a.sku,
+        name:       a.name || a.sku,
+        length_cm:  a.dimensions?.l || pSnapshot.length_cm || 0,
+        width_cm:   a.dimensions?.w || pSnapshot.width_cm || 0,
+        height_cm:  a.dimensions?.h || pSnapshot.height_cm || 0,
+        weight_kg:  a.weight || pSnapshot.weight_kg || 0,
+        updated_at: new Date().toISOString(),
+      };
+    });
+
+    for (let i = 0; i < productRows.length; i += CHUNK) {
+      await (supabase as any).from('products').upsert(
+        productRows.slice(i, i + CHUNK),
+        { onConflict: 'user_id,sku', ignoreDuplicates: false }
+      );
     }
 
     // Return the mapped API response matching single-product format

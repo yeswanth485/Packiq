@@ -49,22 +49,23 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      const { data: optimizations, error } = await (supabase.from('optimizations') as any)
+      // Read from optimization_sessions (new schema)
+      const { data: sessions, error } = await (supabase.from('optimization_sessions') as any)
         .select('*')
         .eq('user_id', user.id)
         .eq('status', 'completed')
 
       if (error) throw error
 
-      const totalSavings = (optimizations || []).reduce((acc: number, o: any) => acc + (o.cost_savings_usd || 0), 0)
-      const count = (optimizations || []).length
-      const avgEff = count > 0 
-        ? (optimizations || []).reduce((acc: number, o: any) => acc + (o.efficiency_score || 0), 0) / count
-        : 0
+      const totalSavings = (sessions || []).reduce((acc: number, s: any) => acc + (s.estimated_savings || 0), 0)
+      const count = (sessions || []).length
+      const totalItems = (sessions || []).reduce((acc: number, s: any) => acc + (s.total_items || 0), 0)
+      const totalOptimized = (sessions || []).reduce((acc: number, s: any) => acc + (s.optimized_items || 0), 0)
+      const avgEff = totalItems > 0 ? (totalOptimized / totalItems) * 100 : 0
 
       const newStats = {
         totalSavings,
-        ordersProcessed: count * 1.5,
+        ordersProcessed: totalItems,
         efficiency: avgEff,
         optimizationsCount: count
       }

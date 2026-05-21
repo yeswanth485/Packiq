@@ -1,115 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-const mapToOptimizationResult = (opt: any, res: any, idx: number) => {
-  const isItemFitted = res.fits && res.assignedBox
-  const boxCost = res.assignedBox?.cost || 0.5
-  const savings = res.savings || 0
-  const baselineCost = isItemFitted ? (boxCost + savings) : 0.5
-  
-  return {
-    id: `${opt.id}-${res.sku || idx}`,
-    batch_id: opt.batch_id || opt.id,
-    created_at: opt.created_at,
-    file_name: opt.file_name || 'Bulk Upload',
-    ai_model: opt.ai_model || 'XGBoost ML Scorer v2.1',
-    status: isItemFitted ? 'success' : 'error',
-    error: isItemFitted ? null : (res.failure_reason || 'No suitable box found in catalog'),
-    product_id: res.sku || `SKU-${idx}`,
-    product_name: res.name || res.product_name || 'Unknown Product',
-    product_price: 0,
-    product_dims: `${res.dimensions?.length_cm || 0}x${res.dimensions?.width_cm || 0}x${res.dimensions?.height_cm || 0}`,
-    product_weight: res.weight || 0.5,
-    original_box: res.original_box || 'Not specified',
-    original_box_cost: baselineCost,
-    optimized_box: isItemFitted ? res.assignedBox.name : 'Unoptimized',
-    optimized_box_cost: boxCost,
-    optimized_box_dims: isItemFitted ? `${res.assignedBox.length_cm}x${res.assignedBox.width_cm}x${res.assignedBox.height_cm}` : '—',
-    optimized_box_sku: isItemFitted ? res.assignedBox.sku : '—',
-    packaging_material: isItemFitted ? 'Corrugated Cardboard' : '—',
-    fill_material: isItemFitted ? 'Recycled Paper / Bubble Wrap' : '—',
-    packaging_cost: boxCost,
-    shipping_cost: isItemFitted ? Math.round(boxCost * 0.8 * 100) / 100 : 0.5, 
-    total_cost: isItemFitted ? boxCost + Math.round(boxCost * 0.8 * 100) / 100 : 0.5,
-    baseline_cost: isItemFitted ? baselineCost + Math.round(baselineCost * 0.8 * 100) / 100 : 0.5,
-    cost_before: isItemFitted ? baselineCost + Math.round(baselineCost * 0.8 * 100) / 100 : 0.5,
-    cost_after: isItemFitted ? boxCost + Math.round(boxCost * 0.8 * 100) / 100 : 0.5,
-    savings: savings,
-    savings_percent: isItemFitted ? (savings / baselineCost) * 100 : 0,
-    damage_risk: res.fragility || 'Low',
-    space_utilization: Math.round(res.volume_utilization || 0),
-    confidence_score: 95,
-    void_reduction: 100 - Math.round(res.volume_utilization || 0),
-    fit_score: 95,
-    void_score: 90,
-    cost_score: 85,
-    sustainability_score: 90,
-    final_score: 92,
-    reasoning: res.recommendation_reason || res.failure_reason || 'Optimized by XGBoost Scorer',
-    packing_tips: [
-      'Place the heaviest item at the center bottom.',
-      'Fill remaining void with paper pads.'
-    ],
-    candidates_evaluated: 5,
-    model: opt.ai_model || 'XGBoost ML Scorer v2.1',
-    data_quality: 'complete'
-  }
-}
-
-const mapSingleToOptimizationResult = (opt: any) => {
-  const p = opt.product_snapshot || {}
-  const res = opt.ai_response || {}
-  const isItemFitted = opt.recommended_box && opt.recommended_box !== 'Unoptimized'
-  
-  return {
-    id: opt.id,
-    batch_id: opt.batch_id || opt.id,
-    created_at: opt.created_at,
-    file_name: opt.file_name || 'Bulk Upload',
-    ai_model: opt.ai_model || 'XGBoost ML Scorer v2.1',
-    status: isItemFitted ? 'success' : 'error',
-    error: isItemFitted ? null : (res.reasoning || 'No suitable box found in catalog'),
-    product_id: p.sku || p.product_id || opt.product_id || 'SKU-0',
-    product_name: p.name || p.product_name || 'Unknown Product',
-    product_price: 0,
-    product_dims: `${p.length_cm || 0}x${p.width_cm || 0}x${p.height_cm || 0}`,
-    product_weight: p.weight_kg || 0.5,
-    original_box: p.current_box_name || p.current_box_size || 'Not specified',
-    original_box_cost: p.current_cost_usd || 0.5,
-    optimized_box: opt.recommended_box || 'Unoptimized',
-    optimized_box_cost: res.new_cost_usd || res.totalCost || 0.5,
-    optimized_box_dims: isItemFitted ? `${p.length_cm}x${p.width_cm}x${p.height_cm}` : '—',
-    optimized_box_sku: opt.recommended_box || '—',
-    packaging_material: isItemFitted ? 'Corrugated Cardboard' : '—',
-    fill_material: isItemFitted ? 'Recycled Paper / Bubble Wrap' : '—',
-    packaging_cost: res.new_cost_usd || res.totalCost || 0.5,
-    shipping_cost: isItemFitted ? Math.round((res.new_cost_usd || res.totalCost || 0.5) * 0.8 * 100) / 100 : 0.5,
-    total_cost: res.totalCost || opt.total_cost || 0.5,
-    baseline_cost: res.baselineCost || p.current_cost_usd || 0.5,
-    cost_before: res.baselineCost || p.current_cost_usd || 0.5,
-    cost_after: res.totalCost || opt.total_cost || 0.5,
-    savings: opt.cost_savings_usd || 0,
-    savings_percent: (opt.cost_savings_usd || 0) / (res.baselineCost || p.current_cost_usd || 1) * 100,
-    damage_risk: res.damage_risk || (p.fragile ? 'High' : 'Low'),
-    space_utilization: opt.efficiency_score || 0,
-    confidence_score: 95,
-    void_reduction: res.void_reduction || 0,
-    fit_score: 95,
-    void_score: 90,
-    cost_score: 85,
-    sustainability_score: 90,
-    final_score: 92,
-    reasoning: res.reasoning || 'Optimized by XGBoost Scorer',
-    packing_tips: [
-      'Place the heaviest item at the center bottom.',
-      'Fill remaining void with paper pads.'
-    ],
-    candidates_evaluated: 5,
-    model: opt.ai_model || 'XGBoost ML Scorer v2.1',
-    data_quality: 'complete'
-  }
-}
-
 export function useDashboardData() {
   const [dbStats, setDbStats] = useState<{
     totalRuns: number
@@ -148,9 +39,6 @@ export function useDashboardData() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        // Sync tokens if needed (resets tokens if past reset date)
-        await (supabase as any).rpc('sync_user_tokens')
-
         // 1. Fetch Profile Preferences
         const { data: profile } = await (supabase as any)
           .from('profiles')
@@ -160,68 +48,101 @@ export function useDashboardData() {
 
         if (profile && mounted) {
           setProfileData({
-            company: profile.company || '',
+            company: profile.company_name || profile.company || '',
             industry: profile.industry || '',
             companySize: profile.company_size || '',
             monthlyVolume: profile.monthly_volume || 1000,
             primaryCarriers: profile.primary_carriers || [],
             fulfillmentType: profile.fulfillment_type || 'In-House',
             warehousesCount: profile.warehouses_count || 1,
-            sizeUnits: profile.size_units || 'cm',
+            sizeUnits: profile.unit_system || 'metric',
             optimizationGoal: profile.optimization_goal || 'void',
             sustainabilityMode: profile.sustainability_mode || false,
-            plan: profile.plan || 'normal',
-            tokensLimit: profile.tokens_limit || 1000,
-            tokensUsed: profile.tokens_used || 0,
-            tokenResetDate: profile.token_reset_date || new Date(Date.now() + 30*24*60*60*1000).toISOString(),
+            plan: profile.plan || 'starter',
+            tokensLimit: profile.token_limit || 500,
+            tokensUsed: profile.monthly_opt_count || 0,
+            tokenResetDate: profile.monthly_opt_reset || new Date(Date.now() + 30*24*60*60*1000).toISOString(),
           })
         }
 
-        // 2. Fetch Optimization Summary
-        const { data } = await (supabase as any).rpc('get_optimization_summary', {
-          p_user_id: user.id,
-          p_days: 30,
-        })
-
-        // 3. Fetch Raw Optimizations
-        const { data: optimizations } = await supabase
-          .from('optimizations')
+        // 2. Fetch optimization sessions
+        const { data: sessions } = await supabase
+          .from('optimization_sessions')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
 
-        if (mounted) {
-          const list: any[] = []
-          if (optimizations) {
-            optimizations.forEach((opt: any) => {
-              if (opt.results && Array.isArray(opt.results)) {
-                opt.results.forEach((res: any, idx: number) => {
-                  list.push(mapToOptimizationResult(opt, res, idx))
-                });
-              } else {
-                list.push(mapSingleToOptimizationResult(opt))
-              }
-            })
-          }
+        // 3. Fetch all optimization results for dashboard charts
+        const { data: results } = await supabase
+          .from('optimization_results')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (mounted && results) {
+          // Map optimization_results rows to the format DashboardClient expects
+          const list = results.map((r: any) => ({
+            id: r.id,
+            batch_id: r.session_id,
+            created_at: r.created_at,
+            file_name: '',
+            ai_model: 'XGBoost ML Scorer v2.1',
+            status: r.is_optimized ? 'success' : 'error',
+            error: r.is_optimized ? null : (r.failure_reason || 'No suitable box found'),
+            product_id: r.sku,
+            product_name: r.product_name || r.sku,
+            product_price: 0,
+            product_dims: `${r.length_cm || 0}x${r.width_cm || 0}x${r.height_cm || 0}`,
+            product_weight: r.weight_kg || 0.5,
+            original_box: r.old_box_name || 'Not specified',
+            original_box_cost: r.old_box_cost || 0,
+            optimized_box: r.new_box_name || 'Unoptimized',
+            optimized_box_cost: r.new_box_cost || 0,
+            optimized_box_dims: r.new_box_dims || '—',
+            optimized_box_sku: r.new_box_name || '—',
+            packaging_material: r.is_optimized ? 'Corrugated Cardboard' : '—',
+            fill_material: r.is_optimized ? 'Recycled Paper' : '—',
+            packaging_cost: r.new_box_cost || 0,
+            shipping_cost: r.is_optimized ? (r.weight_kg || 0.5) * 0.54 : 0,
+            total_cost: (r.new_box_cost || 0) + (r.is_optimized ? (r.weight_kg || 0.5) * 0.54 : 0),
+            baseline_cost: r.old_box_cost || 0,
+            cost_before: r.old_box_cost || 0,
+            cost_after: r.new_box_cost || 0,
+            savings: r.savings_amount || 0,
+            savings_percent: r.savings_pct || 0,
+            damage_risk: r.fragility_level || 'Low',
+            space_utilization: r.volume_utilization || 0,
+            confidence_score: 95,
+            void_reduction: r.void_percentage || 0,
+            fit_score: 95,
+            void_score: 90,
+            cost_score: 85,
+            sustainability_score: 90,
+            final_score: r.ml_score || 85,
+            reasoning: r.recommendation_reason || r.failure_reason || 'Optimized by ML Scorer',
+            packing_tips: ['Place heaviest item at center bottom.', 'Fill void with paper pads.'],
+            candidates_evaluated: 5,
+            model: 'XGBoost ML Scorer v2.1',
+            data_quality: 'complete'
+          }))
           setRawOptimizations(list)
         }
 
-        if (data && mounted) {
-          // Also get the most recent AI model used
-          const { data: recent } = await (supabase as any)
-            .from('optimizations')
-            .select('ai_model')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single()
+        if (sessions && mounted) {
+          const totalRuns = sessions.length
+          const totalSavings = sessions.reduce((acc: number, s: any) => acc + (s.estimated_savings || 0), 0)
+          const totalItems = sessions.reduce((acc: number, s: any) => acc + (s.total_items || 0), 0)
+          const totalOptimized = sessions.reduce((acc: number, s: any) => acc + (s.optimized_items || 0), 0)
+          const avgEff = totalItems > 0 ? (totalOptimized / totalItems) * 100 : 0
+          const today = new Date().toISOString().split('T')[0]
+          const runsToday = sessions.filter((s: any) => s.created_at?.startsWith(today)).length
 
           setDbStats({
-            totalRuns:       data.total_runs || 0,
-            totalSavingsDb:  parseFloat((data.total_savings_usd || 0).toFixed(2)),
-            avgEfficiency:   parseFloat((data.avg_efficiency || 0).toFixed(1)),
-            runsToday:       data.runs_today || 0,
-            aiModel:         recent?.ai_model || 'PackVision Heuristic v2.0',
+            totalRuns,
+            totalSavingsDb: parseFloat(totalSavings.toFixed(2)),
+            avgEfficiency: parseFloat(avgEff.toFixed(1)),
+            runsToday,
+            aiModel: 'XGBoost ML Scorer v2.1',
           })
         }
       } catch (err) {

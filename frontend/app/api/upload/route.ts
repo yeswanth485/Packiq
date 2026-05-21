@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
-import { runOptimization, DEFAULT_MODEL } from '@/lib/openrouter'
 import type { UploadedProduct } from '@/types'
 
 export async function POST(request: NextRequest) {
@@ -61,69 +60,30 @@ export async function POST(request: NextRequest) {
     const valid = products.filter((p) => p.name?.trim())
     if (valid.length === 0) return NextResponse.json({ error: 'No valid rows found' }, { status: 422 })
 
-    const rows = valid.map((p) => ({ ...p, user_id: user.id }))
-    const { data: dbProducts, error: dbError } = await (supabase as any).from('products').insert(rows).select()
+    // Upsert products to the products master table
+    const productRows = valid.map((p) => ({
+      user_id: user.id,
+      sku: p.sku || `SKU-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: p.name,
+      length_cm: p.length_cm || 0,
+      width_cm: p.width_cm || 0,
+      height_cm: p.height_cm || 0,
+      weight_kg: p.weight_kg || 0,
+      category: p.category || 'general',
+      updated_at: new Date().toISOString(),
+    }))
 
-    if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 })
-
-    // Background Optimization using Claude 4 Sonnet
-    const { data: boxes } = await supabase.from('box_catalog').select('*')
-    
-    // Process all uploaded rows
-    const results = await Promise.all(
-      (dbProducts ?? []).map(async (p: any) => {
-        try {
-          const opt = await runOptimization({
-            productName: p.name,
-            productId: p.id,
-            weightKg: p.weight_kg || 0.5,
-            lengthCm: p.length_cm || 10,
-            widthCm: p.width_cm || 10,
-            heightCm: p.height_cm || 10,
-            fragility: p.fragile ? 'high' : 'low',
-            quantity: 1,
-            category: p.category || 'general',
-            destinationZone: 2,
-            shippingMethod: 'standard',
-            availableBoxes: boxes ?? []
-          })
-
-          const { data: optData } = await (supabase as any).from('optimizations').insert({
-            user_id: user.id,
-            product_id: p.id,
-            status: 'completed',
-            product_snapshot: p,
-            ai_response: opt,
-            recommended_box: opt.recommendedBoxName,
-            efficiency_score: opt.finalScore,
-            space_utilization: opt.spaceUtilization,
-            cost_savings_usd: opt.savings,
-            co2_savings_kg: 0,
-            ai_model: DEFAULT_MODEL
-          }).select().single()
-
-          // Automatically create an order for the optimization
-          if (optData) {
-            await (supabase as any).from('orders').insert({
-              user_id: user.id,
-              product_id: p.id,
-              optimization_id: optData.id,
-              status: 'pending',
-              quantity: 1,
-              total_cost_usd: opt.savings // placeholder
-            })
-          }
-          return optData
-        } catch (e) {
-          console.error('Optimization failed for product', p.id, e)
-          return null
-        }
-      })
-    )
+    const CHUNK = 100
+    for (let i = 0; i < productRows.length; i += CHUNK) {
+      await (supabase as any).from('products').upsert(
+        productRows.slice(i, i + CHUNK),
+        { onConflict: 'user_id,sku', ignoreDuplicates: false }
+      )
+    }
 
     return NextResponse.json({ 
-      inserted: dbProducts?.length ?? 0, 
-      optimized: results.filter(Boolean).length 
+      inserted: valid.length,
+      message: `${valid.length} products uploaded. Go to Optimization tab to run AI packaging optimization.`
     }, { status: 201 })
   } catch (err) {
     console.error('[upload]', err)

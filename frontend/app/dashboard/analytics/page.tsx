@@ -9,14 +9,26 @@ export default async function AnalyticsPage() {
 
   let dbOptimizations: any[] = []
   if (user) {
-    const { data } = await supabase
-      .from('optimizations')
+    // Fetch optimization sessions (batch-level data)
+    const { data: sessions } = await supabase
+      .from('optimization_sessions')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-    
-    if (data) {
-      dbOptimizations = data
+
+    // Fetch individual results for detailed analytics
+    const { data: results } = await supabase
+      .from('optimization_results')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+
+    // Merge session-level + result-level data for analytics
+    if (sessions && results) {
+      dbOptimizations = sessions.map((s: any) => ({
+        ...s,
+        results: results.filter((r: any) => r.session_id === s.id),
+      }))
     }
   }
 
