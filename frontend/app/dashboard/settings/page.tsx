@@ -107,7 +107,7 @@ export default function SettingsPage() {
           ...prev,
           full_name: profile?.full_name || user.user_metadata?.full_name || 'Admin',
           email: user.email || 'admin@example.com',
-          company_name: profile?.company || 'Enterprise',
+          company_name: profile?.company_name || 'Enterprise',
           phone: profile?.mobile || '+1 (555) 000-0000',
           industry: profile?.industry || 'Logistics',
           plan: profile?.plan || 'Starter'
@@ -128,7 +128,7 @@ export default function SettingsPage() {
       const supabase = createClient()
       const { error } = await (supabase as any).from('profiles').update({
         full_name: formData.full_name,
-        company: formData.company_name,
+        company_name: formData.company_name,
         mobile: formData.phone,
         industry: formData.industry,
         notification_prefs: formData.notifications,

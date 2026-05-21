@@ -1,6 +1,8 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Upload, FileText, Loader2, CheckCircle2, AlertCircle, FileCode } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -14,6 +16,7 @@ export default function UploadZone({ onSuccess }: UploadZoneProps) {
   const [message, setMessage] = useState('')
   const [dragging, setDragging] = useState(false)
   const [fileName, setFileName] = useState('')
+  const router = useRouter()
 
   async function handleFile(file: File) {
     setFileName(file.name)
@@ -26,9 +29,65 @@ export default function UploadZone({ onSuccess }: UploadZoneProps) {
       const res = await fetch('/api/upload', { method: 'POST', body: formData })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Upload failed')
+      setMessage(`${data.inserted} products imported — starting optimization...`)
+
+      // Immediately call optimize API with parsed products
+      const optimizeRes = await fetch('/api/optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products: data.products, file_name: file.name })
+      })
+      const optJson = await optimizeRes.json()
+      if (!optimizeRes.ok || !optJson.success) {
+        throw new Error(optJson.error || 'Optimization failed')
+      }
+
       setStatus('success')
-      setMessage(`${data.inserted} products imported & optimizing...`)
-      onSuccess?.(data.inserted)
+      setMessage(`Optimization complete — creating orders and redirecting...`)
+
+      // Create orders for optimized saved results if available
+      const saved = optJson.saved_results || []
+      // Delay slightly to let DB settle
+      await new Promise(r => setTimeout(r, 800))
+
+      for (const row of saved) {
+        try {
+          if (!row.is_optimized) continue
+          await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              product_id: row.sku,
+              optimization_id: optJson.session_id || null,
+              optimization_result_id: row.id,
+              box_id: row.new_box_id || null,
+              total_cost_usd: row.new_box_cost || null,
+              product_snapshot: {
+                id: row.sku,
+                name: row.product_name,
+                length_cm: row.length_cm,
+                width_cm: row.width_cm,
+                height_cm: row.height_cm,
+                weight_kg: row.weight_kg
+              },
+              box_snapshot: {
+                id: row.new_box_id,
+                name: row.new_box_name,
+                dims: row.new_box_dims,
+                cost: row.new_box_cost
+              },
+              quantity: row.quantity || 1
+            })
+          })
+        } catch (e) {
+          console.error('Order creation failed for', row, e)
+        }
+      }
+
+      toast.success('Optimization complete — orders created.')
+      // Redirect to Orders page for user review
+      const router = useRouter()
+      router.push('/dashboard/orders')
     } catch (err) {
       setStatus('error')
       setMessage(err instanceof Error ? err.message : 'Upload failed')

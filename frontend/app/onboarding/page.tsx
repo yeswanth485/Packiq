@@ -81,7 +81,7 @@ export default function OnboardingWizard() {
       if (user) {
         const { data: profile } = await (supabase as any)
           .from('profiles')
-          .select('company, onboarding_complete')
+          .select('company_name, onboarding_complete')
           .eq('id', user.id)
           .single()
         
@@ -90,8 +90,8 @@ export default function OnboardingWizard() {
           return
         }
         
-        if (profile?.company) {
-          setData(prev => ({ ...prev, companyName: profile.company }))
+        if (profile?.company_name) {
+          setData(prev => ({ ...prev, companyName: profile.company_name }))
         }
       }
     }
@@ -124,10 +124,10 @@ export default function OnboardingWizard() {
 
       let dbError;
       const profileData = {
-        company: data.companyName,
+        company_name: data.companyName,
         industry: data.industry,
         company_size: data.companySize,
-        website_url: data.websiteUrl,
+        company_website: data.websiteUrl,
         monthly_volume: data.monthlyVolume,
         primary_carriers: data.primaryCarriers,
         fulfillment_type: data.fulfillmentType,

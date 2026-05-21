@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { parseDimensions } from '@/lib/utils/parser'
 import { runOptimization, LIGHTWEIGHT_MODEL } from '@/lib/openrouter'
 import { runHeuristicOptimization, normalizeInput, runProductionOptimization } from '@/lib/optimization/engine'
@@ -289,6 +289,7 @@ import { runMLOptimization } from '@/lib/optimization/mlOptimizer'
 export async function POST(req: Request) {
   try {
     const supabase = await createClient()
+    const supabaseAdmin = await createServiceClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -426,7 +427,7 @@ export async function POST(req: Request) {
     const successful = mlResult.assignments.filter(a => a.fits === true && a.assignedBox !== null);
     const failed = mlResult.assignments.filter(a => !a.fits || !a.assignedBox);
     
-    const { data: session, error: sessionError } = await (supabase as any)
+    const { data: session, error: sessionError } = await (supabaseAdmin as any)
       .from('optimization_sessions')
       .insert({
         user_id:            user.id,
@@ -544,11 +545,18 @@ export async function POST(req: Request) {
     });
 
     const CHUNK = 100;
+    const savedResults: any[] = []
     for (let i = 0; i < resultRows.length; i += CHUNK) {
       const chunk = resultRows.slice(i, i + CHUNK);
-      const { error: insertError } = await (supabase as any).from('optimization_results').insert(chunk);
+      // Return inserted rows so frontend can reference optimization_result_id
+      const { data: insertedData, error: insertError } = await (supabaseAdmin as any)
+        .from('optimization_results')
+        .insert(chunk)
+        .select('*')
       if (insertError) {
         console.error('[DB] Results insert error (chunk ' + i + '):', insertError);
+      } else if (insertedData && Array.isArray(insertedData)) {
+        savedResults.push(...insertedData)
       }
     }
 
@@ -569,15 +577,17 @@ export async function POST(req: Request) {
     });
 
     for (let i = 0; i < productRows.length; i += CHUNK) {
-      await (supabase as any).from('products').upsert(
+      await (supabaseAdmin as any).from('products').upsert(
         productRows.slice(i, i + CHUNK),
         { onConflict: 'user_id,sku', ignoreDuplicates: false }
       );
     }
 
-    // Return the mapped API response matching single-product format
+    // Return the mapped API response matching single-product format and include DB ids
     return NextResponse.json({
       success: true,
+      session_id: sessionId,
+      saved_results: savedResults,
       results: mlResult.assignments.map(ass => {
         // Find matching engineInput dimensions
         const engineInput: any = mappedProducts.find(m => m.product_id === ass.sku) || {}

@@ -81,9 +81,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Prepare lightweight product payload for optimization
+    const productPayload = valid.map((p) => ({
+      product_id: p.sku || `SKU-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      product_name: p.name,
+      length_cm: p.length_cm || 0,
+      width_cm: p.width_cm || 0,
+      height_cm: p.height_cm || 0,
+      weight_kg: p.weight_kg || 0.5,
+      fragility: p.fragile ? 'high' : 'low',
+      quantity: 1,
+      category: p.category || 'general'
+    }))
+
     return NextResponse.json({ 
       inserted: valid.length,
-      message: `${valid.length} products uploaded. Go to Optimization tab to run AI packaging optimization.`
+      products: productPayload,
+      message: `${valid.length} products uploaded and ready for optimization.`
     }, { status: 201 })
   } catch (err) {
     console.error('[upload]', err)

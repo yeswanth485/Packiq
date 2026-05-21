@@ -105,16 +105,16 @@ export default function SignupPage() {
       if (error) throw error
 
       if (data.user) {
-         // Create profile explicitly
-         await (supabase as any).from('profiles').insert({
-            id: data.user.id,
-            email: data.user.email,
-            full_name: formData.fullName,
-            company: formData.companyName,
-            industry: formData.industry,
-            mobile: formData.phone,
-            onboarding_complete: false
-         })
+        // Create profile explicitly
+        await (supabase as any).from('profiles').insert({
+          id: data.user.id,
+          email: data.user.email,
+          full_name: formData.fullName,
+          company_name: formData.companyName,
+          industry: formData.industry,
+          mobile: formData.phone,
+          onboarding_complete: false
+        })
       }
 
       toast.success('Account created! Let us set up your workspace.')
