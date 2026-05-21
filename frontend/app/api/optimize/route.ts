@@ -457,56 +457,88 @@ export async function POST(req: Request) {
     // STEP 2: Save ALL individual results to optimization_results table
     const resultRows = mlResult.assignments.map(originalA => {
       const a = originalA as any;
-      const pSnapshot = mappedProducts.find(prod => prod.product_id === a.sku) || {} as any;
+      const pSnapshot = mappedProducts.find(prod => prod.product_id === a.sku) || ({} as any);
+
+      // Resolve dimensions (prefer assignment, then mapped product snapshot)
+      const length_cm = Number(a.dimensions?.l ?? pSnapshot.length_cm ?? 0);
+      const width_cm = Number(a.dimensions?.w ?? pSnapshot.width_cm ?? 0);
+      const height_cm = Number(a.dimensions?.h ?? pSnapshot.height_cm ?? 0);
+
+      // Basic validation: dimensions must be > 0
+      const missingDims = !(length_cm > 0 && width_cm > 0 && height_cm > 0);
+
+      // Resolve old/new costs
+      const oldCost = Number(pSnapshot.current_box_cost ?? pSnapshot.currentBoxCostUsd ?? (a.baselineCost ?? 0) ?? 0);
+      const newCost = Number(a.assignedBox?.cost ?? a.optimized_box_cost ?? null);
+
+      // Compute savings_amount and savings_pct deterministically when possible
+      let savings_amount = a.savings_amount ?? a.savings ?? null;
+      if ((savings_amount === null || savings_amount === undefined) && oldCost && newCost) {
+        savings_amount = Math.max(0, oldCost - newCost);
+      }
+      let savings_pct = a.savings_pct ?? a.savingsPercent ?? a.savings ?? null;
+      if ((savings_pct === null || savings_pct === undefined) && oldCost) {
+        savings_pct = oldCost > 0 ? (savings_amount ? (savings_amount / oldCost) * 100 : 0) : null;
+      }
+
+      // Normalize fragility level casing
+      const frag = (a.fragility || pSnapshot.fragility || 'Low').toString();
+      const fragility_level = frag.charAt(0).toUpperCase() + frag.slice(1).toLowerCase();
+
+      // Deterministic zone: prefer assignment, then product snapshot, else default 2
+      const zoneValue = a.zone || pSnapshot.destinationZone || pSnapshot.destination_zone || pSnapshot.destinationZone || null;
+      const zone = zoneValue ? (typeof zoneValue === 'number' ? `ZONE ${zoneValue}` : String(zoneValue)) : 'ZONE 2';
+
+      // If dimensions are missing, mark as failed with clear reason
+      const isOptimized = !missingDims && (a.fits === true && a.assignedBox !== null);
+      const failureReason = missingDims ? 'Missing or invalid product dimensions' : ((!a.fits || !a.assignedBox) ? (a.reason || a.failure_reason || 'No suitable box found') : null);
+
       return {
         session_id:           sessionId,
         user_id:              user.id,
         sku:                  a.sku,
         product_name:         a.name || a.sku,
-        length_cm:            a.dimensions?.l || pSnapshot.length_cm || 0,
-        width_cm:             a.dimensions?.w || pSnapshot.width_cm || 0,
-        height_cm:            a.dimensions?.h || pSnapshot.height_cm || 0,
-        weight_kg:            a.weight || pSnapshot.weight_kg || 0,
-        quantity:             a.quantity || pSnapshot.quantity || 1,
-        
-        is_optimized:         a.fits === true && a.assignedBox !== null,
-        failure_reason:       (!a.fits || !a.assignedBox) ? (a.reason || a.failure_reason || 'No suitable box found') : null,
-        
-        old_box_name:         pSnapshot.current_box_name || (a.assignedBox ? (a.alternatives?.[0]?.box?.name || 'Standard Box') : 'N/A'),
+        length_cm:            length_cm,
+        width_cm:             width_cm,
+        height_cm:            height_cm,
+        weight_kg:            Number(a.weight ?? pSnapshot.weight_kg ?? 0),
+        quantity:             a.quantity ?? pSnapshot.quantity ?? 1,
+
+        is_optimized:         Boolean(isOptimized),
+        failure_reason:       failureReason,
+
+        old_box_name:         pSnapshot.current_box_name || (a.alternatives?.[0]?.box?.name || 'Standard Box'),
         old_box_dims:         (pSnapshot.current_box_length && pSnapshot.current_box_width && pSnapshot.current_box_height)
                                 ? `${pSnapshot.current_box_length}x${pSnapshot.current_box_width}x${pSnapshot.current_box_height}`
-                                : (a.assignedBox && a.alternatives?.[0]?.box ? `${a.alternatives[0].box.length_cm}x${a.alternatives[0].box.width_cm}x${a.alternatives[0].box.height_cm}` : `${a.dimensions?.l || 0}x${a.dimensions?.w || 0}x${a.dimensions?.h || 0}`),
-        old_box_cost:         pSnapshot.current_box_cost || (a.assignedBox?.cost ? a.assignedBox.cost * 1.45 : 0),
-        
+                                : (a.alternatives?.[0]?.box ? `${a.alternatives[0].box.length_cm}x${a.alternatives[0].box.width_cm}x${a.alternatives[0].box.height_cm}` : `${length_cm}x${width_cm}x${height_cm}`),
+        old_box_cost:         oldCost || (a.assignedBox?.cost ? a.assignedBox.cost * 1.45 : 0),
+
         new_box_id:           a.assignedBox?.id || null,
         new_box_name:         a.assignedBox?.name || null,
         new_box_dims:         a.assignedBox ? `${a.assignedBox.length_cm}x${a.assignedBox.width_cm}x${a.assignedBox.height_cm}` : null,
-        new_box_cost:         a.assignedBox?.cost || null,
+        new_box_cost:         newCost || null,
         new_box_length_cm:    a.assignedBox?.length_cm || null,
         new_box_width_cm:     a.assignedBox?.width_cm || null,
         new_box_height_cm:    a.assignedBox?.height_cm || null,
-        
-        ml_score:             a.score_breakdown?.totalScore || a.score_breakdown?.space_score || null,
+
+        ml_score:             a.score_breakdown?.totalScore ?? a.score_breakdown?.space_score ?? null,
         void_percentage:      a.volume_utilization ? Math.round(100 - a.volume_utilization) : null,
-        volume_utilization:   a.volume_utilization || null,
-        savings_pct:          a.savings || null,
-        savings_amount:       a.savings_amount || a.savings || null,
+        volume_utilization:   a.volume_utilization ?? null,
+        savings_pct:          savings_pct !== null ? Number(savings_pct) : null,
+        savings_amount:       savings_amount !== null ? Number(savings_amount) : null,
         recommendation_reason: a.recommendation_reason || null,
         score_breakdown:      a.score_breakdown || null,
         orientation:          a.orientation || null,
-        alternatives:         a.alternatives?.slice(0, 3).map((alt: any) => ({
-                                box_name: alt.box?.name || alt.name,
-                                score: alt.score,
-                              })) || null,
-        
-        fragility_score:      a.fragility === 'High' ? 90 : a.fragility === 'Medium' ? 60 : 30,
-        fragility_level:      a.fragility || 'Low',
-        fragility_label:      a.fragility === 'High' ? '🔴 High Risk' : a.fragility === 'Medium' ? '🟡 Medium Risk' : '🟢 Low Risk',
-        fragility_recommendation: a.fragility === 'High' ? 'Use double-walled boxes.' : 'Standard packing sufficient.',
-        
-        zone:                 'ZONE ' + (Math.floor(Math.random() * 4) + 1),
-        tracking_id:          'PKQ-' + a.sku.replace(/[^A-Z0-9]/gi, '').toUpperCase() + '-' + Date.now().toString(36).toUpperCase(),
-        carrier:              'Standard',
+        alternatives:         a.alternatives?.slice(0, 3).map((alt: any) => ({ box_name: alt.box?.name || alt.name, score: alt.score })) || null,
+
+        fragility_score:      fragility_level === 'High' ? 90 : fragility_level === 'Medium' ? 60 : 30,
+        fragility_level:      fragility_level,
+        fragility_label:      fragility_level === 'High' ? '🔴 High Risk' : fragility_level === 'Medium' ? '🟡 Medium Risk' : '🟢 Low Risk',
+        fragility_recommendation: fragility_level === 'High' ? 'Use double-walled boxes.' : 'Standard packing sufficient.',
+
+        zone:                 zone,
+        tracking_id:          a.tracking_id || ('PKQ-' + (a.sku || '').toString().replace(/[^A-Z0-9]/gi, '').toUpperCase() + '-' + Date.now().toString(36).toUpperCase()),
+        carrier:              a.carrier || 'Standard',
         created_at:           new Date().toISOString(),
       };
     });
