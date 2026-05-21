@@ -42,6 +42,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSession(session)
           setUser(session?.user ?? null)
           setIsLoading(false)
+          
+          if (_event === 'SIGNED_OUT') {
+            localStorage.clear()
+          }
         }
       }
     )

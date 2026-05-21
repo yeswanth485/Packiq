@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { Package, Zap, TrendingUp, CheckCircle2, Brain, Sparkles, Activity, DollarSign, Leaf, Weight, Building } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
 import { StaggerContainer, StaggerItem, CountUpNumber } from '@/components/animations'
 import { useDashboardData } from '@/lib/hooks/useDashboardData'
@@ -146,18 +146,37 @@ export default function DashboardClient() {
             </div>
             <div className="h-full w-full pb-10">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
+                <AreaChart data={chartData} margin={{ left: -20, right: 10 }}>
                   <defs>
                     <linearGradient id="colorSavings" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#00FFD1" stopOpacity={0.3}/>
+                      <stop offset="5%"  stopColor="#00FFD1" stopOpacity={0.25}/>
                       <stop offset="95%" stopColor="#00FFD1" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                  <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="rgba(255,255,255,0.03)" />
                   <XAxis dataKey="name" hide />
-                  <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} />
-                  <Area type="monotone" dataKey="savings" stroke="#00FFD1" fillOpacity={1} fill="url(#colorSavings)" strokeWidth={2} isAnimationActive={false} />
-                  <RechartsTooltip contentStyle={{ backgroundColor: '#0A0A0F', borderColor: 'rgba(255,255,255,0.1)' }} />
+                  <YAxis stroke="rgba(255,255,255,0.15)" fontSize={10} axisLine={false} tickLine={false} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="savings" 
+                    stroke="#00FFD1" 
+                    fillOpacity={1} 
+                    fill="url(#colorSavings)" 
+                    strokeWidth={2} 
+                    isAnimationActive={true}
+                    dot={{ r: 3, fill: '#00FFD1', strokeWidth: 1, stroke: '#0A0A0F' }}
+                    activeDot={{ r: 5, strokeWidth: 0 }}
+                  />
+                  <RechartsTooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(10, 10, 15, 0.8)', 
+                      backdropFilter: 'blur(20px)',
+                      borderColor: 'rgba(255,255,255,0.08)', 
+                      borderRadius: '16px',
+                      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)'
+                    }} 
+                    itemStyle={{ fontSize: '11px', color: '#FFF' }}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -170,14 +189,38 @@ export default function DashboardClient() {
                 <Leaf className="w-4 h-4 text-green-400" /> Void Reduction per Product
               </h3>
               <ResponsiveContainer width="100%" height={150}>
-                <BarChart data={wasteChartData} barCategoryGap="30%">
-                  <XAxis dataKey="name" fontSize={9} stroke="rgba(255,255,255,0.2)" />
-                  <YAxis fontSize={9} stroke="rgba(255,255,255,0.2)" unit="%" />
-                  <RechartsTooltip contentStyle={{ backgroundColor: '#0A0A0F', borderColor: 'rgba(255,255,255,0.1)' }} />
-                  <Bar dataKey="voidReduction" radius={[4, 4, 0, 0]}>
-                    {wasteChartData.map((entry, index) => (
-                      <rect key={index} fill={entry.fill} />
-                    ))}
+                <BarChart data={wasteChartData} barCategoryGap="35%">
+                  <defs>
+                    <linearGradient id="greenBarGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10B981" />
+                      <stop offset="100%" stopColor="#059669" />
+                    </linearGradient>
+                    <linearGradient id="amberBarGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F59E0B" />
+                      <stop offset="100%" stopColor="#D97706" />
+                    </linearGradient>
+                    <linearGradient id="redBarGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#EF4444" />
+                      <stop offset="100%" stopColor="#DC2626" />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" fontSize={9} stroke="rgba(255,255,255,0.15)" axisLine={false} tickLine={false} />
+                  <YAxis fontSize={9} stroke="rgba(255,255,255,0.15)" unit="%" axisLine={false} tickLine={false} />
+                  <RechartsTooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(10, 10, 15, 0.8)', 
+                      backdropFilter: 'blur(20px)',
+                      borderColor: 'rgba(255,255,255,0.08)', 
+                      borderRadius: '16px',
+                      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)'
+                    }} 
+                    itemStyle={{ fontSize: '11px', color: '#FFF' }}
+                  />
+                  <Bar dataKey="voidReduction" radius={[6, 6, 0, 0]} background={{ fill: 'rgba(255, 255, 255, 0.02)', radius: 6 }}>
+                    {wasteChartData.map((entry, index) => {
+                      const fill = entry.fill === '#22c55e' ? 'url(#greenBarGrad)' : entry.fill === '#F59E0B' ? 'url(#amberBarGrad)' : 'url(#redBarGrad)'
+                      return <Cell key={index} fill={fill} />
+                    })}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>

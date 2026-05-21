@@ -30,7 +30,7 @@ export function FinalCTASection() {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00FFD1] to-[#185FA5]">shipping waste?</span>
             </h2>
             <p className="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mb-12">
-              Join thousands of brands saving millions on dimensional weight and packaging materials with PackIQ's spatial intelligence.
+              Join thousands of brands saving millions on dimensional weight and packaging materials with Shipzi's spatial intelligence.
             </p>
             
             <Link 
@@ -61,7 +61,7 @@ export function Footer() {
             <div className="w-8 h-8 rounded-lg bg-[#00FFD1] flex items-center justify-center group-hover:rotate-12 transition-transform shadow-[0_0_15px_rgba(0,255,209,0.3)]">
               <Boxes className="w-4 h-4 text-[#0A0A0F]" />
             </div>
-            <span className="font-bold text-2xl font-syne text-white tracking-tight">PackIQ</span>
+            <span className="shipzi-logo text-3xl tracking-tight">Shipzi</span>
           </Link>
           <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
             The intelligent FFD engine that optimizes packaging dimensions to reduce DIM weight and shipping costs globally.
@@ -95,7 +95,7 @@ export function Footer() {
             <li className="hover:text-[#00FFD1] transition-colors cursor-pointer">Terms of Service</li>
           </ul>
           <div className="mt-12 text-[10px] text-gray-600 font-bold uppercase tracking-widest">
-            © {new Date().getFullYear()} PackIQ Inc.<br />
+            © {new Date().getFullYear()} Shipzi Inc.<br />
             All rights reserved.
           </div>
         </div>

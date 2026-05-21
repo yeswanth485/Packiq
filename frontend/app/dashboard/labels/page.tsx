@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Printer, Scan, Package, MapPin, Search, Filter, 
@@ -9,6 +9,8 @@ import {
 import { QRCodeSVG } from 'qrcode.react'
 import { useOptimizationStore, OptimizationResult } from '@/lib/store/optimizationStore'
 import { createClient } from '@/lib/supabase/client'
+import BoxWithLabel from '@/components/3d/BoxWithLabel'
+
 
 const mapToOptimizationResult = (opt: any, res: any, idx: number): OptimizationResult => {
   const isItemFitted = res.fits && res.assignedBox
@@ -140,12 +142,27 @@ function getTrackingNumber(productId: string, carrierName: string) {
     return `4812 ${suffix.substring(0, 4)} ${suffix.substring(4, 8)}`
   }
 }
+const carriers = [
+  { name: 'FedEx Express', logo: 'F', color: 'bg-[#4D148C]' },
+  { name: 'UPS Ground', logo: 'U', color: 'bg-[#351C15]' }
+];
+
+function getCarrier(productId: string) {
+  let hash = 0;
+  const cleanId = productId || 'default';
+  for (let i = 0; i < cleanId.length; i++) {
+    hash = cleanId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % carriers.length;
+  return carriers[index];
+}
 
 export default function LabelsPage() {
   const { results: storeOrders } = useOptimizationStore()
   const [dbOrders, setDbOrders] = useState<OptimizationResult[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedLabel, setSelectedLabel] = useState<any>(null)
+  const [show3DPreview, setShow3DPreview] = useState(false)
 
   useEffect(() => {
     async function loadDbOrders() {
@@ -214,14 +231,6 @@ export default function LabelsPage() {
     }
   }, [filtered, selectedLabel])
 
-  const carriers = [
-    { name: 'FedEx Express', logo: 'F', color: 'bg-[#4D148C]' },
-    { name: 'UPS Ground', logo: 'U', color: 'bg-[#351C15]' },
-    { name: 'USPS Priority', logo: 'P', color: 'bg-[#004B87]' }
-  ]
-
-  const getCarrier = (id: string) => carriers[id.charCodeAt(0) % carriers.length]
-
   return (
     <div className="max-w-[1200px] w-full mx-auto space-y-6 pb-20 px-4 md:px-0 h-[calc(100vh-100px)] flex flex-col">
       
@@ -260,7 +269,10 @@ export default function LabelsPage() {
                 return (
                   <button 
                     key={idx}
-                    onClick={() => setSelectedLabel({ ...order, carrier })}
+                    onClick={() => {
+                      setSelectedLabel({ ...order, carrier })
+                      setShow3DPreview(false)
+                    }}
                     className={`w-full text-left p-4 rounded-2xl transition-all border ${
                       selectedLabel?.product_id === order.product_id 
                         ? 'bg-[#00FFD1]/5 border-[#00FFD1]/30' 
@@ -323,111 +335,145 @@ export default function LabelsPage() {
 
                 <div className="flex-1 flex flex-col xl:flex-row gap-8 overflow-y-auto no-scrollbar">
                   
-                  {/* The Physical Label Representation */}
-                  <div className="w-full xl:w-[400px] h-[550px] min-h-[550px] shrink-0 bg-white rounded-xl shadow-2xl p-6 flex flex-col justify-between text-black relative">
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-gray-100 rounded-bl-[40px]" />
-                    
-                    <div>
-                      {/* Carrier Header */}
-                      <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-4">
-                        <div>
-                          <h2 className="text-2xl font-black uppercase tracking-tighter">{selectedLabel.carrier.name}</h2>
-                          <p className="text-xs font-bold mt-1">STANDARD OVERNIGHT</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-3xl font-black">{new Date().getDate()}</p>
-                          <p className="text-xs font-bold uppercase">{new Date().toLocaleString('default', { month: 'short' })}</p>
-                        </div>
+                  {show3DPreview ? (
+                    <div className="w-full flex-1 bg-black/20 rounded-3xl border border-white/5 overflow-hidden relative flex flex-col">
+                      <div className="absolute top-4 left-4 z-10 flex gap-4">
+                        <button 
+                          onClick={() => setShow3DPreview(false)}
+                          className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-all"
+                        >
+                          ← Back to 2D
+                        </button>
                       </div>
-
-                      {/* Addresses */}
-                      <div className="space-y-4 mb-6">
-                        <div>
-                          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">From</p>
-                          <p className="text-xs font-bold mt-0.5">PackIQ Logistics Center<br/>123 Innovation Way<br/>San Francisco, CA 94105</p>
-                        </div>
-                        <div className="border-l-2 border-black pl-4">
-                          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">To</p>
-                          <p className="text-lg font-black uppercase leading-tight mt-0.5">
-                            {getShippingAddress(selectedLabel.product_id).name}<br/>
-                            {getShippingAddress(selectedLabel.product_id).line1}<br/>
-                            {getShippingAddress(selectedLabel.product_id).line2}
-                          </p>
-                        </div>
+                      <div className="flex-1 min-h-[500px]">
+                        <BoxWithLabel labelData={{
+                          ...selectedLabel,
+                          shippingAddress: getShippingAddress(selectedLabel.product_id),
+                          trackingNumber: getTrackingNumber(selectedLabel.product_id, selectedLabel.carrier.name)
+                        }} />
                       </div>
-
-                      {/* Package Details */}
-                      <div className="grid grid-cols-2 gap-4 border-y-2 border-black py-4 mb-6">
+                      <div className="p-6 bg-white/5 border-t border-white/5 flex justify-between items-center">
                         <div>
-                          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Weight</p>
-                          <p className="text-sm font-black">
-                            {((selectedLabel.product_weight || 0.5) * 2.2).toFixed(1)} LBS
-                          </p>
+                          <p className="text-sm font-bold text-white mb-1">Confirm Box Dimensions & Print</p>
+                          <p className="text-xs text-gray-400">Ensure your thermal printer has 4x6" labels loaded.</p>
                         </div>
-                        <div>
-                          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Dimensions</p>
-                          <p className="text-sm font-black uppercase tracking-tighter">{selectedLabel.optimized_box_dims}</p>
-                        </div>
+                        <button 
+                          onClick={() => window.print()}
+                          className="px-8 py-3 bg-[#00FFD1] text-black rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(0,255,209,0.3)] hover:scale-105 transition-all flex items-center gap-2"
+                        >
+                          <Printer className="w-4 h-4" /> Print Now
+                        </button>
                       </div>
                     </div>
+                  ) : (
+                    <>
+                      {/* The Physical Label Representation */}
+                      <div className="w-full xl:w-[400px] h-[550px] min-h-[550px] shrink-0 bg-white rounded-xl shadow-2xl p-6 flex flex-col justify-between text-black relative">
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-gray-100 rounded-bl-[40px]" />
+                        
+                        <div>
+                          {/* Carrier Header */}
+                          <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-4">
+                            <div>
+                              <h2 className="text-2xl font-black uppercase tracking-tighter">{selectedLabel.carrier.name}</h2>
+                              <p className="text-xs font-bold mt-1">STANDARD OVERNIGHT</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-3xl font-black">{new Date().getDate()}</p>
+                              <p className="text-xs font-bold uppercase">{new Date().toLocaleString('default', { month: 'short' })}</p>
+                            </div>
+                          </div>
 
-                    {/* QR Code and Barcode area */}
-                    <div className="flex items-end justify-between mt-auto">
-                      <div className="space-y-2">
-                        <QRCodeSVG 
-                          value={`https://packiq.vercel.app/track/${selectedLabel.product_id}`}
-                          size={96}
-                          bgColor={"#ffffff"}
-                          fgColor={"#000000"}
-                          level={"Q"}
-                        />
-                        <p className="text-[8px] font-mono text-center font-bold">SCAN TO TRACK</p>
-                      </div>
-                      
-                      {/* Fake Barcode */}
-                      <div className="flex-1 ml-6 h-20 flex flex-col justify-end">
-                        <div className="w-full h-12 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IndoaXRlIi8+PHBhdGggZD0iTTEwLDBWMTAwaDVWMHptMTAsMFYxMDBoMlYwem01LDBWMTAwaDhWMHptMTUsMFYxMDBoM1Ywem01LDBWMTAwaDVWMHoiIGZpbGw9ImJsYWNrIi8+PC9zdmc+')] bg-repeat-x opacity-90" />
-                        <p className="text-[10px] font-mono text-center font-bold mt-1 tracking-[0.1em] truncate">
-                          {getTrackingNumber(selectedLabel.product_id, selectedLabel.carrier.name)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                          {/* Addresses */}
+                          <div className="space-y-4 mb-6">
+                            <div>
+                              <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">From</p>
+                              <p className="text-xs font-bold mt-0.5">PackIQ Logistics Center<br/>123 Innovation Way<br/>San Francisco, CA 94105</p>
+                            </div>
+                            <div className="border-l-2 border-black pl-4">
+                              <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">To</p>
+                              <p className="text-lg font-black uppercase leading-tight mt-0.5">
+                                {getShippingAddress(selectedLabel.product_id).name}<br/>
+                                {getShippingAddress(selectedLabel.product_id).line1}<br/>
+                                {getShippingAddress(selectedLabel.product_id).line2}
+                              </p>
+                            </div>
+                          </div>
 
-                  {/* Shipment Info Panel */}
-                  <div className="flex-1 space-y-6">
-                    <div className="glass p-6 rounded-3xl border border-white/5">
-                      <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
-                        <Truck className="w-4 h-4 text-[#00FFD1]" /> Dispatch Details
-                      </h3>
-                      
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                          <span className="text-xs text-gray-400">Order Reference</span>
-                          <span className="text-sm font-bold text-white font-mono">{selectedLabel.product_id}</span>
+                          {/* Package Details */}
+                          <div className="grid grid-cols-2 gap-4 border-y-2 border-black py-4 mb-6">
+                            <div>
+                              <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Weight</p>
+                              <p className="text-sm font-black">
+                                {((selectedLabel.product_weight || 0.5) * 2.2).toFixed(1)} LBS
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Dimensions</p>
+                              <p className="text-sm font-black uppercase tracking-tighter">{selectedLabel.optimized_box_dims}</p>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                          <span className="text-xs text-gray-400">Carrier Service</span>
-                          <span className="text-sm font-bold text-white">{selectedLabel.carrier.name}</span>
-                        </div>
-                        <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                          <span className="text-xs text-gray-400">Box Selected</span>
-                          <span className="text-[10px] font-black uppercase tracking-widest bg-white/10 px-2 py-1 rounded text-white">{selectedLabel.optimized_box}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-gray-400">Shipping Cost</span>
-                          <span className="text-lg font-black text-[#00FFD1] font-mono">${(selectedLabel.shipping_cost || 0).toFixed(2)}</span>
+
+                        {/* QR Code and Barcode area */}
+                        <div className="flex items-end justify-between mt-auto">
+                          <div className="space-y-2">
+                            <QRCodeSVG 
+                              value={`https://packiq.vercel.app/track/${selectedLabel.product_id}`}
+                              size={96}
+                              bgColor={"#ffffff"}
+                              fgColor={"#000000"}
+                              level={"Q"}
+                            />
+                            <p className="text-[8px] font-mono text-center font-bold">SCAN TO TRACK</p>
+                          </div>
+                          
+                          {/* Fake Barcode */}
+                          <div className="flex-1 ml-6 h-20 flex flex-col justify-end">
+                            <div className="w-full h-12 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IndoaXRlIi8+PHBhdGggZD0iTTEwLDBWMTAwaDVWMHptMTAsMFYxMDBoMlYwem01LDBWMTAwaDhWMHptMTUsMFYxMDBoM1Ywem01LDBWMTAwaDVWMHoiIGZpbGw9ImJsYWNrIi8+PC9zdmc+')] bg-repeat-x opacity-90" />
+                            <p className="text-[10px] font-mono text-center font-bold mt-1 tracking-[0.1em] truncate">
+                              {getTrackingNumber(selectedLabel.product_id, selectedLabel.carrier.name)}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <button 
-                      onClick={() => window.print()}
-                      className="w-full h-14 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
-                    >
-                      <Printer className="w-5 h-5" /> Print Thermal Label (4x6")
-                    </button>
-                  </div>
+                      {/* Shipment Info Panel */}
+                      <div className="flex-1 space-y-6">
+                        <div className="glass p-6 rounded-3xl border border-white/5">
+                          <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                            <Truck className="w-4 h-4 text-[#00FFD1]" /> Dispatch Details
+                          </h3>
+                          
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                              <span className="text-xs text-gray-400">Order Reference</span>
+                              <span className="text-sm font-bold text-white font-mono">{selectedLabel.product_id}</span>
+                            </div>
+                            <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                              <span className="text-xs text-gray-400">Carrier Service</span>
+                              <span className="text-sm font-bold text-white">{selectedLabel.carrier.name}</span>
+                            </div>
+                            <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                              <span className="text-xs text-gray-400">Box Selected</span>
+                              <span className="text-[10px] font-black uppercase tracking-widest bg-white/10 px-2 py-1 rounded text-white">{selectedLabel.optimized_box}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-400">Shipping Cost</span>
+                              <span className="text-lg font-black text-[#00FFD1] font-mono">${(selectedLabel.shipping_cost || 0).toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <button 
+                          onClick={() => setShow3DPreview(true)}
+                          className="w-full h-14 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                        >
+                          <Printer className="w-5 h-5" /> Print Thermal Label (4x6")
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
 
               </motion.div>

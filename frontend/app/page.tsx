@@ -9,7 +9,7 @@ import { FinalCTASection, Footer } from '@/components/landing/FinalCTASection'
 import { InteractiveSimulator } from '@/components/landing/InteractiveSimulator'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Menu, X, Boxes } from 'lucide-react'
+import { Menu, X, Rocket } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const NAV_LINKS = [
@@ -22,6 +22,7 @@ const NAV_LINKS = [
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50)
@@ -30,7 +31,7 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F] text-white selection:bg-[#00FFD1]/30">
+    <div className="min-h-screen bg-[#0A0A0F] text-white selection:bg-[#00FFD1]/30 overflow-x-hidden">
       
       {/* Navigation */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${
@@ -39,13 +40,16 @@ export default function LandingPage() {
           : 'bg-transparent py-10'
       }`}>
         <div className="max-w-[1400px] mx-auto px-10 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-4 z-50 group">
-            <div className="w-11 h-11 rounded-2xl bg-[#00FFD1] flex items-center justify-center group-hover:rotate-12 transition-all duration-500 shadow-[0_0_30px_rgba(0,255,209,0.4)]">
-              <Boxes className="w-6 h-6 text-[#0A0A0F]" />
+          {/* Logo - Clickable for Explanation */}
+          <button 
+            onClick={() => setShowAbout(true)}
+            className="flex items-center gap-4 z-50 group perspective-1000"
+          >
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#00FFD1] to-[#185FA5] flex items-center justify-center group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 shadow-[0_0_30px_rgba(0,255,209,0.4)] transform-style-3d">
+              <Rocket className="w-6 h-6 text-white drop-shadow-md" />
             </div>
-            <span className="font-bold text-3xl font-syne text-white tracking-tighter">PackIQ</span>
-          </Link>
+            <span className="shipzi-logo text-3xl">Shipzi</span>
+          </button>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-12 text-[10px] font-black uppercase tracking-[0.25em] text-gray-500">
@@ -119,13 +123,65 @@ export default function LandingPage() {
                   onClick={() => setMobileMenuOpen(false)}
                   className="bg-[#00FFD1] text-[#0A0A0F] px-16 py-6 rounded-3xl font-black text-lg uppercase tracking-widest"
                 >
-                  Join PackIQ
+                  Join Shipzi
                 </Link>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </nav>
+
+      {/* Shipzi About Modal */}
+      <AnimatePresence>
+        {showAbout && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0A0A0F]/90 backdrop-blur-3xl"
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8, rotateX: 20 }}
+              animate={{ opacity: 1, scale: 1, rotateX: 0 }}
+              exit={{ opacity: 0, scale: 0.8, rotateX: -20 }}
+              transition={{ type: "spring", bounce: 0.4, duration: 0.8 }}
+              className="relative max-w-2xl w-full bg-white/[0.02] border border-white/10 p-10 md:p-14 rounded-[40px] shadow-[0_0_100px_rgba(0,255,209,0.15)] transform-style-3d card-3d"
+            >
+              <button 
+                onClick={() => setShowAbout(false)}
+                className="absolute top-6 right-6 w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+
+              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#00FFD1] to-[#185FA5] flex items-center justify-center mb-8 shadow-2xl animate-float3d">
+                <Rocket className="w-10 h-10 text-white" />
+              </div>
+              
+              <h2 className="text-4xl md:text-5xl font-bold font-syne text-white mb-6">
+                What is <span className="shipzi-logo">Shipzi?</span>
+              </h2>
+              
+              <div className="space-y-6 text-gray-400 text-lg leading-relaxed">
+                <p>
+                  <strong className="text-white">Shipzi</strong> — Where &apos;Ship&apos; meets &apos;Zi&apos; (meaning &apos;intelligence&apos; in the digital age). We are the smart shipping brain.
+                </p>
+                <p>
+                  Shipzi is an AI-powered packaging & shipping intelligence platform that uses advanced Claude AI to optimize every box, reduce DIM weight waste, and cut shipping costs by up to 32%.
+                </p>
+                <p>
+                  Built for modern e-commerce brands who refuse to overpay for air.
+                </p>
+              </div>
+
+              <div className="mt-10 pt-8 border-t border-white/5 flex flex-wrap gap-4">
+                <span className="px-4 py-2 bg-white/5 rounded-full text-xs font-bold text-[#00FFD1] uppercase tracking-widest border border-white/5">Spatial Intelligence</span>
+                <span className="px-4 py-2 bg-white/5 rounded-full text-xs font-bold text-[#185FA5] uppercase tracking-widest border border-white/5">Claude AI Powered</span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <main>
         {/* Hero — AI-Powered Packaging Automation */}
@@ -161,8 +217,8 @@ export default function LandingPage() {
               {['FEDEX', 'BLUE DART', 'UPS', 'DHL', 'AMAZON', 'ECOMM', 'SHIPROCKET', 'DELHIVERY'].map(name => (
                 <motion.div
                   key={name}
-                  whileHover={{ scale: 1.05, backgroundColor: 'rgba(255,255,255,0.05)' }}
-                  className="h-32 bg-white/[0.02] border border-white/5 rounded-[32px] flex items-center justify-center font-syne font-black text-white/10 tracking-[0.3em] uppercase text-[10px] hover:border-[#00FFD1]/20 hover:text-[#00FFD1] transition-all duration-500 cursor-pointer"
+                  whileHover={{ scale: 1.05, backgroundColor: 'rgba(255,255,255,0.05)', rotateX: 5, rotateY: 5 }}
+                  className="h-32 bg-white/[0.02] border border-white/5 rounded-[32px] flex items-center justify-center font-syne font-black text-white/10 tracking-[0.3em] uppercase text-[10px] hover:border-[#00FFD1]/20 hover:text-[#00FFD1] transition-all duration-500 cursor-pointer transform-style-3d perspective-1000"
                 >
                   {name}
                 </motion.div>

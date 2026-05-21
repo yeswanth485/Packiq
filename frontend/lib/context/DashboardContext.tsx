@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface DashboardStats {
@@ -18,7 +18,6 @@ interface DashboardContextType {
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined)
 
-let statsCache: { data: DashboardStats; ts: number } | null = null
 const CACHE_TTL = 60_000 // 60 seconds
 
 export function DashboardProvider({ children }: { children: React.ReactNode }) {
@@ -30,19 +29,26 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   })
   const [isRefreshing, setIsRefreshing] = useState(false)
   const supabase = createClient()
+  
+  // Use a ref to store cache tied to the current user ID to fix multi-user bug
+  const statsCacheRef = useRef<{ data: DashboardStats; ts: number; userId: string } | null>(null)
 
   const refreshStats = useCallback(async () => {
-    if (statsCache && Date.now() - statsCache.ts < CACHE_TTL) {
-      setStats(statsCache.data)
-      return
-    }
-
     setIsRefreshing(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Fetch all optimizations for this user
+      // Check cache validity against current user
+      if (
+        statsCacheRef.current && 
+        statsCacheRef.current.userId === user.id && 
+        Date.now() - statsCacheRef.current.ts < CACHE_TTL
+      ) {
+        setStats(statsCacheRef.current.data)
+        return
+      }
+
       const { data: optimizations, error } = await (supabase.from('optimizations') as any)
         .select('*')
         .eq('user_id', user.id)
@@ -64,7 +70,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       }
 
       setStats(newStats)
-      statsCache = { data: newStats, ts: Date.now() }
+      statsCacheRef.current = { data: newStats, ts: Date.now(), userId: user.id }
     } catch (error) {
       console.error('Error refreshing dashboard stats:', error)
     } finally {

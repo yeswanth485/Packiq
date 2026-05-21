@@ -44,16 +44,29 @@ export function StaggerContainer({
 
 export function StaggerItem({ children, className = "" }: { children: ReactNode, className?: string }) {
   const itemVariants = {
-    hidden: { opacity: 0, y: 24 },
+    hidden: { 
+      opacity: 0, 
+      y: 40, 
+      rotateX: 15,
+      z: -50,
+      filter: 'blur(8px)'
+    },
     show: { 
       opacity: 1, 
       y: 0,
-      transition: { type: "spring" as const, stiffness: 300, damping: 24 }
+      rotateX: 0,
+      z: 0,
+      filter: 'blur(0px)',
+      transition: { type: "spring" as const, stiffness: 120, damping: 18 }
     }
   }
 
   return (
-    <motion.div variants={itemVariants} className={className}>
+    <motion.div 
+      variants={itemVariants} 
+      className={className}
+      style={{ transformStyle: 'preserve-3d' }}
+    >
       {children}
     </motion.div>
   )

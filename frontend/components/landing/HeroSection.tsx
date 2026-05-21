@@ -15,6 +15,7 @@ const FloatingBox = ({ delay = 0, x = '10%', y = '10%', size = 40 }) => (
       y: [-20, 20, -20],
       rotateX: [0, 360],
       rotateY: [0, 360],
+      z: [-50, 50, -50]
     }}
     transition={{
       duration: 12,
@@ -22,7 +23,7 @@ const FloatingBox = ({ delay = 0, x = '10%', y = '10%', size = 40 }) => (
       delay,
       ease: 'easeInOut',
     }}
-    style={{ left: x, top: y, perspective: 1000 }}
+    style={{ left: x, top: y, perspective: 1000, transformStyle: 'preserve-3d' }}
     className="absolute pointer-events-none"
   >
     <div
@@ -211,7 +212,7 @@ export function HeroSection() {
                 width="100%" 
                 height="100%" 
                 src="https://www.youtube.com/embed/v9X2V9S-F1E?autoplay=1" 
-                title="PackIQ AI Workflow Demo" 
+                title="Shipzi AI Workflow Demo" 
                 frameBorder="0" 
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                 allowFullScreen

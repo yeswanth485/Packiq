@@ -33,8 +33,11 @@ create table if not exists public.profiles (
   optimization_goal    text default 'void',
   sustainability_mode  boolean default false,
   onboarding_completed boolean not null default false,
-  plan                 text not null default 'free'
-                         check (plan in ('free', 'starter', 'growth', 'enterprise')),
+  plan                 text not null default 'normal'
+                         check (plan in ('normal', 'pro', 'max')),
+  tokens_limit         integer not null default 1000,
+  tokens_used          integer not null default 0,
+  token_reset_date     timestamptz not null default (now() + interval '30 days'),
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()
 );
@@ -149,17 +152,24 @@ create policy "products_all" on public.products
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, email, full_name, avatar_url)
+  insert into public.profiles (id, email, full_name, avatar_url, plan, tokens_limit, tokens_used, token_reset_date)
   values (
     new.id,
     coalesce(new.email, new.raw_user_meta_data->>'email', ''),
     coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', ''),
-    coalesce(new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'picture', '')
+    coalesce(new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'picture', ''),
+    'normal',
+    1000,
+    0,
+    now() + interval '30 days'
   )
   on conflict (id) do update set
     email = coalesce(excluded.email, public.profiles.email),
     full_name = coalesce(excluded.full_name, public.profiles.full_name),
     avatar_url = coalesce(excluded.avatar_url, public.profiles.avatar_url),
+    tokens_limit = 1000,
+    tokens_used = 0,
+    token_reset_date = now() + interval '30 days',
     updated_at = now();
 
   -- Seed the box catalog for the new user with 30 industry-standard sizes
@@ -234,5 +244,47 @@ begin
     and created_at >= now() - (p_days || ' days')::interval
     and status = 'completed';
   return result;
+end;
+$$ language plpgsql security definer;
+
+-- ============================================================
+-- HELPER: update user plan and token limits
+-- ============================================================
+create or replace function public.change_user_plan(new_plan text)
+returns void as $$
+declare
+  v_tokens_limit integer;
+begin
+  if new_plan = 'normal' then
+    v_tokens_limit := 1000;
+  elsif new_plan = 'pro' then
+    v_tokens_limit := 10000;
+  elsif new_plan = 'max' then
+    v_tokens_limit := 1000000;
+  else
+    raise exception 'Invalid plan type';
+  end if;
+
+  update public.profiles
+  set 
+    plan = new_plan,
+    tokens_limit = v_tokens_limit,
+    token_reset_date = now() + interval '30 days'
+  where id = auth.uid();
+end;
+$$ language plpgsql security definer;
+
+-- ============================================================
+-- HELPER: sync user tokens (resets if past reset date)
+-- ============================================================
+create or replace function public.sync_user_tokens()
+returns void as $$
+begin
+  update public.profiles
+  set 
+    tokens_used = 0,
+    token_reset_date = now() + interval '30 days'
+  where id = auth.uid()
+    and now() > token_reset_date;
 end;
 $$ language plpgsql security definer;

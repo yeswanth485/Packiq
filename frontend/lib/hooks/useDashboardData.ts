@@ -131,6 +131,9 @@ export function useDashboardData() {
     optimizationGoal: string
     sustainabilityMode: boolean
     plan: string
+    tokensLimit: number
+    tokensUsed: number
+    tokenResetDate: string
   } | null>(null)
   
   const [rawOptimizations, setRawOptimizations] = useState<any[]>([])
@@ -144,6 +147,9 @@ export function useDashboardData() {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
+
+        // Sync tokens if needed (resets tokens if past reset date)
+        await (supabase as any).rpc('sync_user_tokens')
 
         // 1. Fetch Profile Preferences
         const { data: profile } = await (supabase as any)
@@ -164,7 +170,10 @@ export function useDashboardData() {
             sizeUnits: profile.size_units || 'cm',
             optimizationGoal: profile.optimization_goal || 'void',
             sustainabilityMode: profile.sustainability_mode || false,
-            plan: profile.plan || 'free',
+            plan: profile.plan || 'normal',
+            tokensLimit: profile.tokens_limit || 1000,
+            tokensUsed: profile.tokens_used || 0,
+            tokenResetDate: profile.token_reset_date || new Date(Date.now() + 30*24*60*60*1000).toISOString(),
           })
         }
 

@@ -1,382 +1,308 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { 
-  Check, Zap, Shield, Globe, Users, 
-  ArrowRight, CreditCard, Sparkles, Box,
-  Package, LayoutDashboard, TrendingUp,
-  Download, Calendar, AlertCircle, Clock,
-  ChevronRight, ArrowUpRight, HelpCircle, CheckCircle2
-} from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Check, Shield, Zap, Info, CreditCard, Sparkles, AlertTriangle, ArrowRight, LayoutDashboard } from 'lucide-react'
 import { useDashboardData } from '@/lib/hooks/useDashboardData'
-
-// --- MOCK DATA ---
-
-const BILLING_HISTORY = [
-  { id: 'INV-001', date: 'Oct 01, 2026', plan: 'Growth Plan', amount: '$49.00', status: 'Paid' },
-  { id: 'INV-002', date: 'Sep 01, 2026', plan: 'Growth Plan', amount: '$49.00', status: 'Paid' },
-  { id: 'INV-003', date: 'Aug 01, 2026', plan: 'Starter Plan', amount: '$19.00', status: 'Paid' },
-  { id: 'INV-004', date: 'Jul 01, 2026', plan: 'Starter Plan', amount: '$19.00', status: 'Paid' }
-]
+import * as Tabs from '@radix-ui/react-tabs'
 
 const PLANS = [
   {
-    id: 'starter',
-    name: 'Starter',
-    monthlyPrice: 19,
-    annualPrice: 15,
-    desc: 'For individual sellers & hobbyists',
+    id: 'normal',
+    name: 'Normal',
+    price: '$0',
+    period: '/month',
+    tokens: 1000,
     features: [
-      '50 Optimizations / month',
-      'Standard Box Catalog',
-      'Basic Email Support',
-      'Public Tracking API',
-      '1 Admin User'
-    ]
-  },
-  {
-    id: 'growth',
-    name: 'Growth',
-    monthlyPrice: 49,
-    annualPrice: 39,
-    desc: 'For growing e-commerce brands',
-    features: [
-      '500 Optimizations / month',
-      'Custom Box Dimensions',
-      'Priority AI (Claude 4)',
-      'CO2 Savings Analytics',
-      'Direct API Access',
-      '5 Admin Users'
+      '1,000 AI Tokens/month',
+      'Basic Box Optimization',
+      'Standard Catalog',
+      'Email Support',
+      'Community Access'
     ],
-    popular: true,
-    current: true
+    color: '#185FA5'
   },
   {
-    id: 'enterprise',
-    name: 'Enterprise',
-    monthlyPrice: 'Custom',
-    annualPrice: 'Custom',
-    desc: 'For large scale logistics & warehouses',
+    id: 'pro',
+    name: 'Pro',
+    price: '$29',
+    period: '/month',
+    tokens: 10000,
     features: [
-      'Unlimited Optimizations',
-      'Dedicated Fallback AI',
-      'Multi-warehouse Sync',
+      '10,000 AI Tokens/month',
+      'Advanced Claude AI Engine',
+      'Custom Box Dimensions',
+      'Priority Support',
+      'API Access',
+      'Analytics Dashboard'
+    ],
+    color: '#00FFD1',
+    popular: true
+  },
+  {
+    id: 'max',
+    name: 'Max',
+    price: '$99',
+    period: '/month',
+    tokens: 1000000,
+    features: [
+      '1,000,000 AI Tokens/month',
+      'Dedicated Claude Instance',
+      'Unlimited Warehouses',
       'White-label Reports',
       '24/7 Account Manager',
-      'Unlimited Users'
-    ]
+      'Custom Integrations',
+      'SLA Guarantee'
+    ],
+    color: '#A855F7'
   }
 ]
 
-// --- COMPONENTS ---
-
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    'Paid': 'bg-green-500/10 text-green-400',
-    'Failed': 'bg-red-500/10 text-red-400',
-    'Pending': 'bg-amber-500/10 text-amber-400'
-  }
-  return (
-    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${colors[status]}`}>
-      {status}
-    </span>
-  )
-}
-
-// --- MAIN PAGE ---
-
 export default function SubscriptionPage() {
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
-  const { dbStats, profileData, isLoading } = useDashboardData()
+  const { profileData, isLoading } = useDashboardData()
+  const [activePlan, setActivePlan] = useState('normal')
+  const [isSwitching, setIsSwitching] = useState(false)
+  const [activeTab, setActiveTab] = useState('plans')
 
-  const activePlan = profileData?.plan || 'free'
-  const totalRuns = dbStats?.totalRuns || 0
+  const supabase = createClient()
 
-  const planLimits: Record<string, number> = {
-    free: 20,
-    starter: 100,
-    growth: 500,
-    enterprise: 9999999
+  useEffect(() => {
+    if (profileData?.plan) {
+      setActivePlan(profileData.plan.toLowerCase())
+    }
+  }, [profileData])
+
+  const handleSwitchPlan = async (planId: string) => {
+    if (planId === activePlan) return
+    setIsSwitching(true)
+    try {
+      const { error } = await supabase.rpc('change_user_plan', { new_plan: planId } as any)
+
+      if (error) throw error
+      setActivePlan(planId)
+      window.location.reload()
+    } catch (error) {
+      console.error("Error switching plan:", error)
+    } finally {
+      setIsSwitching(false)
+    }
   }
-  const planNames: Record<string, string> = {
-    free: 'Free Plan',
-    starter: 'Starter Plan',
-    growth: 'Growth Plan',
-    enterprise: 'Enterprise Plan'
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 rounded-full border-2 border-[#00FFD1] border-t-transparent animate-spin" />
+      </div>
+    )
   }
 
-  const limit = planLimits[activePlan] || 20
-  const planDisplayName = planNames[activePlan] || 'Free Plan'
-  const usagePercentage = limit === 9999999 ? 0 : Math.min(100, Math.round((totalRuns / limit) * 100))
+  const tokensUsed = profileData?.tokensUsed || 0
+  const tokensLimit = profileData?.tokensLimit || 1000
+  const tokenResetDate = profileData?.tokenResetDate 
+    ? new Date(profileData.tokenResetDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Unknown'
+
+  const usagePercent = Math.min(100, Math.round((tokensUsed / tokensLimit) * 100))
+  const isNearLimit = usagePercent > 80
+  const circumference = 2 * Math.PI * 40
+  const strokeDashoffset = circumference - (usagePercent / 100) * circumference
 
   return (
-    <div className="max-w-[1200px] mx-auto space-y-10 pb-24 px-4 md:px-0">
-      
+    <div className="max-w-[1200px] mx-auto space-y-12 pb-24 font-inter">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white mb-1">Subscriptions</h1>
-        <p className="text-gray-400 text-sm">Manage your plan, billing, and usage.</p>
-      </div>
-
-      {/* Current Plan Hero Card */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-[#0f0f1a] border border-white/[0.06] border-l-[#4361EE] border-l-4 rounded-[32px] p-8 shadow-2xl relative overflow-hidden"
-      >
-        {/* Background Sparkle */}
-        <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
-          <Zap className="w-48 h-48 text-[#4361EE]" />
-        </div>
-
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 relative z-10">
-          <div className="space-y-4 flex-1">
-            <div className="flex items-center gap-3">
-              <span className="bg-[#4361EE]/20 text-[#4361EE] px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border border-[#4361EE]/30 shadow-[0_0_15px_rgba(67,97,238,0.2)]">
-                {planDisplayName}
-              </span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest">Active</span>
-              </div>
-            </div>
-            
-            <div className="flex flex-wrap gap-8">
-               <div>
-                 <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1">Renewal Date</p>
-                 <p className="text-sm font-bold text-white">November 01, 2026</p>
-               </div>
-               <div>
-                 <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1">Billing Cycle</p>
-                 <p className="text-sm font-bold text-white">{billingCycle === 'annual' ? 'Annual' : 'Monthly'}</p>
-               </div>
-               <div>
-                 <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1">Seats Used</p>
-                 <p className="text-sm font-bold text-white">3 of 5</p>
-               </div>
-            </div>
-          </div>
-
-          <div className="w-full lg:w-1/3 space-y-3">
-             <div className="flex justify-between items-end">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Optimization Usage</p>
-                <p className="text-xs font-black text-white">
-                  {totalRuns} / {limit === 9999999 ? 'Unlimited' : limit}
-                </p>
-             </div>
-             <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${usagePercentage}%` }}
-                  transition={{ duration: 1.5, ease: 'easeOut' }}
-                  className="h-full bg-gradient-to-r from-[#4361EE] to-[#4895EF] rounded-full shadow-[0_0_10px_rgba(67,97,238,0.5)]"
-                />
-             </div>
-             <p className="text-[10px] text-gray-600 italic">
-               {limit === 9999999 ? 'Unlimited' : `${usagePercentage}%`} of your plan quota used. Resets in 9 days.
-             </p>
-          </div>
-
-          <div className="flex gap-3 w-full lg:w-auto">
-             <button className="flex-1 lg:flex-none bg-[#4361EE] hover:bg-[#344FDA] text-white px-8 py-3 rounded-xl font-bold text-sm shadow-xl shadow-[#4361EE]/20 transition-all">
-               Upgrade Plan
-             </button>
-             <button className="flex-1 lg:flex-none bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-400 px-6 py-3 rounded-xl font-bold text-sm border border-white/5 transition-all">
-               Cancel Plan
-             </button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Plan Comparison Grid */}
-      <div className="space-y-8">
-        <div className="flex flex-col items-center gap-6">
-           <h2 className="text-xl font-bold text-white">Change your plan</h2>
-           <div className="flex items-center bg-[#0f0f1a] p-1 rounded-xl border border-white/[0.06] relative">
-              <button 
-                onClick={() => setBillingCycle('monthly')}
-                className={`px-6 py-2.5 rounded-lg text-xs font-bold transition-all relative z-10 ${billingCycle === 'monthly' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
-              >
-                Monthly
-              </button>
-              <button 
-                onClick={() => setBillingCycle('annual')}
-                className={`px-6 py-2.5 rounded-lg text-xs font-bold transition-all relative z-10 ${billingCycle === 'annual' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
-              >
-                Annual <span className="ml-1 text-[9px] text-[#00E5CC]">Save 20%</span>
-              </button>
-              <motion.div 
-                animate={{ x: billingCycle === 'monthly' ? 0 : '100%' }}
-                className="absolute top-1 bottom-1 left-1 w-1/2 bg-white/10 rounded-lg pointer-events-none"
-                transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
-              />
-           </div>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-           {PLANS.map((plan, i) => (
-             <motion.div 
-               key={plan.id}
-               initial={{ opacity: 0, y: 30 }}
-               animate={{ opacity: 1, y: 0 }}
-               transition={{ delay: i * 0.1 }}
-               className={`bg-[#0f0f1a] border rounded-[40px] p-10 flex flex-col relative transition-all ${plan.current ? 'border-[#4361EE] shadow-2xl shadow-[#4361EE]/10' : 'border-white/[0.06] hover:border-white/10'}`}
-             >
-                {plan.current && (
-                  <div className="absolute top-0 right-10 -translate-y-1/2 bg-[#4361EE] text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl">
-                    Current Plan
-                  </div>
-                )}
-                {plan.popular && !plan.current && (
-                   <div className="absolute top-0 right-10 -translate-y-1/2 bg-white/10 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10">
-                    Recommended
-                  </div>
-                )}
-
-                <div className="mb-8">
-                   <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
-                   <p className="text-xs text-gray-500">{plan.desc}</p>
-                </div>
-
-                <div className="mb-10">
-                   <div className="flex items-baseline gap-1">
-                      <span className="text-5xl font-black text-white">
-                        {typeof plan.monthlyPrice === 'number' 
-                          ? (billingCycle === 'monthly' ? `$${plan.monthlyPrice}` : `$${plan.annualPrice}`)
-                          : plan.monthlyPrice}
-                      </span>
-                      {typeof plan.monthlyPrice === 'number' && (
-                        <span className="text-gray-500 text-sm font-bold">/ month</span>
-                      )}
-                   </div>
-                   {billingCycle === 'annual' && typeof plan.monthlyPrice === 'number' && (
-                      <p className="text-[10px] text-green-400 font-bold mt-2">Billed annually (${(plan.annualPrice as any) * 12}/yr)</p>
-                   )}
-                </div>
-
-                <ul className="space-y-4 mb-12 flex-1">
-                   {plan.features.map((f, j) => (
-                     <li key={j} className="flex gap-3 items-start">
-                        <Check className="w-4 h-4 text-[#4361EE] shrink-0 mt-0.5" />
-                        <span className="text-sm text-gray-400 font-medium">{f}</span>
-                     </li>
-                   ))}
-                </ul>
-
-                <button 
-                  disabled={plan.current}
-                  className={`w-full py-4 rounded-2xl font-bold text-sm transition-all ${
-                    plan.current 
-                    ? 'bg-white/5 text-gray-500 border border-white/5 cursor-not-allowed' 
-                    : plan.popular 
-                      ? 'bg-[#4361EE] hover:bg-[#344FDA] text-white shadow-xl shadow-[#4361EE]/20' 
-                      : 'bg-white/5 hover:bg-white/10 text-white border border-white/5'
-                  }`}
-                >
-                  {plan.current ? 'Your Active Plan' : plan.id === 'enterprise' ? 'Contact Sales' : 'Switch to Plan'}
-                </button>
-             </motion.div>
-           ))}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
+        <div>
+          <h1 className="text-4xl font-bold font-syne text-white mb-2 tracking-tight">Subscription & Tokens</h1>
+          <p className="text-gray-400">Manage your Shipzi plan, tokens, and billing.</p>
         </div>
       </div>
 
-      {/* Payment & History */}
-      <div className="grid lg:grid-cols-12 gap-8">
-        
-        {/* Payment Method */}
-        <div className="lg:col-span-4 space-y-6">
-           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-             <CreditCard className="w-5 h-5 text-gray-500" /> Payment Method
-           </h2>
-           <div className="bg-[#0f0f1a] border border-white/[0.06] rounded-[32px] p-8 shadow-xl">
-              <div className="flex items-center justify-between mb-8">
-                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-white italic font-serif text-xl border border-white/10">
-                      VISA
-                    </div>
+      <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs.List className="flex gap-4 border-b border-white/10 mb-8 pb-4 overflow-x-auto">
+          <Tabs.Trigger 
+            value="plans"
+            className={`px-6 py-3 rounded-full text-sm font-bold transition-all ${activeTab === 'plans' ? 'bg-white text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+          >
+            Upgrade Plan
+          </Tabs.Trigger>
+          <Tabs.Trigger 
+            value="usage"
+            className={`px-6 py-3 rounded-full text-sm font-bold transition-all ${activeTab === 'usage' ? 'bg-white text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+          >
+            Token Usage
+          </Tabs.Trigger>
+        </Tabs.List>
+
+        <AnimatePresence mode="wait">
+          {activeTab === 'plans' && (
+            <Tabs.Content value="plans" asChild forceMount>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="grid md:grid-cols-3 gap-6">
+                  {PLANS.map((plan) => {
+                    const isActive = activePlan === plan.id
+                    return (
+                      <motion.div
+                        key={plan.id}
+                        whileHover={!isActive ? { y: -5, borderColor: plan.color + '40' } : {}}
+                        className={`relative flex flex-col p-8 rounded-[32px] border transition-all duration-300 ${
+                          isActive 
+                            ? 'bg-white/[0.03] border-white/20 shadow-2xl' 
+                            : 'bg-[#0A0A0F] border-white/[0.05] hover:bg-white/[0.02]'
+                        }`}
+                      >
+                        {isActive && (
+                          <motion.div 
+                            layoutId="activePlanHighlight"
+                            className="absolute inset-0 border-2 rounded-[32px] pointer-events-none"
+                            style={{ borderColor: plan.color, boxShadow: `0 0 30px ${plan.color}20` }}
+                          />
+                        )}
+
+                        {plan.popular && !isActive && (
+                          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white/10 border border-white/20 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-md">
+                            Recommended
+                          </div>
+                        )}
+                        {isActive && (
+                          <div 
+                            className="absolute -top-3 left-1/2 -translate-x-1/2 text-[#0A0A0F] px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg"
+                            style={{ backgroundColor: plan.color }}
+                          >
+                            Current Plan
+                          </div>
+                        )}
+
+                        <div className="mb-8 mt-4">
+                          <h3 className="text-2xl font-bold font-syne text-white mb-2">{plan.name}</h3>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-4xl font-bold font-syne" style={{ color: isActive ? plan.color : 'white' }}>{plan.price}</span>
+                            <span className="text-sm text-gray-500 font-medium">{plan.period}</span>
+                          </div>
+                        </div>
+
+                        <div className="h-px w-full bg-white/5 mb-8" />
+
+                        <ul className="space-y-5 flex-1 mb-10">
+                          {plan.features.map((feature, i) => (
+                            <li key={i} className="flex items-start gap-3">
+                              <div className="mt-1 w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: plan.color + '20' }}>
+                                <Check className="w-2.5 h-2.5" style={{ color: plan.color }} />
+                              </div>
+                              <span className={`text-sm ${i === 0 ? 'text-white font-bold' : 'text-gray-400'}`}>
+                                {feature}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+
+                        <button
+                          onClick={() => handleSwitchPlan(plan.id)}
+                          disabled={isActive || isSwitching}
+                          className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${
+                            isActive
+                              ? 'bg-white/5 text-gray-500 cursor-default'
+                              : 'bg-white/10 hover:bg-white/20 text-white border border-white/5 hover:border-white/20'
+                          }`}
+                        >
+                          {isSwitching && !isActive ? 'Updating...' : isActive ? 'Active' : 'Select Plan'}
+                          {!isActive && !isSwitching && <ArrowRight className="w-4 h-4" />}
+                        </button>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              </motion.div>
+            </Tabs.Content>
+          )}
+
+          {activeTab === 'usage' && (
+            <Tabs.Content value="usage" asChild forceMount>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="bg-[#0A0A0F] border border-white/10 rounded-[32px] p-8 shadow-2xl relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#00FFD1]/5 to-transparent pointer-events-none rounded-[32px]" />
+                  
+                  <div className="relative z-10 grid md:grid-cols-2 gap-12 items-center">
                     <div>
-                      <p className="text-sm font-bold text-white">•••• 4242</p>
-                      <p className="text-xs text-gray-500">Expires 12/28</p>
-                    </div>
-                 </div>
-                 <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center text-green-400">
-                    <CheckCircle2 className="w-4 h-4" />
-                 </div>
-              </div>
-              <div className="space-y-3">
-                 <button className="w-full py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold border border-white/5 transition-all">
-                   Update Payment Method
-                 </button>
-                 <button className="w-full py-3 text-gray-500 hover:text-white rounded-xl text-xs font-bold transition-all">
-                   Remove Card
-                 </button>
-              </div>
-           </div>
-
-           <div className="bg-gradient-to-br from-[#4361EE]/10 to-transparent border border-[#4361EE]/20 rounded-[32px] p-6">
-              <div className="flex gap-4 items-start">
-                 <HelpCircle className="w-5 h-5 text-[#4361EE] shrink-0 mt-0.5" />
-                 <div>
-                    <h4 className="text-sm font-bold text-white mb-1">Billing Questions?</h4>
-                    <p className="text-xs text-gray-500 leading-relaxed">Our support team is here to help with any billing or invoice inquiries.</p>
-                    <button className="mt-4 text-[#4361EE] text-xs font-bold hover:underline">Contact Support</button>
-                 </div>
-              </div>
-           </div>
-        </div>
-
-        {/* Billing History */}
-        <div className="lg:col-span-8 space-y-6">
-           <div className="flex justify-between items-center">
-             <h2 className="text-xl font-bold text-white flex items-center gap-2">
-               <Clock className="w-5 h-5 text-gray-500" /> Billing History
-             </h2>
-             <button className="text-xs font-bold text-gray-500 hover:text-white flex items-center gap-1 transition-colors">
-               See All <ChevronRight className="w-4 h-4" />
-             </button>
-           </div>
-
-           <div className="bg-[#0f0f1a] border border-white/[0.06] rounded-[32px] overflow-hidden shadow-xl">
-              <table className="w-full text-left text-sm">
-                 <thead>
-                    <tr className="bg-white/[0.02] border-b border-white/5">
-                       <th className="px-6 py-4 font-black uppercase tracking-widest text-[10px] text-gray-500">Invoice Date</th>
-                       <th className="px-6 py-4 font-black uppercase tracking-widest text-[10px] text-gray-500">Plan</th>
-                       <th className="px-6 py-4 font-black uppercase tracking-widest text-[10px] text-gray-500">Amount</th>
-                       <th className="px-6 py-4 font-black uppercase tracking-widest text-[10px] text-gray-500">Status</th>
-                       <th className="px-6 py-4 text-right font-black uppercase tracking-widest text-[10px] text-gray-500">Action</th>
-                    </tr>
-                 </thead>
-                 <tbody className="divide-y divide-white/5">
-                    {BILLING_HISTORY.map((inv) => (
-                      <tr key={inv.id} className="hover:bg-white/[0.01] transition-colors">
-                         <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                               <Calendar className="w-3.5 h-3.5 text-gray-600" />
-                               <span className="font-bold text-gray-300">{inv.date}</span>
+                      <h3 className="text-xl font-bold font-syne text-white mb-4 flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-[#00FFD1]" /> Token Usage Details
+                      </h3>
+                      <p className="text-gray-400 text-sm leading-relaxed mb-6">
+                        Each optimization request consumes tokens. Your limit resets monthly on your billing date. Note: Tokens are fully refreshed when upgrading or downgrading plans!
+                      </p>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5">
+                          <span className="text-xs text-gray-400 font-medium">Current Cycle Reset Date</span>
+                          <span className="text-sm font-bold text-white">{tokenResetDate}</span>
+                        </div>
+                        {isNearLimit && (
+                          <div className="flex gap-3 items-start p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+                            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-bold text-red-400">Approaching Limit</p>
+                              <p className="text-xs text-red-400/80 mt-1">Upgrade your plan to ensure uninterrupted optimization access.</p>
                             </div>
-                         </td>
-                         <td className="px-6 py-4 text-gray-400">{inv.plan}</td>
-                         <td className="px-6 py-4 font-black text-white">{inv.amount}</td>
-                         <td className="px-6 py-4">
-                            <StatusBadge status={inv.status} />
-                         </td>
-                         <td className="px-6 py-4 text-right">
-                            <button className="p-2 bg-white/5 hover:bg-[#4361EE]/20 rounded-lg text-gray-500 hover:text-[#4361EE] transition-all">
-                               <Download className="w-4 h-4" />
-                            </button>
-                         </td>
-                      </tr>
-                    ))}
-                 </tbody>
-              </table>
-              <div className="p-4 bg-white/[0.01] border-t border-white/5 flex justify-center">
-                 <button className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-white transition-colors">Load More Invoices</button>
-              </div>
-           </div>
-        </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
 
+                    <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5">
+                      <div className="flex justify-between items-end mb-4">
+                        <div>
+                          <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Usage Tracker</div>
+                          <div className="text-3xl font-bold font-syne text-white">{usagePercent}%</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-gray-400 mb-1">Tokens Used</div>
+                          <div className="text-lg font-bold text-white">{tokensUsed.toLocaleString()} <span className="text-sm text-gray-500 font-normal">/ {tokensLimit.toLocaleString()}</span></div>
+                        </div>
+                      </div>
+                      
+                      <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden mb-3">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${usagePercent}%` }}
+                          transition={{ duration: 1.5, ease: 'easeOut' }}
+                          className={`h-full rounded-full ${isNearLimit ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-[#00FFD1] shadow-[0_0_15px_rgba(0,255,209,0.5)]'}`}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 text-center mt-4">
+                        Remaining tokens: <span className="font-bold text-[#00FFD1]">{(tokensLimit - tokensUsed).toLocaleString()}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </Tabs.Content>
+          )}
+        </AnimatePresence>
+      </Tabs.Root>
+
+      {/* Payment Information Area (Static representation) */}
+      <div className="mt-16 bg-white/[0.01] border border-white/5 rounded-[32px] p-8 md:p-10 flex flex-col md:flex-row justify-between items-center gap-8">
+        <div className="flex items-center gap-6">
+          <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+            <CreditCard className="w-6 h-6 text-gray-400" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white mb-1">Payment Method</h3>
+            <p className="text-sm text-gray-500">Visa ending in •••• 4242</p>
+          </div>
+        </div>
+        <button className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold transition-all text-white">
+          Update Billing details
+        </button>
       </div>
 
     </div>

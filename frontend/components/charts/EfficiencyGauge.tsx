@@ -1,29 +1,50 @@
 'use client'
 
-import { RadialBarChart, RadialBar, ResponsiveContainer } from 'recharts'
+import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts'
 
 export default function EfficiencyGauge({ score }: { score: number }) {
-  const data = [
-    { name: 'bg', value: 100, fill: 'rgba(255,255,255,0.06)' },
-    { name: 'score', value: score, fill: score >= 80 ? '#6366f1' : score >= 60 ? '#f59e0b' : '#ef4444' },
-  ]
+  // We format data so that we only have one radial bar that fills up to the score, 
+  // and we use PolarAngleAxis to draw the track/background circle.
+  const data = [{ name: 'Efficiency', value: score }]
+
+  // Pick color based on score
+  const color = score >= 85 ? '#00FFD1' : score >= 65 ? '#F59E0B' : '#EF4444'
 
   return (
     <div className="relative flex flex-col items-center justify-center">
       <ResponsiveContainer width={160} height={160}>
         <RadialBarChart
-          cx="50%" cy="50%"
-          innerRadius="60%" outerRadius="90%"
-          startAngle={220} endAngle={-40}
+          cx="50%"
+          cy="50%"
+          innerRadius="75%"
+          outerRadius="95%"
+          barSize={10}
           data={data}
-          barSize={14}
+          startAngle={90}
+          endAngle={-270}
         >
-          <RadialBar dataKey="value" cornerRadius={8} background={false} />
+          <PolarAngleAxis
+            type="number"
+            domain={[0, 100]}
+            angleAxisId={0}
+            tick={false}
+          />
+          <RadialBar
+            background={{ fill: 'rgba(255, 255, 255, 0.04)' }}
+            dataKey="value"
+            cornerRadius={10}
+            fill={color}
+          />
         </RadialBarChart>
       </ResponsiveContainer>
       <div className="absolute flex flex-col items-center">
-        <span className="text-3xl font-bold text-white">{score.toFixed(0)}</span>
-        <span className="text-xs text-gray-400">Efficiency</span>
+        <span 
+          className="text-3xl font-black font-mono tracking-tighter"
+          style={{ color, textShadow: `0 0 20px ${color}40` }}
+        >
+          {score.toFixed(0)}%
+        </span>
+        <span className="text-[10px] text-gray-500 uppercase tracking-widest font-black mt-0.5">Efficiency</span>
       </div>
     </div>
   )

@@ -11,7 +11,13 @@ import { useOptimizationStore } from '@/lib/store/optimizationStore'
 import { CountUpNumber } from '@/components/animations'
 import { useDashboardData } from '@/lib/hooks/useDashboardData'
 
-const ECO_COLORS = ['#10B981', '#059669', '#34D399', '#6EE7B7', '#A7F3D0']
+const GRADIENTS = [
+  { id: 'ecoEmerald', stop1: '#10B981', stop2: '#059669' },
+  { id: 'ecoTeal', stop1: '#0D9488', stop2: '#0F766E' },
+  { id: 'ecoGreen', stop1: '#22C55E', stop2: '#15803D' },
+  { id: 'ecoLime', stop1: '#84CC16', stop2: '#4D7C0F' },
+  { id: 'ecoCyan', stop1: '#06B6D4', stop2: '#0891B2' }
+]
 
 export default function SustainabilityPage() {
   const { results: optResults } = useOptimizationStore()
@@ -94,7 +100,7 @@ export default function SustainabilityPage() {
         { name: 'Kraft Paper', value: 40 }
       ]
     }
-  }, [optResults])
+  }, [mergedResults])
 
   // Simulator ESG projection calculations
   const simulatorSavings = useMemo(() => {
@@ -303,6 +309,14 @@ export default function SustainabilityPage() {
           <div className="h-56 relative">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
+                <defs>
+                  {GRADIENTS.map((g) => (
+                    <linearGradient id={g.id} key={g.id} x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor={g.stop1} />
+                      <stop offset="100%" stopColor={g.stop2} />
+                    </linearGradient>
+                  ))}
+                </defs>
                 <Pie
                   data={stats.materialData}
                   cx="50%"
@@ -311,13 +325,38 @@ export default function SustainabilityPage() {
                   outerRadius={85}
                   paddingAngle={5}
                   dataKey="value"
+                  cornerRadius={4}
                 >
-                  {stats.materialData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={ECO_COLORS[index % ECO_COLORS.length]} />
-                  ))}
+                  {stats.materialData.map((entry, index) => {
+                    const g = GRADIENTS[index % GRADIENTS.length]
+                    return <Cell key={`cell-${index}`} fill={`url(#${g.id})`} stroke="rgba(255, 255, 255, 0.05)" strokeWidth={1} />
+                  })}
                 </Pie>
-                <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
-                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(10, 10, 15, 0.8)', 
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255,255,255,0.08)', 
+                    borderRadius: '16px',
+                    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)'
+                  }}
+                  itemStyle={{ fontSize: '11px', color: '#FFF' }}
+                  labelStyle={{ display: 'none' }}
+                />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  iconType="circle"
+                  iconSize={8}
+                  formatter={(value, entry: any, index) => {
+                    const color = GRADIENTS[index % GRADIENTS.length].stop1;
+                    return (
+                      <span className="text-xs font-medium tracking-wide" style={{ color }}>
+                        {value}
+                      </span>
+                    )
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
             
