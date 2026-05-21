@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       }]
 
       // Run local JS ML optimizer (fallback to ensure execution in serverless env)
-      const ml = runMLOptimization(productInput as any, boxes as any)
+      const ml = await runMLOptimization(productInput as any, boxes as any)
       const assignment = ml.assignments && ml.assignments[0]
 
       const breakdown = assignment?.score_breakdown || null
