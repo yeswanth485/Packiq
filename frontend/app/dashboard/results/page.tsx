@@ -37,25 +37,7 @@ export default function ResultsHistoryPage() {
     loadData();
   }, [loadData]);
 
-  async function loadData() {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
-
-    const { data: sessionList } = await supabase
-      .from('optimization_sessions')
-      .select('id, file_name, created_at, total_items, optimized_items, optimization_rate')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
-    
-    if (sessionList) setSessions(sessionList);
-
-    const latestSessionId = (sessionList as any[])?.[0]?.id;
-    if (!latestSessionId) { setLoading(false); return; }
-
-    await loadSessionResults(latestSessionId, user.id);
-  }
+  
 
   async function loadSessionResults(sessionId: string, userId: string) {
     setLoading(true);
