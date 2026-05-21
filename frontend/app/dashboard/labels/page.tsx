@@ -363,7 +363,7 @@ export default function LabelsPage() {
                             recipient_address: draft.address || null,
                             recipient_city: draft.city || null,
                             recipient_state: draft.state || null,
-                          }).eq('id', selected.id)
+                          } as any).eq('id', selected.id)
                           // persist to localStorage as fallback
                           localStorage.setItem('recipient:' + selected.id, JSON.stringify(draft))
                           toast.success('Recipient saved')
