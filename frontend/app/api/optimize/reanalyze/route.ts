@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
     const updated: any[] = []
 
-    for (const r of (results || [])) {
+    for (const r of ((results || []) as any[])) {
       const productInput = [{
         product_id: r.sku || `sku-${r.id}`,
         product_name: r.product_name || r.sku || 'Unknown',

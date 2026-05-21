@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import EmptyState from '@/components/EmptyState'
 
@@ -13,9 +13,29 @@ export default function ResultsHistoryPage() {
   const [savingsFilter, setSavingsFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
+
+    const { data: sessionList } = await supabase
+      .from('optimization_sessions')
+      .select('id, file_name, created_at, total_items, optimized_items, optimization_rate')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    
+    if (sessionList) setSessions(sessionList);
+
+    const latestSessionId = (sessionList as any[])?.[0]?.id;
+    if (!latestSessionId) { setLoading(false); return; }
+
+    await loadSessionResults(latestSessionId, user.id);
+  }, [supabase]);
+
   useEffect(() => {
     loadData();
-  }, [supabase]);
+  }, [loadData]);
 
   async function loadData() {
     setLoading(true);
