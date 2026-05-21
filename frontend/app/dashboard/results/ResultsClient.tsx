@@ -106,14 +106,14 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
 
   // Chart Data preparation
   const chartDataSavings = useMemo(() => {
-    return filteredData.slice(0, 10).map(o => ({
+    return filteredData.map(o => ({
       name: o.product_snapshot?.name?.substring(0, 15) || 'Unknown',
       savings: Number(o.cost_savings_usd || 0).toFixed(2)
     }))
   }, [filteredData])
 
   const chartDataCost = useMemo(() => {
-    return filteredData.slice(0, 10).map(o => ({
+    return filteredData.map(o => ({
       name: o.product_snapshot?.name?.substring(0, 15) || 'Unknown',
       oldCost: Number(o.product_snapshot?.current_cost_usd || 0),
       newCost: Number(o.ai_response?.new_cost_usd || 0)
@@ -197,6 +197,7 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
                     <th className="px-6 py-4 text-left">Dimensions</th>
                     <th className="px-6 py-4 text-left">Fragility</th>
                     <th className="px-6 py-4 text-right">Void %</th>
+                    <th className="px-6 py-4 text-right">Score</th>
                     <th className="px-6 py-4 text-right">Old Cost</th>
                     <th className="px-6 py-4 text-right">New Cost</th>
                     <th className="px-6 py-4 text-right cursor-pointer hover:text-white transition-colors group">
@@ -273,6 +274,13 @@ export default function ResultsClient({ optimizations }: ResultsClientProps) {
                         voidPct <= 15 ? 'bg-green-500/20 text-green-400' : voidPct <= 30 ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'
                       }`}>
                         {Math.max(0, voidPct).toFixed(1)}% Void
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium">
+                      <span className={`px-2 py-1 rounded text-[10px] font-bold ${
+                        (100 - voidPct) >= 80 ? 'bg-indigo-500/20 text-indigo-400' : 'bg-blue-500/20 text-blue-400'
+                      }`}>
+                        {(100 - voidPct).toFixed(1)}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right text-gray-400">${oldCost.toFixed(2)}</td>

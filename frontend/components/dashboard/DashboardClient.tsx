@@ -76,7 +76,7 @@ export default function DashboardClient() {
 
   const chartData = useMemo(() => {
     if (mergedResults.length === 0) return []
-    return mergedResults.slice(-20).map(r => ({
+    return mergedResults.slice(-50).map(r => ({
       name: (r.product_name || 'Item').substring(0, 8),
       savings: Number((r.savings || r.cost_savings_usd || 0).toFixed(2)),
     }))
@@ -84,7 +84,7 @@ export default function DashboardClient() {
 
   const wasteChartData = useMemo(() => {
     if (mergedResults.length === 0) return []
-    return mergedResults.slice(-15).map(r => {
+    return mergedResults.slice(-50).map(r => {
       const vRed = r.void_reduction || (100 - (r.space_utilization || 80)) || 0
       return {
         name: (r.product_name || 'Item').substring(0, 8),

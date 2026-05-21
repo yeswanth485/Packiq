@@ -163,6 +163,7 @@ export default function LabelsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedLabel, setSelectedLabel] = useState<any>(null)
   const [show3DPreview, setShow3DPreview] = useState(false)
+  const [labelSize, setLabelSize] = useState<'4x6' | '8.5x11'>('4x6')
 
   useEffect(() => {
     async function loadDbOrders() {
@@ -240,9 +241,19 @@ export default function LabelsPage() {
           <h1 className="text-3xl font-bold text-white mb-1">Shipping Labels</h1>
           <p className="text-gray-500 text-sm font-medium">Generate and print QR-enabled carrier labels.</p>
         </div>
-        <button className="bg-[#00FFD1] text-[#0A0A0F] px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-[0_0_20px_rgba(0,255,209,0.2)] flex items-center gap-2 hover:scale-105 transition-all">
-          <Printer className="w-4 h-4" /> Print Batch
-        </button>
+        <div className="flex items-center gap-4">
+          <select 
+            value={labelSize}
+            onChange={(e) => setLabelSize(e.target.value as '4x6' | '8.5x11')}
+            className="bg-black/40 border border-white/10 text-xs text-white rounded-lg px-3 py-2 outline-none"
+          >
+            <option value="4x6">4x6" Thermal</option>
+            <option value="8.5x11">8.5x11" Sheet</option>
+          </select>
+          <button className="bg-[#00FFD1] text-[#0A0A0F] px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-[0_0_20px_rgba(0,255,209,0.2)] flex items-center gap-2 hover:scale-105 transition-all">
+            <Printer className="w-4 h-4" /> Print Batch
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-6 flex-1 min-h-0">
@@ -355,7 +366,16 @@ export default function LabelsPage() {
                       <div className="p-6 bg-white/5 border-t border-white/5 flex justify-between items-center">
                         <div>
                           <p className="text-sm font-bold text-white mb-1">Confirm Box Dimensions & Print</p>
-                          <p className="text-xs text-gray-400">Ensure your thermal printer has 4x6" labels loaded.</p>
+                          <div className="flex items-center gap-3">
+                            <select 
+                              value={labelSize}
+                              onChange={(e) => setLabelSize(e.target.value as '4x6' | '8.5x11')}
+                              className="bg-black/40 border border-white/10 text-xs text-white rounded-lg px-2 py-1 mt-1"
+                            >
+                              <option value="4x6">4x6" Thermal Label</option>
+                              <option value="8.5x11">8.5x11" Standard Page</option>
+                            </select>
+                          </div>
                         </div>
                         <button 
                           onClick={() => window.print()}
@@ -368,7 +388,9 @@ export default function LabelsPage() {
                   ) : (
                     <>
                       {/* The Physical Label Representation */}
-                      <div className="w-full xl:w-[400px] h-[550px] min-h-[550px] shrink-0 bg-white rounded-xl shadow-2xl p-6 flex flex-col justify-between text-black relative">
+                      <div className={`w-full shrink-0 bg-white shadow-2xl p-6 flex flex-col justify-between text-black relative transition-all duration-300 mx-auto ${
+                        labelSize === '4x6' ? 'xl:w-[400px] h-[550px] min-h-[550px] rounded-xl' : 'xl:w-[600px] h-[750px] min-h-[750px] rounded-sm'
+                      }`}>
                         <div className="absolute top-0 right-0 w-16 h-16 bg-gray-100 rounded-bl-[40px]" />
                         
                         <div>

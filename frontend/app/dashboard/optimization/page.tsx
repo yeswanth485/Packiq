@@ -406,7 +406,7 @@ export default function OptimizationPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-white/5">
-                            {parseResult.data.slice(0, 10).map((p, i) => (
+                            {parseResult.data.map((p, i) => (
                               <tr key={i}>
                                 <td className="px-4 py-3 text-white">
                                   {p.product_id}<br/>
@@ -422,11 +422,6 @@ export default function OptimizationPage() {
                             ))}
                           </tbody>
                         </table>
-                        {parseResult.data.length > 10 && (
-                          <div className="p-3 text-center text-xs text-gray-500 bg-white/[0.02] border-t border-white/5">
-                            + {parseResult.data.length - 10} more rows
-                          </div>
-                        )}
                       </div>
 
                       <button

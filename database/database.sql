@@ -100,12 +100,43 @@ create table if not exists public.products (
 );
 
 -- ============================================================
+-- 5. CLIENT CREDENTIALS
+-- ============================================================
+create table if not exists public.client_credentials (
+  id          uuid primary key default uuid_generate_v4(),
+  user_id     uuid references public.profiles(id) on delete cascade,
+  provider    text not null,  -- e.g., 'shopify', 'fedex', 'shippo'
+  api_key     text,
+  api_secret  text,
+  is_active   boolean default true,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  unique(user_id, provider)
+);
+
+-- ============================================================
+-- 6. ORDERS
+-- ============================================================
+create table if not exists public.orders (
+  id               uuid primary key default uuid_generate_v4(),
+  user_id          uuid references public.profiles(id) on delete cascade,
+  optimization_id  uuid references public.optimizations(id) on delete set null,
+  box_id           uuid references public.box_catalog(id) on delete set null,
+  status           text not null default 'pending',
+  quantity         integer default 1,
+  total_cost_usd   float default 0,
+  created_at       timestamptz not null default now()
+);
+
+-- ============================================================
 -- INDEXES
 -- ============================================================
 create index if not exists idx_box_catalog_user      on public.box_catalog(user_id);
 create index if not exists idx_optimizations_user    on public.optimizations(user_id, created_at desc);
 create index if not exists idx_optimizations_status  on public.optimizations(status);
 create index if not exists idx_products_user         on public.products(user_id);
+create index if not exists idx_credentials_user      on public.client_credentials(user_id);
+create index if not exists idx_orders_user           on public.orders(user_id);
 
 -- ============================================================
 -- ROW LEVEL SECURITY
@@ -114,6 +145,8 @@ alter table public.profiles      enable row level security;
 alter table public.box_catalog   enable row level security;
 alter table public.optimizations enable row level security;
 alter table public.products      enable row level security;
+alter table public.client_credentials enable row level security;
+alter table public.orders        enable row level security;
 
 -- Drop existing policies (safe re-run)
 drop policy if exists "profiles_select"      on public.profiles;
@@ -121,6 +154,8 @@ drop policy if exists "profiles_update"      on public.profiles;
 drop policy if exists "box_catalog_all"      on public.box_catalog;
 drop policy if exists "optimizations_all"    on public.optimizations;
 drop policy if exists "products_all"         on public.products;
+drop policy if exists "credentials_all"      on public.client_credentials;
+drop policy if exists "orders_all"           on public.orders;
 
 -- profiles
 create policy "profiles_select" on public.profiles
@@ -142,6 +177,16 @@ create policy "optimizations_all" on public.optimizations
 
 -- products (users manage their own saved products)
 create policy "products_all" on public.products
+  for all using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- credentials (users manage their own credentials)
+create policy "credentials_all" on public.client_credentials
+  for all using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- orders (users manage their own orders)
+create policy "orders_all" on public.orders
   for all using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
