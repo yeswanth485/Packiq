@@ -72,6 +72,24 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at          TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Ensure canonical onboarding column exists and migrate old column if present
+-- This block is idempotent and safe to run multiple times.
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS onboarding_complete BOOLEAN DEFAULT FALSE;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name='profiles' AND column_name='onboarding_completed'
+  ) THEN
+    UPDATE public.profiles
+    SET onboarding_complete = onboarding_completed
+    WHERE onboarding_completed IS NOT NULL;
+
+    ALTER TABLE public.profiles DROP COLUMN IF EXISTS onboarding_completed;
+  END IF;
+END $$;
+
 -- ─────────────────────────────────────────────────────
 -- TABLE 2: BOX CATALOG
 -- ─────────────────────────────────────────────────────
