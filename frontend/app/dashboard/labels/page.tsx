@@ -1,8 +1,16 @@
- 'use client';
+'use client';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client';
-import EmptyState from '@/components/EmptyState'
+import EmptyState from '@/components/EmptyState';
+import BoxWithLabel from '@/components/3d/BoxWithLabel';
+
+const BRANDS = [
+  { id: 'fedex', name: 'FedEx', logo: '🟣', baseRate: 8.50, multiplier: 1.2 },
+  { id: 'ups', name: 'UPS', logo: '🟤', baseRate: 9.00, multiplier: 1.15 },
+  { id: 'amazon', name: 'Amazon Logistics', logo: '🟠', baseRate: 6.00, multiplier: 1.05 },
+  { id: 'shopify', name: 'Shopify Shipping', logo: '🟢', baseRate: 7.50, multiplier: 1.1 }
+];
 
 export default function LabelsPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -12,19 +20,21 @@ export default function LabelsPage() {
   const [search, setSearch] = useState('');
   const [labelFormat, setLabelFormat] = useState('4x6');
   const [loading, setLoading] = useState(true);
-  const [recipientDraft, setRecipientDraft] = useState<any>(null)
+  const [recipientDraft, setRecipientDraft] = useState<any>(null);
+  const [selectedBrand, setSelectedBrand] = useState(BRANDS[0]);
 
   useEffect(() => {
-    if (!selected) return
-    const key = 'recipient:' + selected.id
+    if (!selected) return;
+    const key = 'recipient:' + selected.id;
     try {
-      const saved = localStorage.getItem(key)
-      if (saved) setRecipientDraft(JSON.parse(saved))
-      else setRecipientDraft(null)
+      const saved = localStorage.getItem(key);
+      if (saved) setRecipientDraft(JSON.parse(saved));
+      else setRecipientDraft(null);
     } catch (e) {
-      setRecipientDraft(null)
+      setRecipientDraft(null);
     }
-  }, [selected])
+  }, [selected]);
+  
   const labelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -64,15 +74,16 @@ export default function LabelsPage() {
         ...r,
         tracking_id: r.tracking_id || ('PKQ-' + r.sku + '-' + r.id.slice(0,6).toUpperCase()),
         zone: r.zone || 'ZONE 2',
-        fragility_color_initial: r.fragility_level === 'High' ? '#ef4444' : r.fragility_level === 'Medium' ? '#f59e0b' : '#6366f1',
+        fragility_color_initial: r.fragility_level === 'High' ? '#ef4444' : r.fragility_level === 'Medium' ? '#f59e0b' : '#14b8a6',
       }));
 
       setShipments(formatted);
+      
       // Preselect result if result_id present in URL, or default to first
       const params = new URLSearchParams(window.location.search);
       const resultId = params.get('result_id');
       if (resultId) {
-        const found = formatted.find((f: any) => f.id === resultId);
+        const found = formatted.find((f: any) => f.id === resultId || f.optimization_result_id === resultId);
         if (found) {
           setSelected(found);
         } else {
@@ -83,7 +94,7 @@ export default function LabelsPage() {
               ...(single as any),
               tracking_id: (single as any).tracking_id || ('PKQ-' + ((single as any).sku||'') + '-' + ((single as any).id||'').slice(0,6).toUpperCase()),
               zone: (single as any).zone || 'ZONE 2',
-              fragility_color_initial: (single as any).fragility_level === 'High' ? '#ef4444' : (single as any).fragility_level === 'Medium' ? '#f59e0b' : '#6366f1'
+              fragility_color_initial: (single as any).fragility_level === 'High' ? '#ef4444' : (single as any).fragility_level === 'Medium' ? '#f59e0b' : '#14b8a6'
             };
             setShipments(prev => [s, ...(prev || [])]);
             setSelected(s);
@@ -106,333 +117,262 @@ export default function LabelsPage() {
     s.tracking_id?.toLowerCase().includes(search.toLowerCase())
   );
 
-  function printLabel() {
+  // Dynamic cost calculation
+  const getCalculatedCost = () => {
+    if (!selected) return 0;
+    const volWeight = (selected.length_cm * selected.width_cm * selected.height_cm) / 5000;
+    const billableWeight = Math.max(selected.weight_kg, volWeight);
+    return selectedBrand.baseRate + (billableWeight * selectedBrand.multiplier);
+  };
+
+  const getLabelDataFor3D = () => {
+    if (!selected) return {};
+    return {
+      product_id: selected.id,
+      product_name: selected.product_name,
+      product_weight: selected.weight_kg,
+      optimized_box_dims: selected.new_box_dims,
+      trackingNumber: selected.tracking_id,
+      carrier: { name: selectedBrand.name },
+      shippingAddress: {
+        name: recipientDraft?.name || selected.recipient_name || 'VALUED CUSTOMER',
+        line1: recipientDraft?.address || selected.recipient_address || '123 DEMO STREET',
+        line2: `${recipientDraft?.city || selected.recipient_city || 'CITY'}, ${recipientDraft?.state || selected.recipient_state || 'ST'} 00000`
+      }
+    };
+  };
+
+  async function printLabel() {
     const content = labelRef.current;
     if (!content) return;
 
-    // Try to persist a shipment record before printing
-    (async () => {
-      const draft = recipientDraft || {};
-      try {
-        await fetch('/api/shipments', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            optimization_result_id: selected.id,
-            recipient: draft,
-            carrier: selected.carrier || 'Standard',
-            status: 'printed'
-          })
-        });
-        // fall through to printing regardless of server response
-      } catch (e) {
-        // persist locally as fallback
-        try { localStorage.setItem('recipient:' + selected.id, JSON.stringify(draft)) } catch (er) {}
-        toast.error('Could not persist shipment server-side; saved locally')
-      }
+    // Persist draft
+    const draft = recipientDraft || {};
+    try {
+      await (supabase as any).from('optimization_results').update({
+        recipient_name: draft.name || null,
+        recipient_address: draft.address || null,
+        recipient_city: draft.city || null,
+        recipient_state: draft.state || null,
+        carrier: selectedBrand.name
+      }).eq('id', selected.id);
+    } catch (err) {}
 
-      const win = window.open('', '_blank', 'width=500,height=700');
-      if (!win) return;
-      win.document.write(`
-        <!DOCTYPE html><html><head><title>PackIQ Label</title>
-        <style>body{margin:0;padding:16px;font-family:Arial,sans-serif;}@media print{@page{size:4in 6in;margin:0.2in}}</style>
-        </head><body>${content.innerHTML}
-        <script>window.onload=()=>{window.print();}</script></body></html>
-      `);
-      win.document.close();
-    })();
-  }
-
-  async function printBatch() {
-    const win = window.open('', '_blank', 'width=900,height=700');
+    const win = window.open('', '_blank', 'width=500,height=700');
     if (!win) return;
-    const labelsHTML = filtered.map(s => `
-      <div style="border:1px solid #000;padding:12px;margin:6px;width:340px;display:inline-block;vertical-align:top;font-family:Arial;box-sizing:border-box;">
-        <div style="font-size:18px;font-weight:900;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px;">
-          ${s.carrier || 'STANDARD'} SHIPPING
-        </div>
-        <div style="font-size:10px;color:#666;">FROM</div>
-        <div style="font-size:12px;font-weight:700;">${profile?.company_name || 'Your Company'}</div>
-        <div style="font-size:10px;">${profile?.company_address || ''}, ${profile?.company_city || ''}</div>
-        <div style="font-size:10px;margin-bottom:6px;">${profile?.company_state || ''} ${profile?.company_zip || ''}</div>
-        <div style="font-size:10px;color:#666;">PRODUCT</div>
-        <div style="font-size:12px;font-weight:700;">${s.product_name || s.sku}</div>
-        <div style="font-size:10px;">SKU: ${s.sku} · Box: ${s.new_box_name}</div>
-        <div style="font-size:10px;">${s.length_cm}×${s.width_cm}×${s.height_cm}cm · ${s.weight_kg}kg · ${s.zone}</div>
-        <div style="font-size:11px;font-weight:700;margin-top:6px;letter-spacing:1px;"># ${s.tracking_id}</div>
-        ${s.fragility_level === 'High' ? '<div style="color:red;font-weight:900;border:2px solid red;padding:4px;text-align:center;margin-top:6px;">⚠ FRAGILE — HANDLE WITH CARE</div>' : ''}
-      </div>
-    `).join('');
     win.document.write(`
-      <!DOCTYPE html><html><head><title>Batch Labels</title>
-      <style>body{margin:12px;font-family:Arial;}@media print{@page{margin:0.5cm}}</style>
-      </head><body>
-      <h2 style="margin-bottom:12px;">Batch Labels — ${filtered.length} items · ${new Date().toLocaleDateString()}</h2>
-      ${labelsHTML}
+      <!DOCTYPE html><html><head><title>PackIQ Label</title>
+      <style>body{margin:0;padding:16px;font-family:Arial,sans-serif;}@media print{@page{size:4in 6in;margin:0.2in}}</style>
+      </head><body>${content.innerHTML}
       <script>window.onload=()=>{window.print();}</script></body></html>
     `);
     win.document.close();
   }
 
-  if (loading) return <div style={{padding:40,textAlign:'center'}}>Loading labels...</div>;
+  if (loading) return <div className="p-10 text-center text-teal-400 font-mono animate-pulse">Initializing Print Station...</div>;
 
   return (
-    <div style={{ padding: '24px 32px', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 60px)' }}>
+    <div className="p-8 h-[calc(100vh-60px)] flex flex-col text-white" style={{ background: 'linear-gradient(135deg, #020617 0%, #0f172a 100%)' }}>
       
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700 }}>Shipping Labels</h1>
-          <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 13 }}>
-            Generate and print carrier labels for {filtered.length} optimized shipments.
+          <h1 className="m-0 text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-emerald-500 tracking-tight">
+            Shipping Labels
+          </h1>
+          <p className="mt-1 text-teal-200/60 text-sm">
+            Generate and print realistic e-commerce carrier labels for {filtered.length} optimized shipments.
           </p>
-        </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <select 
-            value={labelFormat} onChange={e => setLabelFormat(e.target.value)}
-            style={{ padding: '8px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13 }}
-          >
-            <option value="4x6">4×6" Thermal</option>
-            <option value="letter">Letter (8.5×11")</option>
-            <option value="a4">A4</option>
-          </select>
-          <button onClick={printBatch} style={{ 
-            padding: '9px 18px', background: '#14b8a6', border: 'none', borderRadius: 8,
-            color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6
-          }}>
-            🖨️ PRINT BATCH ({filtered.length})
-          </button>
         </div>
       </div>
 
-      {/* Main layout: list left, label right */}
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 16, flex: 1, overflow: 'hidden' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-6 flex-1 min-h-0">
         
-        {/* LEFT: Shipment List */}
-        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <input 
-            placeholder="Search tracking or SKU..."
-            value={search} onChange={e => setSearch(e.target.value)}
-            style={{ padding: '9px 14px', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
-                     borderRadius: 8, color: 'var(--text-primary)', fontSize: 13, marginBottom: 10 }}
-          />
-          <div style={{ overflowY: 'auto', flex: 1 }}>
-            {filtered.map(s => (
-              <div 
-                key={s.id}
-                onClick={() => setSelected(s)}
-                style={{ 
-                  padding: '12px 14px', borderRadius: 10, marginBottom: 6, cursor: 'pointer',
-                  border: selected?.id === s.id ? '1px solid rgba(20,184,166,0.5)' : '1px solid rgba(255,255,255,0.06)',
-                  background: selected?.id === s.id ? 'rgba(20,184,166,0.08)' : 'var(--bg-elevated)',
-                  transition: 'all 0.15s',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{s.product_name || s.sku}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{s.sku}</div>
+        {/* LEFT PANEL: Shipments & Brands */}
+        <div className="flex flex-col gap-4 overflow-hidden">
+          <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4 shadow-xl">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">1. Select Carrier</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {BRANDS.map(b => (
+                <button
+                  key={b.id}
+                  onClick={() => setSelectedBrand(b)}
+                  className={`p-2 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-all border ${selectedBrand.id === b.id ? 'bg-teal-500/20 border-teal-500 text-white shadow-[0_0_15px_rgba(20,184,166,0.3)]' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
+                >
+                  <span className="text-lg">{b.logo}</span>
+                  {b.name.split(' ')[0]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex-1 bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4 flex flex-col min-h-0 shadow-xl">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">2. Select Shipment</h3>
+            <input 
+              placeholder="Search tracking or SKU..."
+              value={search} onChange={e => setSearch(e.target.value)}
+              className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-teal-500 focus:outline-none mb-3 text-sm"
+            />
+            <div className="overflow-y-auto flex-1 pr-2 space-y-2 custom-scrollbar">
+              {filtered.map(s => (
+                <div 
+                  key={s.id}
+                  onClick={() => setSelected(s)}
+                  className={`p-3 rounded-xl cursor-pointer transition-all border ${selected?.id === s.id ? 'bg-teal-500/10 border-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.1)]' : 'bg-slate-800/50 border-transparent hover:bg-slate-800'}`}
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <div className="font-bold text-sm text-white truncate pr-2">{s.product_name || s.sku}</div>
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5`} style={{ background: s.fragility_color_initial }} />
                   </div>
-                  <div title={s.fragility_level + ' fragility'} style={{
-                    width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', 
-                    justifyContent: 'center', fontWeight: 900, fontSize: 14, color: '#fff',
-                    background: s.fragility_color_initial,
-                  }}>
-                    {s.fragility_level === 'High' ? '⚠' : (s.product_name || s.sku).charAt(0).toUpperCase()}
+                  <div className="text-xs text-slate-500 mb-2">{s.tracking_id}</div>
+                  <div className="flex gap-2 text-[10px] font-mono font-bold">
+                    <span className="px-2 py-0.5 bg-slate-700 rounded text-teal-300">📦 {s.new_box_name}</span>
+                    <span className="px-2 py-0.5 bg-slate-700 rounded text-slate-300">{s.zone}</span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-secondary)' }}>
-                  <span>📦 {s.new_box_name}</span>
-                  <span>📍 {s.zone}</span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* RIGHT: Label Viewer */}
-        <div style={{ overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* RIGHT PANEL: Preview & Print */}
+        <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
           {!selected ? (
-            <div style={{ flex: 1 }}>
-              <EmptyState title={shipments.length === 0 ? 'No shipments' : 'Select a shipment'} description={shipments.length === 0 ? 'Run an optimization to create shipments ready for labels.' : 'Select a shipment on the left to preview and print labels.'} />
+            <div className="flex-1 flex items-center justify-center">
+              <EmptyState title="Select a shipment" description="Choose a shipment on the left to preview the realistic 3D label." />
             </div>
           ) : (
-            <>
-              {/* Status bar */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#22c55e' }}>LABEL GENERATED</span>
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] h-full">
+              
+              {/* Realistic 3D Preview */}
+              <div className="relative border-r border-slate-700/50 bg-[#0a0f18]">
+                <div className="absolute top-4 left-4 z-10">
+                  <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded border border-white/10 text-xs font-bold text-teal-400 shadow-lg mb-1">
+                    Realistic Label Preview
+                  </div>
+                  <div className="text-[10px] text-slate-500 uppercase tracking-widest px-1">
+                    Drag to rotate • Scroll to zoom
+                  </div>
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-                  # {selected.tracking_id}
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 240px', gap: 16, flex: 1 }}>
                 
-                {/* Label Preview */}
-                <div ref={labelRef} style={{
-                  background: '#ffffff', color: '#000', borderRadius: 8, padding: 20,
-                  fontFamily: 'Arial, sans-serif', border: '2px solid rgba(255,255,255,0.1)',
-                  display: 'flex', flexDirection: 'column', gap: 10, minHeight: 500,
-                }}>
-                  {/* Carrier Header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '3px solid #000', paddingBottom: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 22, fontWeight: 900 }}>
-                        {selected.carrier?.toUpperCase() || 'STANDARD'} SHIPPING
-                      </div>
-                      <div style={{ fontSize: 11, color: '#555' }}>
-                        {selected.carrier === 'UPS' ? 'STANDARD OVERNIGHT' : 'GROUND DELIVERY'}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right', fontSize: 12 }}>
-                      <div style={{ color: '#555', fontSize: 10 }}>Date</div>
-                      <div style={{ fontWeight: 700 }}>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                    </div>
-                  </div>
-
-                  {/* From — REAL company data */}
-                  <div style={{ borderBottom: '1px solid #ddd', paddingBottom: 10 }}>
-                    <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', fontWeight: 700, marginBottom: 3 }}>FROM</div>
-                    <div style={{ fontSize: 14, fontWeight: 900 }}>{profile?.company_name || 'Your Company Name'}</div>
-                    <div style={{ fontSize: 11, color: '#333' }}>{profile?.company_address || 'Set your address in Settings → Company Profile'}</div>
-                    <div style={{ fontSize: 11, color: '#333' }}>
-                      {[profile?.company_city, profile?.company_state, profile?.company_zip].filter(Boolean).join(', ') || ''}
-                    </div>
-                    {profile?.company_phone && <div style={{ fontSize: 10, color: '#555' }}>{profile.company_phone}</div>}
-                  </div>
-
-                  {/* To — Configurable */}
-                  <div style={{ borderBottom: '1px solid #ddd', paddingBottom: 10 }}>
-                    <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', fontWeight: 700, marginBottom: 3 }}>TO</div>
-                    <div style={{ fontSize: 16, fontWeight: 900, textTransform: 'uppercase', color: '#000' }}>
-                      [RECIPIENT NAME]
-                    </div>
-                    <div style={{ fontSize: 13, textTransform: 'uppercase', color: '#000' }}>
-                      [DELIVERY ADDRESS]
-                    </div>
-                    <div style={{ fontSize: 11, color: '#555', marginTop: 4, fontStyle: 'italic' }}>
-                      (Set recipient details in order management)
-                    </div>
-                  </div>
-
-                  {/* Product Details */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, borderBottom: '1px solid #ddd', paddingBottom: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', fontWeight: 700 }}>Product</div>
-                      <div style={{ fontSize: 12, fontWeight: 700 }}>{selected.product_name}</div>
-                      <div style={{ fontSize: 10, color: '#555' }}>SKU: {selected.sku}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', fontWeight: 700 }}>Package</div>
-                      <div style={{ fontSize: 12, fontWeight: 700 }}>{selected.new_box_name}</div>
-                      <div style={{ fontSize: 10, color: '#555' }}>{selected.new_box_dims}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', fontWeight: 700 }}>Weight / Zone</div>
-                      <div style={{ fontSize: 12, fontWeight: 700 }}>{selected.weight_kg}kg</div>
-                      <div style={{ fontSize: 10, color: '#555' }}>{selected.zone}</div>
-                    </div>
-                  </div>
-
-                  {/* Fragility Warning */}
-                  {selected.fragility_level === 'High' && (
-                    <div style={{ border: '2px solid #dc2626', borderRadius: 6, padding: '8px 14px', display: 'flex', gap: 10, background: '#fef2f2' }}>
-                      <span style={{ fontSize: 22 }}>⚠️</span>
+                {/* 3D Box With Label */}
+                <BoxWithLabel labelData={getLabelDataFor3D()} />
+                
+                {/* Hidden Printable Label (just for window.print rendering) */}
+                <div className="hidden">
+                  <div ref={labelRef} style={{ background: '#ffffff', color: '#000', padding: 20, width: 400, height: 600, boxSizing: 'border-box', position: 'relative' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '3px solid #000', paddingBottom: 10, marginBottom: 10 }}>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 900, color: '#dc2626' }}>FRAGILE — HANDLE WITH CARE</div>
-                        <div style={{ fontSize: 10, color: '#dc2626' }}>Do not stack · Keep upright · Avoid moisture</div>
+                        <div style={{ fontSize: 24, fontWeight: 900, textTransform: 'uppercase' }}>{selectedBrand.name}</div>
+                        <div style={{ fontSize: 12, fontWeight: 'bold' }}>STANDARD OVERNIGHT</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 28, fontWeight: 900 }}>{new Date().getDate()}</div>
+                        <div style={{ fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' }}>{new Date().toLocaleString('default', { month: 'short' })}</div>
                       </div>
                     </div>
-                  )}
 
-                  {/* Barcode visual */}
-                  <div style={{ display: 'flex', gap: 1.5, height: 48, padding: '0 8px' }}>
-                    {Array.from({ length: 55 }, (_, i) => (
-                      <div key={i} style={{
-                        flex: 1, background: '#000',
-                        opacity: (selected.tracking_id?.charCodeAt(i % selected.tracking_id.length) + i) % 3 === 0 ? 0 : 1,
-                      }} />
-                    ))}
-                  </div>
-                  <div style={{ textAlign: 'center', fontSize: 10, letterSpacing: 3, fontFamily: 'monospace' }}>
-                    {selected.tracking_id}
-                  </div>
+                    <div style={{ marginBottom: 15 }}>
+                      <div style={{ fontSize: 10, fontWeight: 'bold', color: '#555', textTransform: 'uppercase' }}>From</div>
+                      <div style={{ fontSize: 14, fontWeight: 'bold' }}>{profile?.company_name || 'PackIQ Logistics'}</div>
+                      <div style={{ fontSize: 12 }}>{profile?.company_address || '123 Innovation Way'}</div>
+                      <div style={{ fontSize: 12 }}>San Francisco, CA 94105</div>
+                    </div>
 
-                  {/* Footer */}
-                  <div style={{ fontSize: 8, color: '#999', textAlign: 'center', borderTop: '1px solid #eee', paddingTop: 6 }}>
-                    Generated by PackIQ AI Packaging Optimizer · {new Date().toLocaleString()}
+                    <div style={{ borderLeft: '3px solid #000', paddingLeft: 10, marginBottom: 20 }}>
+                      <div style={{ fontSize: 10, fontWeight: 'bold', color: '#555', textTransform: 'uppercase' }}>To</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, textTransform: 'uppercase' }}>{recipientDraft?.name || selected.recipient_name || 'VALUED CUSTOMER'}</div>
+                      <div style={{ fontSize: 14, textTransform: 'uppercase' }}>{recipientDraft?.address || selected.recipient_address || '123 DEMO STREET'}</div>
+                      <div style={{ fontSize: 14, textTransform: 'uppercase' }}>{`${recipientDraft?.city || selected.recipient_city || 'CITY'}, ${recipientDraft?.state || selected.recipient_state || 'ST'} 00000`}</div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #000', borderBottom: '2px solid #000', padding: '10px 0', marginBottom: 20 }}>
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 'bold', color: '#555', textTransform: 'uppercase' }}>Weight</div>
+                        <div style={{ fontSize: 14, fontWeight: 900 }}>{((selected.weight_kg || 0.5) * 2.2).toFixed(1)} LBS</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 10, fontWeight: 'bold', color: '#555', textTransform: 'uppercase' }}>Dimensions</div>
+                        <div style={{ fontSize: 14, fontWeight: 900 }}>{selected.new_box_dims}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ position: 'absolute', bottom: 20, left: 20, right: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <div style={{ border: '2px solid #000', padding: 5, textAlign: 'center' }}>
+                        <div style={{ width: 80, height: 80, background: '#000' }}></div>
+                        <div style={{ fontSize: 10, fontWeight: 'bold', marginTop: 5 }}>SCAN</div>
+                      </div>
+                      <div style={{ flex: 1, marginLeft: 20, textAlign: 'center' }}>
+                        <div style={{ height: 60, width: '100%', background: 'repeating-linear-gradient(90deg, #000, #000 3px, #fff 3px, #fff 6px)' }}></div>
+                        <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 2, marginTop: 5 }}>{selected.tracking_id}</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Dispatch Details Panel */}
-                <div style={{ 
-                  background: 'var(--bg-elevated)', borderRadius: 10, padding: 16,
-                  border: '1px solid rgba(255,255,255,0.06)', overflowY: 'auto',
-                  display: 'flex', flexDirection: 'column', gap: 16
-                }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    DISPATCH DETAILS
-                  </div>
-                  {[
-                    { label: 'Order Reference', value: selected.sku },
-                    { label: 'Tracking ID', value: selected.tracking_id, mono: true },
-                    { label: 'Carrier Service', value: selected.carrier || 'Standard' },
-                    { label: 'Box', value: selected.new_box_name },
-                    { label: 'Box Dims', value: selected.new_box_dims }
-                  ].map((field: any, i: number) => (
-                    <div key={i}>
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{field.label}</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, fontFamily: field.mono ? 'monospace' : 'inherit' }}>
-                        {field.value}
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Recipient editor */}
-                  <div>
-                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>Recipient</div>
-                    <input placeholder="Recipient name" value={recipientDraft?.name || selected.recipient_name || ''} onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), name: e.target.value }))} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)', marginBottom: 8 }} />
-                    <input placeholder="Address" value={recipientDraft?.address || selected.recipient_address || ''} onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), address: e.target.value }))} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)', marginBottom: 8 }} />
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input placeholder="City" value={recipientDraft?.city || selected.recipient_city || ''} onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), city: e.target.value }))} style={{ flex: 1, padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)' }} />
-                      <input placeholder="State / ZIP" value={recipientDraft?.state || selected.recipient_state || ''} onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), state: e.target.value }))} style={{ flex: 1, padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)' }} />
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                      <button onClick={async () => {
-                        const draft = recipientDraft || {};
-                        // attempt to persist to optimization_results; if columns don't exist, ignore
-                        try {
-                          await (supabase as any).from('optimization_results').update({
-                            recipient_name: draft.name || null,
-                            recipient_address: draft.address || null,
-                            recipient_city: draft.city || null,
-                            recipient_state: draft.state || null,
-                          }).eq('id', selected.id)
-                          // persist to localStorage as fallback
-                          localStorage.setItem('recipient:' + selected.id, JSON.stringify(draft))
-                          toast.success('Recipient saved')
-                        } catch (err) {
-                          localStorage.setItem('recipient:' + selected.id, JSON.stringify(draft))
-                          toast.success('Saved locally (schema may not support server persistence)')
-                        }
-                      }} style={{ padding: '8px 12px', background: '#14b8a6', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 700 }}>Save Recipient</button>
-                      <button onClick={() => { setRecipientDraft(null); localStorage.removeItem('recipient:' + selected.id); toast.success('Cleared') }} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.06)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>Clear</button>
-                    </div>
-                  </div>
-
-                  <button onClick={printLabel} style={{
-                    marginTop: 'auto', padding: '10px', background: '#14b8a6', color: '#fff',
-                    border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer'
-                  }}>
-                    🖨️ Print Label
-                  </button>
-                </div>
               </div>
-            </>
+
+              {/* Sidebar Action Panel */}
+              <div className="p-5 flex flex-col gap-6 bg-slate-900/40">
+                <div>
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Label Cost Calculation</h4>
+                  <div className="p-4 bg-slate-800/80 border border-slate-700 rounded-xl">
+                    <div className="flex justify-between text-xs mb-2">
+                      <span className="text-slate-400">Carrier Base</span>
+                      <span className="text-white font-mono">₹{selectedBrand.baseRate.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs mb-3">
+                      <span className="text-slate-400">Volumetric Weight</span>
+                      <span className="text-white font-mono">{((selected.length_cm * selected.width_cm * selected.height_cm) / 5000).toFixed(2)}kg</span>
+                    </div>
+                    <div className="border-t border-slate-700 pt-3 flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-300">Total Label Cost</span>
+                      <span className="text-xl font-black text-emerald-400">₹{getCalculatedCost().toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1">
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Recipient Details</h4>
+                  <div className="space-y-3">
+                    <input 
+                      placeholder="Recipient Name" 
+                      value={recipientDraft?.name || selected.recipient_name || ''} 
+                      onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), name: e.target.value }))} 
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white text-sm focus:border-teal-500 focus:outline-none" 
+                    />
+                    <input 
+                      placeholder="Street Address" 
+                      value={recipientDraft?.address || selected.recipient_address || ''} 
+                      onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), address: e.target.value }))} 
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white text-sm focus:border-teal-500 focus:outline-none" 
+                    />
+                    <div className="flex gap-2">
+                      <input 
+                        placeholder="City" 
+                        value={recipientDraft?.city || selected.recipient_city || ''} 
+                        onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), city: e.target.value }))} 
+                        className="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white text-sm focus:border-teal-500 focus:outline-none w-1/2" 
+                      />
+                      <input 
+                        placeholder="State" 
+                        value={recipientDraft?.state || selected.recipient_state || ''} 
+                        onChange={e => setRecipientDraft((d: any) => ({ ...(d||{}), state: e.target.value }))} 
+                        className="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white text-sm focus:border-teal-500 focus:outline-none w-1/2" 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={printLabel} 
+                  className="w-full py-4 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-900 font-black rounded-xl shadow-[0_0_20px_rgba(20,184,166,0.3)] transform hover:-translate-y-1 transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="text-xl">🖨️</span> PRINT LABEL
+                </button>
+              </div>
+
+            </div>
           )}
         </div>
       </div>

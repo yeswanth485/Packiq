@@ -1,16 +1,15 @@
- 'use client';
+'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import EmptyState from '@/components/EmptyState'
+import EmptyState from '@/components/EmptyState';
+import BoxViewer3D from '@/components/3d/BoxViewer3D';
 
 export default function OrdersPage() {
   const supabase = useMemo(() => createClient(), []);
   const [orders, setOrders] = useState<any[]>([]);
-  const [sessions, setSessions] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [riskFilter, setRiskFilter] = useState('all');
   const [loading, setLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -35,7 +34,7 @@ export default function OrdersPage() {
           new_box_name: (o.box_snapshot && (o.box_snapshot.name || o.box_snapshot.box_name)) || o.new_box_name,
           new_box_dims: o.box_snapshot ? `${o.box_snapshot.length_cm}×${o.box_snapshot.width_cm}×${o.box_snapshot.height_cm}cm` : o.new_box_dims,
           new_box_cost: o.box_snapshot?.cost || o.new_box_cost || o.total_cost,
-        }))
+        }));
 
         setOrders(normalized);
       }
@@ -45,8 +44,8 @@ export default function OrdersPage() {
   }, [supabase]);
 
   const allOrders = useMemo(() => orders, [orders]);
-  const successOrders = useMemo(() => orders.filter(o => o.is_optimized), [orders]);
-  const failedOrders = useMemo(() => orders.filter(o => !o.is_optimized), [orders]);
+  const successOrders = useMemo(() => orders.filter(o => o.is_optimized || o.new_box_name), [orders]);
+  const failedOrders = useMemo(() => orders.filter(o => !o.is_optimized && !o.new_box_name), [orders]);
   
   const totalSaved = useMemo(() => 
     successOrders.reduce((s, o) => s + (o.savings_amount || 0), 0), 
@@ -62,53 +61,46 @@ export default function OrdersPage() {
       .filter(o => riskFilter === 'all' || o.fragility_level === riskFilter),
   [successOrders, search, riskFilter]);
 
-  if (loading) return <div style={{padding:40,textAlign:'center'}}>Loading orders...</div>;
+  if (loading) return <div className="p-10 text-center text-teal-400 font-mono animate-pulse">Loading Manifests...</div>;
 
   return (
-    <div style={{ padding: '0 32px 32px', maxWidth: '100%', overflowX: 'hidden' }}>
+    <div className="p-8 max-w-full overflow-hidden text-white min-h-screen" style={{ background: 'linear-gradient(135deg, #050b14 0%, #0a192f 100%)' }}>
       
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', 
-                    marginBottom: 24, paddingTop: 24, gap: 16, flexWrap: 'wrap' }}>
+      <div className="flex flex-wrap justify-between items-start mb-8 gap-4">
         <div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700 }}>Shipment Manifests</h1>
-          <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>
-            Manage order logistics, view packing guides, and print labels.
+          <h1 className="m-0 text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-blue-500 tracking-tight">
+            Shipment Manifests
+          </h1>
+          <p className="mt-2 text-blue-200/60 text-sm">
+            Manage your AI-optimized order logistics, view 3D packing guides, and generate labels seamlessly.
           </p>
         </div>
-        <button style={{ 
-          padding: '10px 20px', background: '#14b8a6', border: 'none', borderRadius: 8,
-          color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 14, whiteSpace: 'nowrap',
-          flexShrink: 0
-        }}>
+        <button className="px-6 py-3 bg-gradient-to-r from-teal-500 to-teal-400 hover:from-teal-400 hover:to-teal-300 rounded-xl text-slate-900 font-black shadow-[0_0_20px_rgba(20,184,166,0.3)] transition-all transform hover:scale-105 whitespace-nowrap">
           + NEW ORDER
         </button>
       </div>
 
-      {/* KPI Cards — all 4 populated */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
-        <KPICard dot="green" label="PROCESSED" value={allOrders.length} />
-        <KPICard dot="green" label="OPTIMIZED" value={successOrders.length} />
-        <KPICard dot="orange" label="TOTAL SAVED" value={'₹' + totalSaved.toFixed(2)} />
-        <KPICard dot="red" label="HIGH RISK" value={highRiskCount} valueColor="#ef4444" />
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <KPICard dot="bg-teal-400" label="PROCESSED" value={allOrders.length} glowColor="rgba(45,212,191,0.15)" />
+        <KPICard dot="bg-blue-400" label="OPTIMIZED" value={successOrders.length} glowColor="rgba(96,165,250,0.15)" />
+        <KPICard dot="bg-amber-400" label="TOTAL SAVED" value={'₹' + totalSaved.toFixed(2)} glowColor="rgba(251,191,36,0.15)" />
+        <KPICard dot="bg-rose-500" label="HIGH RISK" value={highRiskCount} valueColor="#f43f5e" glowColor="rgba(244,63,94,0.15)" />
       </div>
 
       {/* Search + Filter */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+      <div className="flex gap-3 mb-6">
         <input
           placeholder="Search by SKU or Product Name..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, padding: '10px 14px', background: 'var(--bg-elevated)',
-                   border: '1px solid var(--border-default)', borderRadius: 8,
-                   color: 'var(--text-primary)', fontSize: 13 }}
+          className="flex-1 px-4 py-3 bg-[#0f172a]/60 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all backdrop-blur-md"
         />
         <select
           value={riskFilter}
           onChange={e => setRiskFilter(e.target.value)}
-          style={{ padding: '10px 14px', background: 'var(--bg-elevated)',
-                   border: '1px solid var(--border-default)', borderRadius: 8,
-                   color: 'var(--text-primary)', fontSize: 13 }}
+          className="px-4 py-3 bg-[#0f172a]/60 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-teal-500 transition-all backdrop-blur-md"
         >
           <option value="all">All Risk Levels</option>
           <option value="High">High Risk</option>
@@ -117,14 +109,13 @@ export default function OrdersPage() {
         </select>
       </div>
 
-      {/* Orders Table */}
-      <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
-        <table style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse' }}>
+      {/* Orders Table - Glassmorphism */}
+      <div className="overflow-x-auto rounded-2xl border border-slate-700 bg-slate-800/30 backdrop-blur-xl shadow-2xl">
+        <table className="w-full min-w-[900px] border-collapse">
           <thead>
-            <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              {['PRODUCT','BASELINE BOX','OPTIMIZED BOX','TOTAL COST','SAVINGS','RISK LEVEL','ACTIONS'].map(col => (
-                <th key={col} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, 
-                                       fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+            <tr className="bg-slate-900/50 border-b border-slate-700/80">
+              {['PRODUCT','BASELINE BOX','OPTIMIZED BOX','TOTAL COST','SAVINGS','RISK LEVEL'].map(col => (
+                <th key={col} className="p-4 text-left text-xs font-bold text-slate-400 tracking-wider whitespace-nowrap">
                   {col}
                 </th>
               ))}
@@ -133,75 +124,12 @@ export default function OrdersPage() {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '48px 0' }}>
+                <td colSpan={6} className="py-16">
                   <EmptyState title={orders.length === 0 ? 'No optimizations yet' : 'No matching orders'} description={orders.length === 0 ? 'Run an optimization to populate shipments' : 'Try a different search or clear filters.'} />
                 </td>
               </tr>
             ) : filtered.map(order => (
-              <tr key={order.id} 
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', 
-                           cursor: 'pointer', transition: 'background 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                {/* PRODUCT */}
-                <td style={{ padding: '14px 14px' }}>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{order.product_name || order.sku}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{order.sku}</div>
-                </td>
-                {/* BASELINE BOX */}
-                <td style={{ padding: '14px 14px', fontSize: 12, color: 'var(--text-secondary)' }}>
-                  {order.old_box_dims || order.length_cm + 'x' + order.width_cm + 'x' + order.height_cm}
-                </td>
-                {/* OPTIMIZED BOX */}
-                <td style={{ padding: '14px 14px' }}>
-                  <div style={{ 
-                    display: 'inline-block', padding: '3px 9px', borderRadius: 4, fontSize: 11, fontWeight: 700,
-                    background: 'rgba(20,184,166,0.12)', color: '#14b8a6', letterSpacing: '0.03em'
-                  }}>
-                    {order.new_box_name || 'N/A'}
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 3 }}>{order.new_box_dims}</div>
-                </td>
-                {/* TOTAL COST */}
-                <td style={{ padding: '14px 14px' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', textDecoration: 'line-through' }}>
-                    ₹{order.old_box_cost?.toFixed(2)}
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
-                    ₹{order.new_box_cost?.toFixed(2)}
-                  </div>
-                </td>
-                {/* SAVINGS */}
-                <td style={{ padding: '14px 14px' }}>
-                  <span style={{ 
-                    display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px',
-                    borderRadius: 20, fontSize: 12, fontWeight: 700,
-                    background: 'rgba(34,197,94,0.1)', color: '#22c55e'
-                  }}>
-                    ↘ {order.savings_pct?.toFixed(1)}%
-                  </span>
-                </td>
-                {/* RISK LEVEL */}
-                <td style={{ padding: '14px 14px' }}>
-                  <span style={{ 
-                    display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600,
-                    color: order.fragility_level === 'High' ? '#ef4444' : order.fragility_level === 'Medium' ? '#f59e0b' : '#22c55e'
-                  }}>
-                    {order.fragility_level === 'High' ? '🔴' : order.fragility_level === 'Medium' ? '⚠️' : '✅'} {order.fragility_level}
-                  </span>
-                </td>
-                {/* ACTIONS */}
-                <td style={{ padding: '14px 14px' }}>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <ActionBtn label="Pack" onClick={() => setSelectedOrder(order)} />
-                    <ActionBtn label="Label" onClick={() => {
-                      const resultId = order.optimization_result_id || order.optimization_id || order.id
-                      window.location.href = `/dashboard/labels?result_id=${resultId}`
-                    }} />
-                    <ActionBtn label="···" onClick={() => setSelectedOrder(order)} />
-                  </div>
-                </td>
-              </tr>
+              <OrderRow key={order.id} order={order} />
             ))}
           </tbody>
         </table>
@@ -209,24 +137,17 @@ export default function OrdersPage() {
 
       {/* Not Optimized Banner */}
       {failedOrders.length > 0 && (
-        <div style={{ 
-          marginTop: 20, padding: '14px 20px', 
-          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', 
-          borderRadius: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-        }}>
+        <div className="mt-6 p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl flex justify-between items-center backdrop-blur-md">
           <div>
-            <span style={{ color: '#ef4444', fontWeight: 700 }}>
+            <span className="text-rose-400 font-bold">
               ⚠ {failedOrders.length} items could not be optimized
             </span>
-            <span style={{ color: 'var(--text-secondary)', fontSize: 13, marginLeft: 8 }}>
-              — see Results History for failure reasons and fix recommendations
+            <span className="text-slate-400 text-sm ml-2 hidden sm:inline">
+              — review History for reasons and recommendations.
             </span>
           </div>
-          <a href="/dashboard/results" style={{ 
-            padding: '7px 16px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: 6, color: '#ef4444', fontSize: 12, fontWeight: 700, textDecoration: 'none'
-          }}>
-            View Details →
+          <a href="/dashboard/results" className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 rounded-lg text-rose-300 text-xs font-bold no-underline transition-all">
+            Review Failures →
           </a>
         </div>
       )}
@@ -234,28 +155,140 @@ export default function OrdersPage() {
   );
 }
 
-function KPICard({ dot, label, value, valueColor }: any) {
+function OrderRow({ order }: { order: any }) {
+  const [expanded, setExpanded] = useState(false);
+  
+  // Extract dimensions safely
+  const dimsArray = order.new_box_dims ? order.new_box_dims.toLowerCase().replace('cm', '').split('x') : [];
+  const w = parseFloat(dimsArray[0]) || 20;
+  const d = parseFloat(dimsArray[1]) || 20;
+  const h = parseFloat(dimsArray[2]) || 15;
+
   return (
-    <div style={{ padding: '16px 20px', background: 'var(--bg-elevated)', borderRadius: 10, 
-                  border: '1px solid rgba(255,255,255,0.06)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', 
-                      background: dot === 'green' ? '#22c55e' : dot === 'orange' ? '#f59e0b' : '#ef4444' }} />
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>{label}</span>
-      </div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: valueColor || 'var(--text-primary)' }}>{value}</div>
-    </div>
+    <>
+      <tr 
+        onClick={() => setExpanded(!expanded)}
+        className="border-b border-slate-700/40 cursor-pointer hover:bg-white/5 transition-all duration-200"
+        style={{ background: expanded ? 'rgba(255,255,255,0.03)' : 'transparent' }}
+      >
+        {/* PRODUCT */}
+        <td className="p-4">
+          <div className="font-bold text-sm text-slate-100">{order.product_name || order.sku}</div>
+          <div className="text-xs text-slate-500 mt-1">{order.sku}</div>
+        </td>
+        {/* BASELINE BOX */}
+        <td className="p-4 text-xs text-slate-400 font-mono">
+          {order.old_box_dims || order.length_cm + 'x' + order.width_cm + 'x' + order.height_cm}
+        </td>
+        {/* OPTIMIZED BOX */}
+        <td className="p-4">
+          <div className="inline-block px-2.5 py-1 rounded-md text-xs font-bold bg-teal-500/10 text-teal-400 border border-teal-500/20">
+            📦 {order.new_box_name || 'N/A'}
+          </div>
+          <div className="text-[10px] text-slate-500 mt-1 font-mono">{order.new_box_dims}</div>
+        </td>
+        {/* TOTAL COST */}
+        <td className="p-4">
+          <div className="text-xs text-slate-500 line-through">
+            ₹{order.old_box_cost?.toFixed(2)}
+          </div>
+          <div className="text-sm font-black text-white">
+            ₹{order.new_box_cost?.toFixed(2)}
+          </div>
+        </td>
+        {/* SAVINGS */}
+        <td className="p-4">
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
+            ↘ {order.savings_pct?.toFixed(1)}%
+          </span>
+        </td>
+        {/* RISK LEVEL & ACTIONS */}
+        <td className="p-4 flex justify-between items-center gap-4">
+          <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${order.fragility_level === 'High' ? 'text-rose-400' : order.fragility_level === 'Medium' ? 'text-amber-400' : 'text-emerald-400'}`}>
+            {order.fragility_level === 'High' ? '🔴' : order.fragility_level === 'Medium' ? '⚠️' : '✅'} {order.fragility_level}
+          </span>
+          <div className="flex gap-2">
+            <button 
+              onClick={(e) => { e.stopPropagation(); window.location.href = `/dashboard/labels?result_id=${order.optimization_result_id || order.id}`; }}
+              className="px-3 py-1.5 text-xs font-bold rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 transition-all"
+            >
+              Label
+            </button>
+            <button className="px-3 py-1.5 text-xs font-bold rounded-md bg-slate-700/50 hover:bg-slate-700 text-slate-300 transition-all">
+              {expanded ? 'Hide 3D' : 'View 3D'}
+            </button>
+          </div>
+        </td>
+      </tr>
+
+      {/* EXPANDED 3D VIEW */}
+      {expanded && (
+        <tr className="bg-slate-900/60 border-b border-slate-700/60 shadow-inner">
+          <td colSpan={6} className="p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+              
+              <div className="lg:col-span-2 relative h-[400px] w-full rounded-2xl overflow-hidden border border-slate-700 bg-black/50 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                <div className="absolute top-4 left-4 z-10 flex gap-2">
+                  <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded border border-white/10 text-xs font-bold text-teal-400 shadow-lg">
+                    Interactive 3D Packing Guide
+                  </div>
+                  <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded border border-white/10 text-xs font-mono text-slate-300">
+                    {order.new_box_dims}
+                  </div>
+                </div>
+                {/* Embedded 3D Viewer Component */}
+                <BoxViewer3D widthCm={w} depthCm={d} heightCm={h} openDelay={300} />
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
+                  <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Item Specs</h4>
+                  <p className="text-sm font-bold text-white mb-1">{order.product_name || order.sku}</p>
+                  <p className="text-xs text-slate-400 font-mono">Weight: {order.weight_kg} kg</p>
+                  <p className="text-xs text-slate-400 font-mono">Dims: {order.length_cm}x{order.width_cm}x{order.height_cm}cm</p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-teal-900/20 border border-teal-500/20">
+                  <h4 className="text-xs font-black text-teal-500/80 uppercase tracking-widest mb-2">AI Packing Strategy</h4>
+                  <ul className="text-xs text-teal-100/70 space-y-2">
+                    <li className="flex items-start gap-2">
+                      <span className="text-teal-400 mt-0.5">✓</span>
+                      Optimal volumetric fit ({100 - (order.void_percentage || 15)}% utilized)
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-teal-400 mt-0.5">✓</span>
+                      {order.fragility_level === 'High' ? 'Heavy dunnage required' : 'Minimal void fill needed'}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-teal-400 mt-0.5">✓</span>
+                      Saved ₹{order.savings_amount?.toFixed(2)} vs baseline
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
-function ActionBtn({ label, onClick }: any) {
+function KPICard({ dot, label, value, valueColor, glowColor }: any) {
   return (
-    <button onClick={onClick} style={{ 
-      padding: '5px 12px', fontSize: 11, fontWeight: 600, borderRadius: 6, cursor: 'pointer',
-      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-      color: 'var(--text-secondary)', transition: 'all 0.15s'
-    }}>
-      {label}
-    </button>
+    <div 
+      className="p-5 rounded-2xl bg-slate-800/40 backdrop-blur-xl border border-slate-700 relative overflow-hidden group hover:border-slate-500 transition-all duration-300"
+      style={{ boxShadow: `0 8px 32px -8px ${glowColor}` }}
+    >
+      <div className="absolute -inset-1 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 group-hover:translate-x-full duration-1000 ease-in-out transition-all" />
+      <div className="flex items-center gap-2 mb-3">
+        <div className={`w-2 h-2 rounded-full ${dot} shadow-[0_0_8px_currentColor]`} />
+        <span className="text-[10px] font-black text-slate-400 tracking-widest">{label}</span>
+      </div>
+      <div className="text-3xl font-black tracking-tight" style={{ color: valueColor || '#f8fafc' }}>
+        {value}
+      </div>
+    </div>
   );
 }

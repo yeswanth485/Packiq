@@ -421,7 +421,7 @@ export async function POST(req: Request) {
     })
 
     // Execute XGBoost-inspired ML optimization
-    const mlResult = runMLOptimization(mappedProducts, boxes)
+    const mlResult = await runMLOptimization(mappedProducts, boxes)
 
     // STEP 1: Create the session record
     const successful = mlResult.assignments.filter(a => a.fits === true && a.assignedBox !== null);
@@ -560,6 +560,43 @@ export async function POST(req: Request) {
       }
     }
 
+    // Return the mapped API response matching single-product format and include DB ids
+    
+    // STEP 2.5: Also insert into orders table for immediate appearance in Orders tab
+    const orderRows = savedResults.filter(r => r.is_optimized).map(r => ({
+      user_id: user.id,
+      sku: r.sku,
+      product_name: r.product_name,
+      length_cm: r.length_cm,
+      width_cm: r.width_cm,
+      height_cm: r.height_cm,
+      weight_kg: r.weight_kg,
+      is_optimized: r.is_optimized,
+      old_box_name: r.old_box_name,
+      old_box_dims: r.old_box_dims,
+      old_box_cost: r.old_box_cost,
+      new_box_id: r.new_box_id,
+      new_box_name: r.new_box_name,
+      new_box_dims: r.new_box_dims,
+      new_box_cost: r.new_box_cost,
+      savings_amount: r.savings_amount,
+      savings_pct: r.savings_pct,
+      fragility_level: r.fragility_level,
+      optimization_result_id: r.id,
+      created_at: new Date().toISOString(),
+      status: 'pending'
+    }));
+
+    for (let i = 0; i < orderRows.length; i += CHUNK) {
+      const chunk = orderRows.slice(i, i + CHUNK);
+      const { error: orderInsertError } = await (supabaseAdmin as any)
+        .from('orders')
+        .insert(chunk);
+      if (orderInsertError) {
+        console.error('[DB] Orders insert error:', orderInsertError);
+      }
+    }
+
     // STEP 3: Upsert products into products master table
     const productRows = mlResult.assignments.map(originalA => {
       const a = originalA as any;
@@ -633,7 +670,7 @@ export async function POST(req: Request) {
           packing_tips:           [],
           candidates_evaluated:   boxes.length,
 
-          model:                  'XGBoost ML Scorer v2.1',
+          model:                  'XGBoost Extended Version 4.0',
           data_quality:           'complete',
           cached:                 false,
           
@@ -641,7 +678,7 @@ export async function POST(req: Request) {
           dim_weight_reduction:   0,
           top_alternatives:       ass.alternatives,
           score_breakdown:        ass.score_breakdown,
-          engine_version:         'XGBoost ML Scorer v2.1',
+          engine_version:         'XGBoost Extended Version 4.0',
           fit_check_passed:       ass.fits,
           clearance_used:         0,
           status:                 ass.fits ? 'success' : 'error',

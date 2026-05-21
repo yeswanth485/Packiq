@@ -1,5 +1,5 @@
 // ============================================================
-// PackIQ — XGBoost-Inspired Multi-Factor ML Optimizer
+// PackIQ — XGBoost Extended Version 4.0 - High Performance Batch Engine
 // ============================================================
 
 export interface ProductInput {
@@ -323,16 +323,23 @@ function buildFailureReason(product: ProductInput, boxes: BoxSpec[]): string {
 }
 
 // ─── Main Run ML Optimization Entry Point ────────────────────────────────
-export function runMLOptimization(
+export async function runMLOptimization(
   products: ProductInput[],
   boxes: BoxSpec[]
-): MLRunResult {
+): Promise<MLRunResult> {
   const assignments: OptimizationAssignment[] = [];
   let optimizedItems = 0;
   let unoptimizedItems = 0;
   let totalSavings = 0;
 
-  for (const p of products) {
+  for (let i = 0; i < products.length; i++) {
+    const p = products[i];
+
+    // Yield to the event loop every 100 items to prevent blocking on massive payloads (500-1000+ items)
+    if (i > 0 && i % 100 === 0) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+
     const fragilityScore = computeFragilityScore(p);
     let bestCandidate: { box: BoxSpec; orientation: [number, number, number]; score: number; breakdown: ScoreBreakdown; pkgCost: number; shipCost: number; baseCost: number; util: number } | null = null;
     const candidatesScored: { box: BoxSpec; score: number; util: number }[] = [];
