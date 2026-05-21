@@ -1,6 +1,7 @@
-'use client';
+ 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import EmptyState from '@/components/EmptyState'
 
 export default function OrdersPage() {
   const supabase = createClient();
@@ -130,8 +131,8 @@ export default function OrdersPage() {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                  {orders.length === 0 ? 'No optimizations yet. Run an optimization first.' : 'No results match your search.'}
+                <td colSpan={7} style={{ padding: '48px 0' }}>
+                  <EmptyState title={orders.length === 0 ? 'No optimizations yet' : 'No matching orders'} description={orders.length === 0 ? 'Run an optimization to populate shipments' : 'Try a different search or clear filters.'} />
                 </td>
               </tr>
             ) : filtered.map(order => (

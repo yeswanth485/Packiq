@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import EmptyState from '@/components/EmptyState'
 
 export default function ResultsHistoryPage() {
   const supabase = createClient();
@@ -182,8 +183,8 @@ export default function ResultsHistoryPage() {
             <tbody>
               {successItems.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    No optimizations found matching your filters.
+                  <td colSpan={10} style={{ padding: '40px 0' }}>
+                    <EmptyState title="No optimizations" description="No successful optimizations found for this session and filters." />
                   </td>
                 </tr>
               ) : successItems.map(r => (
@@ -210,8 +211,8 @@ export default function ResultsHistoryPage() {
             <tbody>
               {failedItems.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    {results.length === 0 ? 'Run an optimization first.' : 'All products were successfully optimized! 🎉'}
+                  <td colSpan={6} style={{ padding: '40px 0' }}>
+                    <EmptyState title={results.length === 0 ? 'No optimizations yet' : 'No failures'} description={results.length === 0 ? 'Run an optimization to see results here.' : 'No failed items in the selected session.'} />
                   </td>
                 </tr>
               ) : failedItems.map(r => (

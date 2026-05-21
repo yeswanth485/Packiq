@@ -48,6 +48,24 @@ export async function middleware(request: NextRequest) {
       return supabaseResponse
     }
 
+    // If user exists, ensure onboarding is complete before allowing dashboard access
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('onboarding_complete')
+        .eq('id', user.id)
+        .single()
+
+      const onboardingDone = profile?.onboarding_complete === true
+      if (!onboardingDone && pathname.startsWith('/dashboard') && !pathname.startsWith('/onboarding')) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/onboarding'
+        return NextResponse.redirect(url)
+      }
+    } catch (e) {
+      // ignore errors and continue
+    }
+
     // Redirect to Dashboard if visiting Landing ('/') or Auth pages
     if (pathname === '/' || pathname.startsWith('/auth')) {
       const url = request.nextUrl.clone()

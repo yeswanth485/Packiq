@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { useOptimizationStore, OptimizationResult } from '@/lib/store/optimizationStore'
 import { useRouter } from 'next/navigation'
 import Box3DViewer from '@/components/dashboard/Box3DViewer'
+import { LimitGuard } from '@/components/LimitReachedWall'
 import { parseFile, ParseResult, generateCSVTemplate } from '@/lib/fileParser'
 
 export default function OptimizationPage() {
@@ -221,7 +222,8 @@ export default function OptimizationPage() {
   }
 
   return (
-    <div className="max-w-[1200px] w-full mx-auto space-y-6 pb-20 px-4 md:px-0">
+    <LimitGuard>
+      <div className="max-w-[1200px] w-full mx-auto space-y-6 pb-20 px-4 md:px-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="text-3xl font-bold text-white mb-1">AI Optimization</h1>
@@ -706,6 +708,7 @@ export default function OptimizationPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </LimitGuard>
   )
 }

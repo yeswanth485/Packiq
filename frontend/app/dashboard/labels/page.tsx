@@ -1,6 +1,8 @@
-'use client';
+ 'use client';
 import { useEffect, useState, useRef } from 'react';
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client';
+import EmptyState from '@/components/EmptyState'
 
 export default function LabelsPage() {
   const supabase = createClient();
@@ -10,6 +12,19 @@ export default function LabelsPage() {
   const [search, setSearch] = useState('');
   const [labelFormat, setLabelFormat] = useState('4x6');
   const [loading, setLoading] = useState(true);
+  const [recipientDraft, setRecipientDraft] = useState<any>(null)
+
+  useEffect(() => {
+    if (!selected) return
+    const key = 'recipient:' + selected.id
+    try {
+      const saved = localStorage.getItem(key)
+      if (saved) setRecipientDraft(JSON.parse(saved))
+      else setRecipientDraft(null)
+    } catch (e) {
+      setRecipientDraft(null)
+    }
+  }, [selected])
   const labelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -190,9 +205,8 @@ export default function LabelsPage() {
         {/* RIGHT: Label Viewer */}
         <div style={{ overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {!selected ? (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🏷️</div>
-              <div>Select a shipment to preview the label</div>
+            <div style={{ flex: 1 }}>
+              <EmptyState title={shipments.length === 0 ? 'No shipments' : 'Select a shipment'} description={shipments.length === 0 ? 'Run an optimization to create shipments ready for labels.' : 'Select a shipment on the left to preview and print labels.'} />
             </div>
           ) : (
             <>
@@ -314,14 +328,13 @@ export default function LabelsPage() {
                   <div style={{ fontWeight: 700, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     DISPATCH DETAILS
                   </div>
-                  
                   {[
                     { label: 'Order Reference', value: selected.sku },
                     { label: 'Tracking ID', value: selected.tracking_id, mono: true },
                     { label: 'Carrier Service', value: selected.carrier || 'Standard' },
                     { label: 'Box', value: selected.new_box_name },
                     { label: 'Box Dims', value: selected.new_box_dims }
-                  ].map((field, i) => (
+                  ].map((field: any, i: number) => (
                     <div key={i}>
                       <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{field.label}</div>
                       <div style={{ fontSize: 13, fontWeight: 600, fontFamily: field.mono ? 'monospace' : 'inherit' }}>
@@ -329,6 +342,38 @@ export default function LabelsPage() {
                       </div>
                     </div>
                   ))}
+
+                  {/* Recipient editor */}
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>Recipient</div>
+                    <input placeholder="Recipient name" value={recipientDraft?.name || selected.recipient_name || ''} onChange={e => setRecipientDraft(d => ({ ...(d||{}), name: e.target.value }))} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)', marginBottom: 8 }} />
+                    <input placeholder="Address" value={recipientDraft?.address || selected.recipient_address || ''} onChange={e => setRecipientDraft(d => ({ ...(d||{}), address: e.target.value }))} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)', marginBottom: 8 }} />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input placeholder="City" value={recipientDraft?.city || selected.recipient_city || ''} onChange={e => setRecipientDraft(d => ({ ...(d||{}), city: e.target.value }))} style={{ flex: 1, padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)' }} />
+                      <input placeholder="State / ZIP" value={recipientDraft?.state || selected.recipient_state || ''} onChange={e => setRecipientDraft(d => ({ ...(d||{}), state: e.target.value }))} style={{ flex: 1, padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-default)' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <button onClick={async () => {
+                        const draft = recipientDraft || {};
+                        // attempt to persist to optimization_results; if columns don't exist, ignore
+                        try {
+                          await supabase.from('optimization_results').update({
+                            recipient_name: draft.name || null,
+                            recipient_address: draft.address || null,
+                            recipient_city: draft.city || null,
+                            recipient_state: draft.state || null,
+                          }).eq('id', selected.id)
+                          // persist to localStorage as fallback
+                          localStorage.setItem('recipient:' + selected.id, JSON.stringify(draft))
+                          toast.success('Recipient saved')
+                        } catch (err) {
+                          localStorage.setItem('recipient:' + selected.id, JSON.stringify(draft))
+                          toast.success('Saved locally (schema may not support server persistence)')
+                        }
+                      }} style={{ padding: '8px 12px', background: '#14b8a6', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 700 }}>Save Recipient</button>
+                      <button onClick={() => { setRecipientDraft(null); localStorage.removeItem('recipient:' + selected.id); toast.success('Cleared') }} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.06)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>Clear</button>
+                    </div>
+                  </div>
 
                   <button onClick={printLabel} style={{
                     marginTop: 'auto', padding: '10px', background: '#14b8a6', color: '#fff',
