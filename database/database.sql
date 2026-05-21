@@ -263,6 +263,16 @@ ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS orders_own ON public.orders;
 CREATE POLICY orders_own ON public.orders FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
+-- Ensure newer columns exist when migrating an existing orders table
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS optimization_result_id UUID REFERENCES public.optimization_results(id);
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS optimization_session_id UUID REFERENCES public.optimization_sessions(id);
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS product_snapshot JSONB;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS box_snapshot JSONB;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 1;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS total_cost DECIMAL(12,2) DEFAULT 0;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'INR';
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+
 CREATE INDEX IF NOT EXISTS idx_orders_user ON public.orders(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_orders_opt_result ON public.orders(optimization_result_id);
 
@@ -284,6 +294,16 @@ CREATE TABLE IF NOT EXISTS public.shipments (
 ALTER TABLE public.shipments ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS shipments_own ON public.shipments;
 CREATE POLICY shipments_own ON public.shipments FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- Ensure newer columns exist when migrating an existing shipments table
+ALTER TABLE public.shipments ADD COLUMN IF NOT EXISTS optimization_result_id UUID REFERENCES public.optimization_results(id);
+ALTER TABLE public.shipments ADD COLUMN IF NOT EXISTS recipient JSONB;
+ALTER TABLE public.shipments ADD COLUMN IF NOT EXISTS carrier TEXT;
+ALTER TABLE public.shipments ADD COLUMN IF NOT EXISTS tracking_id TEXT;
+ALTER TABLE public.shipments ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'prepared';
+ALTER TABLE public.shipments ADD COLUMN IF NOT EXISTS printed_at TIMESTAMPTZ;
+ALTER TABLE public.shipments ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ;
+ALTER TABLE public.shipments ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
 
 CREATE INDEX IF NOT EXISTS idx_shipments_user ON public.shipments(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_shipments_tracking ON public.shipments(tracking_id);
