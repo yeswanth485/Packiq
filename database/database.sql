@@ -8,20 +8,30 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ─────────────────────────────────────────────────────
--- STEP 1: Drop legacy triggers before we touch tables
+-- STEP 1: Drop legacy triggers safely
+--   PostgreSQL's DROP TRIGGER IF EXISTS still throws
+--   42P01 when the TABLE itself does not exist.
+--   We use anonymous DO blocks to swallow that error.
 -- ─────────────────────────────────────────────────────
-DROP TRIGGER IF EXISTS on_auth_user_created      ON auth.users;
-DROP TRIGGER IF EXISTS on_result_insert          ON public.optimization_results;
-DROP TRIGGER IF EXISTS on_session_complete       ON public.optimization_sessions;
+DO $$ BEGIN
+  DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+EXCEPTION WHEN undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN
+  DROP TRIGGER IF EXISTS on_result_insert ON public.optimization_results;
+EXCEPTION WHEN undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN
+  DROP TRIGGER IF EXISTS on_session_complete ON public.optimization_sessions;
+EXCEPTION WHEN undefined_table THEN NULL; END $$;
 
 -- ─────────────────────────────────────────────────────
--- STEP 2: Drop old incompatible tables (safe order)
---   (only drops the old single-table design; keeps
---    profiles / box_catalog / products / subscriptions)
+-- STEP 2: Drop old/incompatible tables (safe order)
+--   CASCADE removes dependent views / foreign keys.
 -- ─────────────────────────────────────────────────────
 DROP TABLE IF EXISTS public.optimization_results  CASCADE;
 DROP TABLE IF EXISTS public.optimization_sessions CASCADE;
-DROP TABLE IF EXISTS public.optimizations         CASCADE;  -- legacy table
+DROP TABLE IF EXISTS public.optimizations         CASCADE;  -- legacy single-table
 DROP TABLE IF EXISTS public.analytics_daily       CASCADE;
 DROP TABLE IF EXISTS public.notifications         CASCADE;
 
@@ -119,7 +129,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
 );
 
 -- ─────────────────────────────────────────────────────
--- TABLE 5: OPTIMIZATION SESSIONS (batch header)
+-- TABLE 5: OPTIMIZATION SESSIONS  (batch header)
 -- ─────────────────────────────────────────────────────
 CREATE TABLE public.optimization_sessions (
   id                UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -142,7 +152,7 @@ CREATE TABLE public.optimization_sessions (
 );
 
 -- ─────────────────────────────────────────────────────
--- TABLE 6: OPTIMIZATION RESULTS (per product row)
+-- TABLE 6: OPTIMIZATION RESULTS  (per product row)
 -- ─────────────────────────────────────────────────────
 CREATE TABLE public.optimization_results (
   id                       UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -163,8 +173,8 @@ CREATE TABLE public.optimization_results (
   old_box_name             TEXT,
   old_box_dims             TEXT,
   old_box_cost             DECIMAL(10,2),
-  -- New box
-  new_box_id               UUID,   -- nullable FK, no hard constraint to allow orphan cleanup
+  -- New box (nullable FK — no hard constraint to allow orphan cleanup)
+  new_box_id               UUID,
   new_box_name             TEXT,
   new_box_dims             TEXT,
   new_box_cost             DECIMAL(10,2),
@@ -237,7 +247,7 @@ ALTER TABLE public.products              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analytics_daily       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications         ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies before recreating (safe re-run)
+-- Drop then recreate policies (safe on re-run)
 DROP POLICY IF EXISTS "profiles_own"        ON public.profiles;
 DROP POLICY IF EXISTS "box_catalog_own"     ON public.box_catalog;
 DROP POLICY IF EXISTS "sessions_own"        ON public.optimization_sessions;
@@ -273,7 +283,10 @@ BEGIN
   )
   ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.subscriptions (user_id, plan, monthly_limit, used_this_month, billing_period_start, billing_period_end)
+  INSERT INTO public.subscriptions (
+    user_id, plan, monthly_limit, used_this_month,
+    billing_period_start, billing_period_end
+  )
   VALUES (NEW.id, 'starter', 500, 0, NOW(), NOW() + INTERVAL '1 month')
   ON CONFLICT (user_id) DO NOTHING;
 
@@ -285,7 +298,7 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Update analytics_daily whenever a result row is inserted
+-- Update analytics_daily on each result insert
 CREATE OR REPLACE FUNCTION public.update_analytics_on_result()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -301,8 +314,10 @@ BEGIN
   )
   ON CONFLICT (user_id, date) DO UPDATE SET
     items_processed   = analytics_daily.items_processed + 1,
-    items_optimized   = analytics_daily.items_optimized + CASE WHEN NEW.is_optimized THEN 1 ELSE 0 END,
-    savings_generated = analytics_daily.savings_generated + COALESCE(NEW.savings_amount, 0);
+    items_optimized   = analytics_daily.items_optimized
+                        + CASE WHEN NEW.is_optimized THEN 1 ELSE 0 END,
+    savings_generated = analytics_daily.savings_generated
+                        + COALESCE(NEW.savings_amount, 0);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -334,22 +349,23 @@ CREATE TRIGGER on_session_complete
   AFTER INSERT ON public.optimization_sessions
   FOR EACH ROW EXECUTE FUNCTION public.increment_subscription_usage();
 
--- Monthly reset helper (call via cron)
+-- Monthly reset helper (invoke via pg_cron or Edge Function)
 CREATE OR REPLACE FUNCTION public.reset_monthly_counts()
 RETURNS void AS $$
 BEGIN
   UPDATE public.subscriptions
-    SET used_this_month = 0,
+    SET used_this_month      = 0,
         billing_period_start = NOW(),
-        billing_period_end = NOW() + INTERVAL '1 month',
-        updated_at = NOW()
+        billing_period_end   = NOW() + INTERVAL '1 month',
+        updated_at           = NOW()
     WHERE billing_period_end < NOW();
 
   UPDATE public.profiles
     SET monthly_opt_count = 0,
         updated_at = NOW()
     WHERE id IN (
-      SELECT user_id FROM public.subscriptions WHERE billing_period_end < NOW()
+      SELECT user_id FROM public.subscriptions
+      WHERE billing_period_end < NOW()
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -357,16 +373,26 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- ═══════════════════════════════════════════════════
 -- INDEXES
 -- ═══════════════════════════════════════════════════
-CREATE INDEX IF NOT EXISTS idx_opt_results_user_session ON public.optimization_results(user_id, session_id);
-CREATE INDEX IF NOT EXISTS idx_opt_results_session      ON public.optimization_results(session_id);
-CREATE INDEX IF NOT EXISTS idx_opt_results_optimized    ON public.optimization_results(user_id, is_optimized);
-CREATE INDEX IF NOT EXISTS idx_opt_sessions_user        ON public.optimization_sessions(user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_analytics_user_date      ON public.analytics_daily(user_id, date DESC);
-CREATE INDEX IF NOT EXISTS idx_products_user_sku        ON public.products(user_id, sku);
+CREATE INDEX IF NOT EXISTS idx_opt_results_user_session
+  ON public.optimization_results(user_id, session_id);
+CREATE INDEX IF NOT EXISTS idx_opt_results_session
+  ON public.optimization_results(session_id);
+CREATE INDEX IF NOT EXISTS idx_opt_results_optimized
+  ON public.optimization_results(user_id, is_optimized);
+CREATE INDEX IF NOT EXISTS idx_opt_sessions_user
+  ON public.optimization_sessions(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_analytics_user_date
+  ON public.analytics_daily(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_products_user_sku
+  ON public.products(user_id, sku);
 
 -- ═══════════════════════════════════════════════════
 -- HELPER VIEW
 -- ═══════════════════════════════════════════════════
+-- Ensure legacy/migrated profile columns exist so view creation won't fail
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS company_name TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS plan TEXT;
+
 CREATE OR REPLACE VIEW public.user_latest_session AS
 SELECT
   s.*,
@@ -381,10 +407,13 @@ SELECT
   END AS is_limit_reached,
   CASE
     WHEN sub.monthly_limit = -1 THEN 100
-    ELSE ROUND((sub.used_this_month::DECIMAL / NULLIF(sub.monthly_limit, 0)) * 100, 1)
+    ELSE ROUND(
+      (sub.used_this_month::DECIMAL / NULLIF(sub.monthly_limit, 0)) * 100,
+      1
+    )
   END AS usage_percentage
 FROM public.optimization_sessions s
-JOIN public.profiles p     ON p.id = s.user_id
+JOIN public.profiles      p   ON p.id       = s.user_id
 JOIN public.subscriptions sub ON sub.user_id = s.user_id
 WHERE s.id = (
   SELECT id FROM public.optimization_sessions
