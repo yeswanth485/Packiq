@@ -7,6 +7,7 @@ export const maxDuration = 60
 export async function POST(req: Request) {
   const supabase = await createClient()
   const supabaseAdmin = await createServiceClient()
+  const admin: any = supabaseAdmin as any
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
     }
 
     // Load box catalog for scoring
-    const { data: boxRows } = await supabaseAdmin.from('box_catalog').select('*')
+    const { data: boxRows } = await admin.from('box_catalog').select('*')
     const boxes = (boxRows || []).map((b: any) => ({
       id: b.id,
       name: b.name,
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
     }))
 
     // Fetch optimization results to re-run
-    const { data: results } = await supabaseAdmin
+    const { data: results } = await admin
       .from('optimization_results')
       .select('*')
       .in('id', resultIds)
@@ -101,13 +102,13 @@ export async function POST(req: Request) {
         failure_reason: assignment?.failure_reason || null,
       }
 
-      await supabaseAdmin
+      await admin
         .from('optimization_results')
         .update(updatePayload)
         .eq('id', r.id)
 
       // Update any orders linked to this optimization result
-      const { data: ordersForResult } = await supabaseAdmin
+      const { data: ordersForResult } = await admin
         .from('orders')
         .select('*')
         .eq('optimization_result_id', r.id)
@@ -123,7 +124,7 @@ export async function POST(req: Request) {
             cost: assignment.assignedBox.cost
           } : o.box_snapshot || null
 
-          await supabaseAdmin
+          await admin
             .from('orders')
             .update({ status: 'reanalyzed', box_snapshot: boxSnap })
             .eq('id', o.id)

@@ -39,7 +39,7 @@ export default function ResultsHistoryPage() {
 
   
 
-  async function loadSessionResults(sessionId: string, userId: string) {
+  const loadSessionResults = useCallback(async (sessionId: string, userId: string) => {
     setLoading(true);
     const { data, error } = await supabase
       .from('optimization_results')
@@ -57,7 +57,7 @@ export default function ResultsHistoryPage() {
     
     setResults(data || []);
     setLoading(false);
-  }
+  }, [supabase]);
 
   const successItems = useMemo(() => 
     results.filter(r => r.is_optimized === true)
