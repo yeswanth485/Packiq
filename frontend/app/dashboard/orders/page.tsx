@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client';
 import EmptyState from '@/components/EmptyState'
 
 export default function OrdersPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [orders, setOrders] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -12,7 +12,6 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -43,7 +42,7 @@ export default function OrdersPage() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [supabase]);
 
   const allOrders = useMemo(() => orders, [orders]);
   const successOrders = useMemo(() => orders.filter(o => o.is_optimized), [orders]);

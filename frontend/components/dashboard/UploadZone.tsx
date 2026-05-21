@@ -86,7 +86,6 @@ export default function UploadZone({ onSuccess }: UploadZoneProps) {
 
       toast.success('Optimization complete — orders created.')
       // Redirect to Orders page for user review
-      const router = useRouter()
       router.push('/dashboard/orders')
     } catch (err) {
       setStatus('error')

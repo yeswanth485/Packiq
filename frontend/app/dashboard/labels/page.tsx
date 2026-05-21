@@ -1,11 +1,11 @@
  'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client';
 import EmptyState from '@/components/EmptyState'
 
 export default function LabelsPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [shipments, setShipments] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -27,7 +27,6 @@ export default function LabelsPage() {
   }, [selected])
   const labelRef = useRef<HTMLDivElement>(null);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -98,7 +97,7 @@ export default function LabelsPage() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [supabase]);
 
   const filtered = shipments.filter(s =>
     !search ||

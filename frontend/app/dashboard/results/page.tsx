@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client';
 import EmptyState from '@/components/EmptyState'
 
 export default function ResultsHistoryPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [results, setResults] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [selectedSession, setSelectedSession] = useState<string>('latest');
@@ -13,10 +13,9 @@ export default function ResultsHistoryPage() {
   const [savingsFilter, setSavingsFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadData();
-  }, []);
+  }, [supabase]);
 
   async function loadData() {
     setLoading(true);
