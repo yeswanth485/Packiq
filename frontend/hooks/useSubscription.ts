@@ -35,18 +35,20 @@ export function useSubscription(): SubscriptionState {
       if (!mounted) return
       if (!sub) return setState(s => ({ ...s, loading: false }))
 
-      const monthly_limit = sub.monthly_limit ?? 500
-      const used = sub.used_this_month ?? 0
+      const subscription: any = sub
+
+      const monthly_limit = subscription.monthly_limit ?? 500
+      const used = subscription.used_this_month ?? 0
       const pct = monthly_limit === -1 ? 0 : (used / Math.max(1, monthly_limit)) * 100
 
       setState({
-        plan: sub.plan || 'starter',
+        plan: subscription.plan || 'starter',
         usedThisMonth: used,
         monthlyLimit: monthly_limit,
         usagePercentage: Math.min(100, Math.round(pct)),
         isLimitReached: monthly_limit !== -1 && used >= monthly_limit,
         isNearLimit: pct >= 80 && pct < 100,
-        billingPeriodEnd: sub.billing_period_end || '',
+        billingPeriodEnd: subscription.billing_period_end || '',
         loading: false,
       })
     }
