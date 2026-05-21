@@ -74,6 +74,7 @@ export default function LabelsPage() {
       
       // Preselect result if result_id present in URL, or default to first
       const params = new URLSearchParams(window.location.search);
+      const resultId = params.get('result_id');
         if (resultId) {
           const found = formatted.find((f: any) => f.id === resultId || f.optimization_result_id === resultId);
           if (found) {
