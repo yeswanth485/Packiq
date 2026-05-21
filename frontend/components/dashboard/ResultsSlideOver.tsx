@@ -207,10 +207,13 @@ export default function ResultsSlideOver({ isOpen, onClose, data }: ResultsSlide
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                          product_id: data.product_snapshot.id,
+                          product_id: data.product_snapshot?.id,
                           optimization_id: data.id,
+                          optimization_result_id: data.id,
                           box_id: data.box_catalog_data?.id,
-                          total_cost_usd: data.ai_response.new_cost_usd
+                          total_cost_usd: data.ai_response?.new_cost_usd,
+                          product_snapshot: data.product_snapshot || null,
+                          box_snapshot: data.box_catalog_data || data.ai_response || null
                         })
                       })
                       if (!res.ok) throw new Error('Order failed')

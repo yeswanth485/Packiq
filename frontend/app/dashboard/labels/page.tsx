@@ -69,15 +69,40 @@ export default function LabelsPage() {
       }));
 
       setShipments(formatted);
-      if (formatted.length > 0) setSelected(formatted[0]);
+      // Preselect result if result_id present in URL, or default to first
+      const params = new URLSearchParams(window.location.search);
+      const resultId = params.get('result_id');
+      if (resultId) {
+        const found = formatted.find((f: any) => f.id === resultId);
+        if (found) {
+          setSelected(found);
+        } else {
+          // fetch single result and add to list
+          const { data: single } = await supabase.from('optimization_results').select('*').eq('id', resultId).maybeSingle();
+          if (single) {
+            const s = {
+              ...(single as any),
+              tracking_id: (single as any).tracking_id || ('PKQ-' + ((single as any).sku||'') + '-' + ((single as any).id||'').slice(0,6).toUpperCase()),
+              zone: (single as any).zone || 'ZONE 2',
+              fragility_color_initial: (single as any).fragility_level === 'High' ? '#ef4444' : (single as any).fragility_level === 'Medium' ? '#f59e0b' : '#6366f1'
+            };
+            setShipments(prev => [s, ...(prev || [])]);
+            setSelected(s);
+          } else if (formatted.length > 0) {
+            setSelected(formatted[0]);
+          }
+        }
+      } else {
+        if (formatted.length > 0) setSelected(formatted[0]);
+      }
       setLoading(false);
     }
     load();
   }, []);
 
   const filtered = shipments.filter(s =>
-    !search || 
-    s.product_name?.toLowerCase().includes(search.toLowerCase()) || 
+    !search ||
+    s.product_name?.toLowerCase().includes(search.toLowerCase()) ||
     s.sku?.toLowerCase().includes(search.toLowerCase()) ||
     s.tracking_id?.toLowerCase().includes(search.toLowerCase())
   );
@@ -85,15 +110,39 @@ export default function LabelsPage() {
   function printLabel() {
     const content = labelRef.current;
     if (!content) return;
-    const win = window.open('', '_blank', 'width=500,height=700');
-    if (!win) return;
-    win.document.write(`
-      <!DOCTYPE html><html><head><title>PackIQ Label</title>
-      <style>body{margin:0;padding:16px;font-family:Arial,sans-serif;}@media print{@page{size:4in 6in;margin:0.2in}}</style>
-      </head><body>${content.innerHTML}
-      <script>window.onload=()=>{window.print();}</script></body></html>
-    `);
-    win.document.close();
+
+    // Try to persist a shipment record before printing
+    (async () => {
+      const draft = recipientDraft || {};
+      try {
+        await fetch('/api/shipments', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            optimization_result_id: selected.id,
+            recipient: draft,
+            carrier: selected.carrier || 'Standard',
+            status: 'printed'
+          })
+        });
+        // fall through to printing regardless of server response
+      } catch (e) {
+        // persist locally as fallback
+        try { localStorage.setItem('recipient:' + selected.id, JSON.stringify(draft)) } catch (er) {}
+        toast.error('Could not persist shipment server-side; saved locally')
+      }
+
+      const win = window.open('', '_blank', 'width=500,height=700');
+      if (!win) return;
+      win.document.write(`
+        <!DOCTYPE html><html><head><title>PackIQ Label</title>
+        <style>body{margin:0;padding:16px;font-family:Arial,sans-serif;}@media print{@page{size:4in 6in;margin:0.2in}}</style>
+        </head><body>${content.innerHTML}
+        <script>window.onload=()=>{window.print();}</script></body></html>
+      `);
+      win.document.close();
+    })();
   }
 
   async function printBatch() {

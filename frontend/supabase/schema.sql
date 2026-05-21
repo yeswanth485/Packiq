@@ -229,6 +229,29 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users manage own orders" ON orders;
 CREATE POLICY "Users manage own orders" ON orders FOR ALL USING (auth.uid() = user_id);
 
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 6A. SHIPMENTS — Shipment tracking and print events
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS shipments (
+  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id       UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  order_id      UUID REFERENCES orders(id) ON DELETE CASCADE,
+  optimization_result_id UUID REFERENCES optimization_results(id),
+  recipient     JSONB,
+  carrier       TEXT,
+  tracking_id   TEXT,
+  status        TEXT DEFAULT 'prepared',
+  printed_at    TIMESTAMPTZ,
+  shipped_at    TIMESTAMPTZ,
+  delivered_at  TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE shipments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users manage own shipments" ON shipments;
+CREATE POLICY "Users manage own shipments" ON shipments FOR ALL USING (auth.uid() = user_id);
+
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 7. INSPECTIONS — Quality inspection data (IoT / AI vision)

@@ -242,6 +242,53 @@ CREATE TABLE public.analytics_daily (
 -- ─────────────────────────────────────────────────────
 -- TABLE 8: NOTIFICATIONS
 -- ─────────────────────────────────────────────────────
+-- TABLE: ORDERS & SHIPMENTS
+-- Idempotent creation for orders and shipments used by frontend
+-- ─────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.orders (
+  id                UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id           UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  optimization_result_id UUID REFERENCES public.optimization_results(id),
+  optimization_session_id UUID REFERENCES public.optimization_sessions(id),
+  product_snapshot  JSONB,
+  box_snapshot      JSONB,
+  quantity          INTEGER DEFAULT 1,
+  total_cost        DECIMAL(12,2) DEFAULT 0,
+  currency          TEXT DEFAULT 'INR',
+  status            TEXT DEFAULT 'pending',
+  created_at        TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS orders_own ON public.orders;
+CREATE POLICY orders_own ON public.orders FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS idx_orders_user ON public.orders(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_opt_result ON public.orders(optimization_result_id);
+
+CREATE TABLE IF NOT EXISTS public.shipments (
+  id                    UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id               UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  order_id              UUID REFERENCES public.orders(id) ON DELETE CASCADE,
+  optimization_result_id UUID REFERENCES public.optimization_results(id),
+  recipient             JSONB,
+  carrier               TEXT,
+  tracking_id           TEXT,
+  status                TEXT DEFAULT 'prepared',
+  printed_at            TIMESTAMPTZ,
+  shipped_at            TIMESTAMPTZ,
+  delivered_at          TIMESTAMPTZ,
+  created_at            TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.shipments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS shipments_own ON public.shipments;
+CREATE POLICY shipments_own ON public.shipments FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS idx_shipments_user ON public.shipments(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_shipments_tracking ON public.shipments(tracking_id);
+
+-- ─────────────────────────────────────────────────────
 CREATE TABLE public.notifications (
   id          UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id     UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,

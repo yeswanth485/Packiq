@@ -26,19 +26,24 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const { product_id, optimization_id, box_id, quantity, total_cost_usd } = await req.json()
-    
+    const { product_id, optimization_id, optimization_result_id, box_id, quantity, total_cost_usd, product_snapshot, box_snapshot } = await req.json()
+
+    const insertPayload: any = {
+      user_id: user.id,
+      product_id: product_id || (product_snapshot && product_snapshot.id) || null,
+      optimization_id: optimization_id || null,
+      optimization_result_id: optimization_result_id || null,
+      box_id: box_id || (box_snapshot && box_snapshot.id) || null,
+      product_snapshot: product_snapshot || null,
+      box_snapshot: box_snapshot || null,
+      quantity: quantity || 1,
+      total_cost: total_cost_usd || null,
+      status: 'pending'
+    }
+
     const { data, error } = await supabase
       .from('orders')
-      .insert({
-        user_id: user.id,
-        product_id,
-        optimization_id,
-        box_id,
-        quantity: quantity || 1,
-        total_cost_usd,
-        status: 'pending'
-      } as any)
+      .insert(insertPayload)
       .select()
       .single()
 

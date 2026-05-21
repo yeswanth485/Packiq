@@ -18,26 +18,28 @@ export default function OrdersPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      // Get latest session
-      const { data: sessionData } = await supabase
-        .from('optimization_sessions')
-        .select('*')
+      // Load user orders from orders table
+      const { data: ordersData, error } = await supabase
+        .from('orders')
+        .select('*, product_snapshot, box_snapshot, created_at')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .order('created_at', { ascending: false });
 
-      if (!sessionData) { setLoading(false); return; }
+      if (error) {
+        setOrders([]);
+      } else {
+        // normalize to expected shape for UI
+        const normalized = (ordersData || []).map((o: any) => ({
+          ...o,
+          product_name: (o.product_snapshot && o.product_snapshot.name) || o.product_name || o.product_snapshot?.product_name,
+          sku: (o.product_snapshot && (o.product_snapshot.sku || o.product_snapshot.SKU)) || o.sku,
+          new_box_name: (o.box_snapshot && (o.box_snapshot.name || o.box_snapshot.box_name)) || o.new_box_name,
+          new_box_dims: o.box_snapshot ? `${o.box_snapshot.length_cm}×${o.box_snapshot.width_cm}×${o.box_snapshot.height_cm}cm` : o.new_box_dims,
+          new_box_cost: o.box_snapshot?.cost || o.new_box_cost || o.total_cost,
+        }))
 
-      // Get ALL results from that session (both success and failed for KPI cards)
-      const { data: resultsData } = await supabase
-        .from('optimization_results')
-        .select('*')
-        .eq('session_id', (sessionData as any).id)
-        .eq('user_id', user.id)
-        .order('savings_pct', { ascending: false });
-
-      setOrders(resultsData || []);
+        setOrders(normalized);
+      }
       setLoading(false);
     }
     load();
@@ -193,7 +195,10 @@ export default function OrdersPage() {
                 <td style={{ padding: '14px 14px' }}>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <ActionBtn label="Pack" onClick={() => setSelectedOrder(order)} />
-                    <ActionBtn label="Label" onClick={() => window.location.href = '/dashboard/labels'} />
+                    <ActionBtn label="Label" onClick={() => {
+                      const resultId = order.optimization_result_id || order.optimization_id || order.id
+                      window.location.href = `/dashboard/labels?result_id=${resultId}`
+                    }} />
                     <ActionBtn label="···" onClick={() => setSelectedOrder(order)} />
                   </div>
                 </td>
