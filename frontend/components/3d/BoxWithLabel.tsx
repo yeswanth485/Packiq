@@ -1,7 +1,7 @@
 'use client'
 
-import { Suspense, useRef } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Suspense, useRef, useState } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Box, Html, ContactShadows, Edges } from '@react-three/drei'
 import * as THREE from 'three'
 import { QRCodeSVG } from 'qrcode.react'
@@ -9,45 +9,34 @@ import { QRCodeSVG } from 'qrcode.react'
 function BoxWithLabelMesh({ labelData }: { labelData: any }) {
   const meshRef = useRef<THREE.Mesh>(null)
 
-  // Parse dimensions from labelData (e.g., "10x8x6")
-  let dims = [10, 8, 6];
-  if (labelData?.optimized_box_dims) {
-    const match = labelData.optimized_box_dims.match(/([\d.]+)\s*[xX*]\s*([\d.]+)\s*[xX*]\s*([\d.]+)/);
-    if (match) {
-      dims = [parseFloat(match[1]), parseFloat(match[2]), parseFloat(match[3])];
-    }
-  }
+  const length = Number(labelData.length) || 20;
+  const width = Number(labelData.width) || 15;
+  const height = Number(labelData.height) || 10;
 
-  const [l, w, h] = dims;
-  const maxDim = Math.max(l, w, h);
-  const scaleFactor = 4.0 / (maxDim || 1);
-  const sl = l * scaleFactor;
-  const sw = w * scaleFactor;
-  const sh = h * scaleFactor;
+  // Scale dimensions to look good inside the 3D canvas viewport
+  const maxDim = Math.max(length, width, height, 1);
+  const scale = 4.2 / maxDim;
 
-  const labelZ = sw / 2 + 0.01;
-  const labelScale = 0.28 * Math.min(sl / 4, sh / 2.5);
+  const x = length * scale;
+  const y = Math.max(height * scale, 2.0); // Make sure box is tall enough to hold the HTML label overlay
+  const z = width * scale;
 
   return (
     <group>
-      <Box ref={meshRef} args={[sl, sh, sw]} castShadow receiveShadow>
+      <Box ref={meshRef} args={[x, y, z]} castShadow receiveShadow>
         <meshStandardMaterial 
-          color="#92623a" // Premium textured cardboard color
+          color="#cf9f72" // Cardboard brown color
           roughness={0.85}
-          metalness={0.1}
+          metalness={0.15}
         />
-        <Edges 
-          scale={1.0}
-          threshold={15}
-          color="#00FFD1"
-        />
+        <Edges color="#ab7b50" />
         
-        {/* Render the Label on the Front Face */}
+        {/* Render the Label on the Front Face (Z = z/2 + 0.01) */}
         <Html 
-          position={[0, 0, labelZ]} 
+          position={[0, 0, (z / 2) + 0.01]} 
           transform 
           occlude
-          scale={labelScale}
+          scale={0.25}
         >
           <div className="w-[400px] h-[550px] bg-white rounded-xl shadow-2xl p-6 flex flex-col justify-between text-black relative pointer-events-none select-none">
             <div className="absolute top-0 right-0 w-16 h-16 bg-gray-100 rounded-bl-[40px]" />

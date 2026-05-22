@@ -565,32 +565,26 @@ export async function POST(req: Request) {
     // STEP 2.5: Also insert into orders table for immediate appearance in Orders tab
     const orderRows = savedResults.filter(r => r.is_optimized).map(r => ({
       user_id: user.id,
+      sku: r.sku,
+      product_name: r.product_name,
+      length_cm: r.length_cm,
+      width_cm: r.width_cm,
+      height_cm: r.height_cm,
+      weight_kg: r.weight_kg,
+      is_optimized: r.is_optimized,
+      old_box_name: r.old_box_name,
+      old_box_dims: r.old_box_dims,
+      old_box_cost: r.old_box_cost,
+      new_box_id: r.new_box_id,
+      new_box_name: r.new_box_name,
+      new_box_dims: r.new_box_dims,
+      new_box_cost: r.new_box_cost,
+      savings_amount: r.savings_amount,
+      savings_pct: r.savings_pct,
+      fragility_level: r.fragility_level,
       optimization_result_id: r.id,
-      optimization_session_id: sessionId,
-      product_snapshot: {
-        sku: r.sku,
-        name: r.product_name,
-        length_cm: r.length_cm,
-        width_cm: r.width_cm,
-        height_cm: r.height_cm,
-        weight_kg: r.weight_kg,
-        current_box_name: r.old_box_name,
-        current_box_dims: r.old_box_dims,
-        current_box_cost: r.old_box_cost
-      },
-      box_snapshot: {
-        id: r.new_box_id,
-        name: r.new_box_name,
-        length_cm: r.new_box_length_cm,
-        width_cm: r.new_box_width_cm,
-        height_cm: r.new_box_height_cm,
-        cost: r.new_box_cost
-      },
-      quantity: r.quantity || 1,
-      total_cost: r.new_box_cost || 0,
-      currency: 'INR',
-      status: 'pending',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      status: 'pending'
     }));
 
     for (let i = 0; i < orderRows.length; i += CHUNK) {
