@@ -5,7 +5,7 @@ import Papa from 'papaparse'
 export const maxDuration = 60
 
 // ━━━ 1. SUPABASE ADMIN CLIENT (Service Role) ━━━
-const supabase = createClient(
+const getSupabase = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
   if (missingEnv.length) {
     return NextResponse.json({ error: 'Missing env vars: ' + missingEnv.join(', ') }, { status: 500 })
   }
+
+  const supabase = getSupabase()
 
   try {
     console.log('[optimize] Request received')
@@ -134,7 +136,7 @@ export async function POST(request: NextRequest) {
 
     // ── 5. Insert orders for optimized products ───────────────────
     let orderSuccesses = 0
-    let orderErrors: string[] = []
+    const orderErrors: string[] = []
 
     // Use Promise.allSettled for individual inserts to be resilient
     const orderPromises = optimized.map(product => {
