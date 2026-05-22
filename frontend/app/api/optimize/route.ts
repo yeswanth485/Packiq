@@ -567,27 +567,42 @@ export async function POST(req: Request) {
     const orderRows = savedResults.filter(r => r.is_optimized).map(r => ({
       user_id: user.id,
       product_id: r.product_id || null,
-      product_snapshot: r.product_id ? { id: r.product_id, name: r.product_name } : (r.product_name ? { name: r.product_name } : null),
+      optimization_result_id: r.id,
+      optimization_session_id: sessionId,
+      product_snapshot: {
+        id: r.product_id,
+        sku: r.sku,
+        name: r.product_name,
+        length_cm: r.length_cm,
+        width_cm: r.width_cm,
+        height_cm: r.height_cm,
+        weight_kg: r.weight_kg,
+        fragility: r.fragility_level
+      },
+      box_snapshot: {
+        id: r.new_box_id,
+        name: r.new_box_name,
+        dims: r.new_box_dims,
+        cost: r.new_box_cost,
+        old_box_name: r.old_box_name,
+        old_box_dims: r.old_box_dims,
+        old_box_cost: r.old_box_cost,
+        savings_amount: r.savings_amount,
+        savings_pct: r.savings_pct
+      },
       sku: r.sku,
       product_name: r.product_name,
       length_cm: r.length_cm,
       width_cm: r.width_cm,
       height_cm: r.height_cm,
       weight_kg: r.weight_kg,
-      is_optimized: r.is_optimized,
-      old_box_name: r.old_box_name,
-      old_box_dims: r.old_box_dims,
-      old_box_cost: r.old_box_cost,
-      new_box_id: r.new_box_id,
-      new_box_name: r.new_box_name,
-      new_box_dims: r.new_box_dims,
-      new_box_cost: r.new_box_cost,
-      savings_amount: r.savings_amount,
-      savings_pct: r.savings_pct,
-      fragility_level: r.fragility_level,
-      optimization_result_id: r.id,
-      created_at: new Date().toISOString(),
-      status: 'pending'
+      quantity: r.quantity || 1,
+      total_cost: r.new_box_cost || 0,
+      currency: 'INR',
+      status: 'pending',
+      tracking_number: r.tracking_id,
+      carrier: r.carrier,
+      created_at: new Date().toISOString()
     }));
 
     const orderInsertErrors: any[] = []

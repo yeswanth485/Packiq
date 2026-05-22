@@ -43,48 +43,13 @@ export default function UploadZone({ onSuccess }: UploadZoneProps) {
       }
 
       setStatus('success')
-      setMessage(`Optimization complete — creating orders and redirecting...`)
-
-      // Create orders for optimized saved results if available
-      const saved = optJson.saved_results || []
-      // Delay slightly to let DB settle
-      await new Promise(r => setTimeout(r, 800))
-
-      for (const row of saved) {
-        try {
-          if (!row.is_optimized) continue
-          await fetch('/api/orders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              product_id: row.sku,
-              optimization_id: optJson.session_id || null,
-              optimization_result_id: row.id,
-              box_id: row.new_box_id || null,
-              total_cost_usd: row.new_box_cost || null,
-              product_snapshot: {
-                id: row.sku,
-                name: row.product_name,
-                length_cm: row.length_cm,
-                width_cm: row.width_cm,
-                height_cm: row.height_cm,
-                weight_kg: row.weight_kg
-              },
-              box_snapshot: {
-                id: row.new_box_id,
-                name: row.new_box_name,
-                dims: row.new_box_dims,
-                cost: row.new_box_cost
-              },
-              quantity: row.quantity || 1
-            })
-          })
-        } catch (e) {
-          console.error('Order creation failed for', row, e)
-        }
-      }
+      setMessage(`Optimization complete — orders created. Redirecting...`)
 
       toast.success('Optimization complete — orders created.')
+
+      // Dispatch custom event to refresh dashboard if needed
+      window.dispatchEvent(new CustomEvent('optimization-complete'));
+
       // Redirect to Orders page for user review
       router.push('/dashboard/orders')
     } catch (err) {

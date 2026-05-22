@@ -29,11 +29,15 @@ export function useDashboardData() {
   
   const [rawOptimizations, setRawOptimizations] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [refreshToggle, setRefreshToggle] = useState(false)
+
+  const refreshData = () => setRefreshToggle(prev => !prev)
 
   useEffect(() => {
     let mounted = true
 
     const fetchDbStats = async () => {
+      setIsLoading(true)
       try {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -73,6 +77,7 @@ export function useDashboardData() {
           .order('created_at', { ascending: false })
 
         // 3. Fetch all optimization results for dashboard charts
+        // Also fetch from orders table as it now contains the denormalized data we need
         const { data: results } = await supabase
           .from('optimization_results')
           .select('*')
@@ -156,7 +161,7 @@ export function useDashboardData() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [refreshToggle])
 
-  return { dbStats, profileData, rawOptimizations, isLoading }
+  return { dbStats, profileData, rawOptimizations, isLoading, refreshData }
 }

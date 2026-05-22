@@ -58,12 +58,12 @@ export default function OrdersPage() {
           id: order.id,
           session_id: order.optimization_session_id,
           user_id: order.user_id,
-          sku: product.sku || order.product_id || 'N/A',
-          product_name: product.name || product.product_name || 'Unknown Product',
-          length_cm: product.length_cm || 0,
-          width_cm: product.width_cm || 0,
-          height_cm: product.height_cm || 0,
-          weight_kg: product.weight_kg || 0,
+          sku: order.sku || product.sku || order.product_id || 'N/A',
+          product_name: order.product_name || product.name || product.product_name || 'Unknown Product',
+          length_cm: order.length_cm || product.length_cm || 0,
+          width_cm: order.width_cm || product.width_cm || 0,
+          height_cm: order.height_cm || product.height_cm || 0,
+          weight_kg: order.weight_kg || product.weight_kg || 0,
           quantity: order.quantity || 1,
           is_optimized: true, // Orders are created from optimized results
           failure_reason: null,
@@ -77,13 +77,13 @@ export default function OrdersPage() {
           new_box_length_cm: box.new_box_length_cm || box.length_cm || 0,
           new_box_width_cm: box.new_box_width_cm || box.width_cm || 0,
           new_box_height_cm: box.new_box_height_cm || box.height_cm || 0,
-          savings_amount: order.total_cost ? (box.old_box_cost || 0) - order.total_cost : 0,
-          savings_pct: box.old_box_cost && box.old_box_cost > 0 
+          savings_amount: box.savings_amount || (order.total_cost && box.old_box_cost ? box.old_box_cost - order.total_cost : 0),
+          savings_pct: box.savings_pct || (box.old_box_cost && box.old_box_cost > 0
             ? ((box.old_box_cost - (order.total_cost || box.new_box_cost || 0)) / box.old_box_cost) * 100 
-            : 0,
-          fragility_level: product.fragility || 'Low',
-          zone: product.zone || 'ZONE 2',
-          tracking_id: order.tracking_id || `ORD-${order.id?.slice(0, 8)?.toUpperCase() || 'UNKNOWN'}`,
+            : 0),
+          fragility_level: order.fragility_level || product.fragility || 'Low',
+          zone: order.zone || product.zone || 'ZONE 2',
+          tracking_id: order.tracking_number || order.tracking_id || `ORD-${order.id?.slice(0, 8)?.toUpperCase() || 'UNKNOWN'}`,
           carrier: order.carrier || 'Standard',
           created_at: order.created_at,
           status: order.status || 'pending'
