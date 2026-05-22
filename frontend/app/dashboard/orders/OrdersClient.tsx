@@ -103,18 +103,33 @@ export default function OrdersClient({ initialOrders, products }: { initialOrder
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
+      // Find the selected product to create a snapshot
+      const selectedProduct = products.find(p => p.id === formData.product_id)
+
       const { data, error } = await (supabase as any)
         .from('orders')
         .insert({
           user_id: user.id,
           product_id: formData.product_id,
+          sku: selectedProduct?.sku || null,
+          product_name: selectedProduct?.name || null,
+          length_cm: selectedProduct?.length_cm || null,
+          width_cm: selectedProduct?.width_cm || null,
+          height_cm: selectedProduct?.height_cm || null,
+          weight_kg: selectedProduct?.weight_kg || null,
+          fragility_level: selectedProduct?.fragility_level || null,
           carrier: formData.carrier,
           tracking_number: formData.tracking_number,
           quantity: formData.quantity,
           status: 'pending'
         })
-        .select('*, product:product_id(*)')
+        .select('*')
         .single()
+
+      if (!error && data) {
+        // Manually attach product object for the UI to render correctly immediately
+        data.product = selectedProduct
+      }
 
       if (error) throw error
 

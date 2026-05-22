@@ -132,6 +132,7 @@ CREATE TABLE IF NOT EXISTS products (
   width_cm    DECIMAL,
   height_cm   DECIMAL,
   fragile     BOOLEAN DEFAULT FALSE,
+  fragility_level TEXT DEFAULT 'low',
   category    TEXT,
   notes       TEXT,
   created_at  TIMESTAMPTZ DEFAULT NOW(),
