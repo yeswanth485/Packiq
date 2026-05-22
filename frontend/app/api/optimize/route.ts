@@ -590,17 +590,23 @@ export async function POST(req: Request) {
       status: 'pending'
     }));
 
+    const orderInsertErrors: any[] = []
+    const savedOrders: any[] = []
+    let totalInsertedOrders = 0
     for (let i = 0; i < orderRows.length; i += CHUNK) {
-      const chunk = orderRows.slice(i, i + CHUNK);
+      const chunk = orderRows.slice(i, i + CHUNK)
       const { data: insertedOrders, error: orderInsertError } = await (supabaseAdmin as any)
         .from('orders')
         .insert(chunk)
-        .select('*');
+        .select('*')
       if (orderInsertError) {
-        console.error('[DB] Orders insert error:', orderInsertError);
-        console.error('[DB] Failed chunk:', chunk);
-      } else {
-        console.log(`[DB] Successfully inserted ${insertedOrders?.length || 0} orders`);
+        console.error('[DB] Orders insert error:', orderInsertError)
+        console.error('[DB] Failed chunk:', chunk)
+        orderInsertErrors.push({ error: orderInsertError, chunk })
+      } else if (insertedOrders && Array.isArray(insertedOrders)) {
+        totalInsertedOrders += insertedOrders.length
+        savedOrders.push(...insertedOrders)
+        console.log(`[DB] Successfully inserted ${insertedOrders.length} orders`)
       }
     }
 
@@ -694,6 +700,12 @@ export async function POST(req: Request) {
       }),
       count: mlResult.totalItems,
       errorCount: mlResult.unoptimizedItems
+    ,
+    order_inserts: {
+      inserted: totalInsertedOrders,
+      errors: orderInsertErrors,
+      sample_inserted: savedOrders.slice(0,5)
+    }
     })
   } catch (error: any) {
     console.error('[Optimize API] Fatal error:', error)
