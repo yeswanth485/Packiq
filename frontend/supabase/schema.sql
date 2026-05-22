@@ -214,43 +214,73 @@ CREATE POLICY "Users manage own optimization results" ON optimization_results FO
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS orders (
-  id                UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id           UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  product_id        UUID,
-  optimization_id   UUID,
-  box_id            UUID,
-  status            TEXT DEFAULT 'pending',
-  quantity          INTEGER DEFAULT 1,
-  total_cost_usd    DECIMAL DEFAULT 0,
-  created_at        TIMESTAMPTZ DEFAULT NOW()
+  id                        UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id                   UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  optimization_result_id    UUID,
+  optimization_session_id   UUID,
+  product_snapshot          JSONB,
+  box_snapshot              JSONB,
+  quantity                  INTEGER DEFAULT 1,
+  total_cost                DECIMAL(12,2) DEFAULT 0,
+  currency                  TEXT DEFAULT 'INR',
+  status                    TEXT DEFAULT 'pending',
+  created_at                TIMESTAMPTZ DEFAULT NOW()
 );
 
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "orders_own" ON orders;
 DROP POLICY IF EXISTS "Users manage own orders" ON orders;
-CREATE POLICY "Users manage own orders" ON orders FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "orders_own" ON orders FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- Ensure newer columns exist when migrating an existing orders table
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS optimization_result_id UUID;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS optimization_session_id UUID;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS product_snapshot JSONB;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS box_snapshot JSONB;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 1;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS total_cost DECIMAL(12,2) DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'INR';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+
+CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_opt_result ON orders(optimization_result_id);
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 6A. SHIPMENTS — Shipment tracking and print events
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS shipments (
-  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id       UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  order_id      UUID REFERENCES orders(id) ON DELETE CASCADE,
-  optimization_result_id UUID REFERENCES optimization_results(id),
-  recipient     JSONB,
-  carrier       TEXT,
-  tracking_id   TEXT,
-  status        TEXT DEFAULT 'prepared',
-  printed_at    TIMESTAMPTZ,
-  shipped_at    TIMESTAMPTZ,
-  delivered_at  TIMESTAMPTZ,
-  created_at    TIMESTAMPTZ DEFAULT NOW()
+  id                        UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id                   UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  order_id                  UUID REFERENCES orders(id) ON DELETE CASCADE,
+  optimization_result_id    UUID,
+  recipient                 JSONB,
+  carrier                   TEXT,
+  tracking_id               TEXT,
+  status                    TEXT DEFAULT 'prepared',
+  printed_at                TIMESTAMPTZ,
+  shipped_at                TIMESTAMPTZ,
+  delivered_at              TIMESTAMPTZ,
+  created_at                TIMESTAMPTZ DEFAULT NOW()
 );
 
 ALTER TABLE shipments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "shipments_own" ON shipments;
 DROP POLICY IF EXISTS "Users manage own shipments" ON shipments;
-CREATE POLICY "Users manage own shipments" ON shipments FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "shipments_own" ON shipments FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- Ensure newer columns exist when migrating an existing shipments table
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS optimization_result_id UUID;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS recipient JSONB;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS carrier TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS tracking_id TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'prepared';
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS printed_at TIMESTAMPTZ;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS idx_shipments_user ON shipments(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_shipments_tracking ON shipments(tracking_id);
 
 
 -- ═══════════════════════════════════════════════════════════════════════════════
