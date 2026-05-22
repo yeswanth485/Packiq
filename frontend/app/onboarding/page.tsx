@@ -163,11 +163,6 @@ export default function OnboardingWizard() {
         return
       }
 
-      // Sync onboarding completion status with auth session metadata for instant routing synchronization
-      await supabase.auth.updateUser({
-        data: { onboarding_complete: true }
-      })
-
       // Confetti Burst
       confetti({
         particleCount: 100,
@@ -175,9 +170,9 @@ export default function OnboardingWizard() {
         origin: { y: 0.6 },
         colors: ['#00E5CC', '#3B82F6', '#FFFFFF']
       })
-
+      // Redirect to dashboard after a short celebration
       setTimeout(() => {
-        window.location.href = '/dashboard'
+        router.push('/dashboard')
       }, 1500)
     } else {
       setLoading(false)
