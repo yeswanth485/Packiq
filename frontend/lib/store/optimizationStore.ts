@@ -67,6 +67,16 @@ export interface OptimizationResult {
   // Extended metrics (returned by engine)
   dim_weight_reduction?: number
   volume_saved_cm3?: number
+
+  // UI helpers for mapping from /api/optimize
+  optimizedDims?: { l: number; w: number; h: number }
+  lengthCm?: number
+  widthCm?: number
+  heightCm?: number
+  volumeUtil?: number
+  optimizedBox?: string
+  reason?: string
+  fragility?: string
 }
 
 // ─── Store State ──────────────────────────────────────────────────────────

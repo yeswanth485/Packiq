@@ -4,12 +4,13 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   Search, RefreshCw, CheckCircle2,
   AlertCircle, ArrowUpRight,
-  Package, Info, TrendingDown
+  Package, Info, TrendingDown, Box as BoxIcon
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import Box3DViewer from '@/components/dashboard/Box3DViewer'
 
 export default function ResultsHistoryPage() {
   const [optimizedProducts, setOptimizedProducts] = useState<any[]>([])
@@ -170,6 +171,8 @@ function StatCard({ title, value, color }: any) {
 }
 
 function OptimizedCard({ p, isExpanded, onToggle }: any) {
+  const [show3D, setShow3D] = useState(false)
+
   return (
     <motion.div layout className="bg-[#1a1a2e] border border-white/5 rounded-2xl p-5 space-y-4 hover:border-violet-500/30 transition-colors">
       <div className="flex justify-between items-start">
@@ -213,13 +216,49 @@ function OptimizedCard({ p, isExpanded, onToggle }: any) {
             <div className="h-full bg-gradient-to-r from-violet-600 to-cyan-400" style={{ width: `${p.volumeUtil}%` }} />
           </div>
         </div>
-        <button
-          onClick={onToggle}
-          className="w-full py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-bold text-slate-400 transition-colors uppercase tracking-widest"
-        >
-          {isExpanded ? 'Hide Details' : 'View why this box was chosen'}
-        </button>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShow3D(!show3D)}
+            className={`flex-1 py-2 rounded-xl text-[10px] font-bold transition-colors uppercase tracking-widest flex items-center justify-center gap-2 ${
+              show3D ? 'bg-cyan-500/20 text-cyan-400' : 'bg-white/5 text-slate-400 hover:bg-white/10'
+            }`}
+          >
+            <BoxIcon className="w-3 h-3" />
+            3D View
+          </button>
+          <button
+            onClick={onToggle}
+            className={`flex-1 py-2 rounded-xl text-[10px] font-bold transition-colors uppercase tracking-widest ${
+              isExpanded ? 'bg-violet-500/20 text-violet-400' : 'bg-white/5 text-slate-400 hover:bg-white/10'
+            }`}
+          >
+            {isExpanded ? 'Hide Info' : 'Why Chosen'}
+          </button>
+        </div>
       </div>
+
+      <AnimatePresence>
+        {show3D && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 250, opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden rounded-xl border border-white/5"
+          >
+            <Box3DViewer
+              l={p.optimizedDims?.l || 0}
+              w={p.optimizedDims?.w || 0}
+              h={p.optimizedDims?.h || 0}
+              productL={p.dimensions.l}
+              productW={p.dimensions.w}
+              productH={p.dimensions.h}
+              spaceUtilization={p.volumeUtil}
+              fragility={p.fragility?.toLowerCase() as any}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isExpanded && (
