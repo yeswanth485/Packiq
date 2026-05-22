@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import {
-  History, Search, Filter, RefreshCw, CheckCircle2,
-  AlertCircle, TrendingDown, Info, ArrowUpRight,
-  Box, Zap, Calendar, Package
+  Search, RefreshCw, CheckCircle2,
+  AlertCircle, ArrowUpRight,
+  Package, Info, TrendingDown
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -22,7 +22,6 @@ export default function ResultsHistoryPage() {
 
   const supabase = createClient()
   const searchParams = useSearchParams()
-  const router = useRouter()
 
   async function fetchResults() {
     setLoading(true)
@@ -45,7 +44,6 @@ export default function ResultsHistoryPage() {
       setStats(json.stats ?? {})
     } catch (err) {
       console.error('Results fetch error:', err)
-      toast.error('Failed to load history')
     } finally {
       setLoading(false)
     }
@@ -53,7 +51,7 @@ export default function ResultsHistoryPage() {
 
   useEffect(() => {
     fetchResults()
-  }, [searchParams])
+  }, [])
 
   const filteredOptimized = useMemo(() => {
     return optimizedProducts.filter(p =>

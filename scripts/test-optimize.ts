@@ -1,18 +1,40 @@
-const testProducts = [
-  { sku:'TEST-001', product_name:'Glass Vase', weight_kg:1.2, length_cm:20, width_cm:15, height_cm:25, fragility:'HIGH' },
-  { sku:'TEST-002', product_name:'Book Set', weight_kg:3.5, length_cm:30, width_cm:22, height_cm:18, fragility:'LOW' },
-  { sku:'TEST-003', product_name:'Watch', weight_kg:0.3, length_cm:12, width_cm:10, height_cm:8, fragility:'CRITICAL' },
-]
+import { createClient } from '@supabase/supabase-js'
 
-async function runTests() {
-  const token = process.env.TEST_AUTH_TOKEN
-  if (!token) {
-    console.error('TEST_AUTH_TOKEN is required')
-    process.exit(1)
+async function runTest() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const email = process.env.TEST_USER_EMAIL || 'test@example.com'
+  const password = process.env.TEST_USER_PASSWORD || 'password123'
+
+  if (!url || !key) {
+    console.error('Missing Supabase env vars')
+    return
   }
 
-  console.log('--- Testing Optimize API ---')
-  const resOptimize = await fetch('http://localhost:3000/api/optimize', {
+  const supabase = createClient(url, key)
+
+  console.log('Logging in...')
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  })
+
+  if (authError) {
+    console.error('Auth error:', authError.message)
+    return
+  }
+
+  const token = authData.session.access_token
+  console.log('Got token.')
+
+  const testProducts = [
+    { sku:'TEST-001', product_name:'Glass Vase', weight_kg:1.2, length_cm:20, width_cm:15, height_cm:25, fragility:'HIGH' },
+    { sku:'TEST-002', product_name:'Book Set', weight_kg:3.5, length_cm:30, width_cm:22, height_cm:18, fragility:'LOW' },
+    { sku:'TEST-003', product_name:'Watch', weight_kg:0.3, length_cm:12, width_cm:10, height_cm:8, fragility:'CRITICAL' },
+  ]
+
+  console.log('Testing /api/optimize...')
+  const optRes = await fetch('http://localhost:3000/api/optimize', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -20,24 +42,26 @@ async function runTests() {
     },
     body: JSON.stringify({ products: testProducts, fileName: 'test.csv' })
   })
-  const jsonOptimize = await resOptimize.json()
-  console.log('Optimize result:', JSON.stringify(jsonOptimize, null, 2))
+  const optJson = await optRes.json()
+  console.log('Optimize result:', JSON.stringify(optJson, null, 2))
 
-  console.log('\n--- Testing Orders API ---')
-  const resOrders = await fetch('http://localhost:3000/api/orders', {
+  if (optJson.session_id) {
+    console.log('Testing /api/orders...')
+    const ordRes = await fetch(`http://localhost:3000/api/orders?session_id=${optJson.session_id}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    const ordJson = await ordRes.json()
+    console.log('Orders:', ordJson.count, 'rows')
+    console.log('First order:', ordJson.orders?.[0])
+  }
+
+  console.log('Testing /api/optimization-results...')
+  const resRes = await fetch('http://localhost:3000/api/optimization-results', {
     headers: { 'Authorization': `Bearer ${token}` }
   })
-  const jsonOrders = await resOrders.json()
-  console.log('Orders:', jsonOrders.count, 'rows')
-  console.log('First order:', JSON.stringify(jsonOrders.orders?.[0], null, 2))
-
-  console.log('\n--- Testing Results API ---')
-  const resResults = await fetch('http://localhost:3000/api/optimization-results', {
-    headers: { 'Authorization': `Bearer ${token}` }
-  })
-  const jsonResults = await resResults.json()
-  console.log('Optimized:', jsonResults.optimized?.length)
-  console.log('Not optimized:', jsonResults.notOptimized?.length)
+  const resJson = await resRes.json()
+  console.log('Optimized:', resJson.optimized?.length)
+  console.log('Not optimized:', resJson.notOptimized?.length)
 }
 
-runTests().catch(console.error)
+runTest().catch(console.error)

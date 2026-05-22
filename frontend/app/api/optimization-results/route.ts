@@ -1,13 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
-const getAdminClient = () => createClient(
+const adminClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export async function GET(request: NextRequest) {
-  const adminClient = getAdminClient()
   try {
     const authHeader = request.headers.get('Authorization')
     if (!authHeader) return NextResponse.json({ error: 'No auth' }, { status: 401 })
