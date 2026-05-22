@@ -48,11 +48,11 @@ export default function OptimizationPage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   const steps = [
-    "Validating product dimensions...",
-    "Generating box candidates...",
-    "Scoring fit, cost, and risk...",
-    "Selecting optimal box...",
-    "Calculating savings vs. baseline..."
+    "Scanning product catalog...",
+    "Loading box catalog...",
+    "Running XGBoost scoring engine...",
+    "Selecting optimal packaging...",
+    "Finalizing results & updating orders..."
   ]
 
   const fmt = (val: number) => currency === 'INR'
@@ -74,10 +74,10 @@ export default function OptimizationPage() {
     setRunning()
     setManualResult(null)
 
-    for (let i = 0; i < 4; i++) {
-      setProcessingStep(i)
-      await new Promise(r => setTimeout(r, 600))
-    }
+    setProcessingStep(0)
+    await new Promise(r => setTimeout(r, 200))
+    setProcessingStep(1)
+    await new Promise(r => setTimeout(r, 200))
 
     try {
       const supabase = createClient()
@@ -99,6 +99,7 @@ export default function OptimizationPage() {
         box_price: manualInput.currentBoxCost ? parseFloat(manualInput.currentBoxCost) : undefined
       }]
 
+      setProcessingStep(2)
       const res = await fetch('/api/optimize', {
         method: 'POST',
         headers: {
@@ -119,6 +120,8 @@ export default function OptimizationPage() {
       if (!res.ok || data.error) throw new Error(data.error || 'Failed to optimize')
 
       if (data.success && data.results && data.results.length > 0) {
+        setProcessingStep(3)
+        await new Promise(r => setTimeout(r, 200))
         setProcessingStep(4)
         setManualResult(data.results[0])
 
@@ -156,15 +159,15 @@ export default function OptimizationPage() {
     setRunning()
     setResults([], [])
 
-    setProcessingStep(0)
-    setProcessingStep(1)
-    setProcessingStep(2)
-    setProcessingStep(3)
-
     try {
+      setProcessingStep(0)
+      await new Promise(r => setTimeout(r, 200))
+      setProcessingStep(1)
+      await new Promise(r => setTimeout(r, 200))
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
 
+      setProcessingStep(2)
       const res = await fetch('/api/optimize', {
         method: 'POST',
         headers: {
@@ -188,6 +191,8 @@ export default function OptimizationPage() {
       if (!res.ok) throw new Error(`Optimization failed (HTTP ${res.status})`)
 
       if (resData.success) {
+        setProcessingStep(3)
+        await new Promise(r => setTimeout(r, 200))
         setProcessingStep(4)
 
         // Save to global store
@@ -389,19 +394,62 @@ export default function OptimizationPage() {
       <AnimatePresence>
         {isOptimizing && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-[#0A0A0F]/90 backdrop-blur-xl flex items-center justify-center p-6">
-            <div className="max-w-md w-full text-center">
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="w-24 h-24 border-2 border-[#00FFD1]/20 border-t-[#00FFD1] rounded-full mx-auto mb-10 flex items-center justify-center">
-                <Brain className="w-10 h-10 text-[#00FFD1]" />
-              </motion.div>
-              <h2 className="text-2xl font-bold text-white mb-8 uppercase tracking-tighter">AI Optimization Engine</h2>
-              <div className="space-y-3 text-left pl-8 border-l border-white/10 ml-8">
+            <div className="max-w-md w-full">
+              <div className="text-center">
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="w-24 h-24 border-2 border-[#00FFD1]/20 border-t-[#00FFD1] rounded-full mx-auto mb-10 flex items-center justify-center">
+                  <Brain className="w-10 h-10 text-[#00FFD1]" />
+                </motion.div>
+                <h2 className="text-2xl font-bold text-white mb-8 uppercase tracking-tighter">AI Optimization Engine</h2>
+              </div>
+              <div className="space-y-4 mb-10">
                 {steps.map((step, i) => (
-                  <motion.div key={i} animate={{ opacity: i === processingStep ? 1 : i < processingStep ? 0.4 : 0.1, color: i === processingStep ? '#00FFD1' : '#fff' }} className="text-[10px] font-black uppercase tracking-[0.1em] flex items-center gap-3">
-                    {i < processingStep ? <CheckCircle2 className="w-3 h-3" /> : <div className={`w-1.5 h-1.5 rounded-full ${i === processingStep ? 'bg-[#00FFD1]' : 'bg-gray-800'}`} />}
+                  <motion.div
+                    key={i}
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{
+                      x: 0,
+                      opacity: i === processingStep ? 1 : i < processingStep ? 0.6 : 0.2,
+                      color: i === processingStep ? '#00FFD1' : '#fff'
+                    }}
+                    className="text-xs font-bold uppercase tracking-[0.1em] flex items-center gap-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl"
+                  >
+                    {i < processingStep ? (
+                      <div className="w-5 h-5 rounded-full bg-[#00FFD1]/20 flex items-center justify-center">
+                        <CheckCircle2 className="w-3 h-3 text-[#00FFD1]" />
+                      </div>
+                    ) : i === processingStep ? (
+                      <div className="w-5 h-5 rounded-full border-2 border-[#00FFD1] border-t-transparent animate-spin" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-white/5 border border-white/10" />
+                    )}
                     {step}
                   </motion.div>
                 ))}
               </div>
+
+              {processingStep === 4 && results.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="glass p-6 rounded-3xl border-[#00FFD1]/20 space-y-4"
+                >
+                  <h3 className="text-[10px] font-black text-[#00FFD1] uppercase tracking-widest text-center">Optimization Summary</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <p className="text-[8px] font-bold text-gray-500 uppercase mb-1">Total SKUs</p>
+                      <p className="text-white font-black text-lg">{results.length}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[8px] font-bold text-gray-500 uppercase mb-1">Void Reduction</p>
+                      <p className="text-[#00FFD1] font-black text-lg">{Math.round(results.reduce((acc, r) => acc + (r.volumeUtil || 0), 0) / results.length)}%</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[8px] font-bold text-gray-500 uppercase mb-1">Savings</p>
+                      <p className="text-white font-black text-lg">{fmt(results.reduce((acc, r) => acc + (r.savings || 0), 0))}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </div>
           </motion.div>
         )}
