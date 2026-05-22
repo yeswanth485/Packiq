@@ -190,7 +190,7 @@ export default function OptimizationPage() {
         // Auto-generate summary and navigate
         await handleGenerateSummary(processedResults)
         await new Promise(r => setTimeout(r, 500))
-        router.push('/dashboard/results')
+        router.push('/dashboard/orders')
       } else {
         throw new Error(resData.error || 'Failed to process optimization')
       }

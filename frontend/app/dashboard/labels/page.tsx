@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client';
 import EmptyState from '@/components/EmptyState';
 import BoxWithLabel from '@/components/3d/BoxWithLabel';
+import { QRCodeSVG } from 'qrcode.react';
 
 const BRANDS = [
   { id: 'fedex', name: 'FedEx', logo: '🟣', baseRate: 8.50, multiplier: 1.2 },
@@ -22,6 +23,7 @@ export default function LabelsPage() {
   const [loading, setLoading] = useState(true);
   const [recipientDraft, setRecipientDraft] = useState<any>(null);
   const [selectedBrand, setSelectedBrand] = useState(BRANDS[0]);
+  const [previewMode, setPreviewMode] = useState<'3d' | 'flat'>('3d');
 
   useEffect(() => {
     if (!selected) return;
@@ -63,30 +65,32 @@ export default function LabelsPage() {
         if (!resResults.ok) throw new Error('Failed to fetch results');
         const { data: results } = await resResults.json();
 
-      const formatted = (results || []).map((r: any) => ({
-        ...r,
-        tracking_id: r.tracking_id || ('PKQ-' + r.sku + '-' + r.id.slice(0,6).toUpperCase()),
-        zone: r.zone || 'ZONE 2',
-        fragility_color_initial: r.fragility_level === 'High' ? '#ef4444' : r.fragility_level === 'Medium' ? '#f59e0b' : '#14b8a6',
-      }));
+      const formatted = (results || [])
+        .filter((r: any) => r.is_optimized)
+        .map((r: any) => ({
+          ...r,
+          tracking_id: r.tracking_id || ('PKQ-' + r.sku + '-' + r.id.slice(0,6).toUpperCase()),
+          zone: r.zone || 'ZONE 2',
+          fragility_color_initial: r.fragility_level === 'High' ? '#ef4444' : r.fragility_level === 'Medium' ? '#f59e0b' : '#14b8a6',
+        }));
 
       setShipments(formatted);
       
       // Preselect result if result_id present in URL, or default to first
       const params = new URLSearchParams(window.location.search);
       const resultId = params.get('result_id');
-        if (resultId) {
-          const found = formatted.find((f: any) => f.id === resultId || f.optimization_result_id === resultId);
-          if (found) {
-            setSelected(found);
-          } else {
-            if (formatted.length > 0) {
-              setSelected(formatted[0]);
-            }
-          }
+      if (resultId) {
+        const found = formatted.find((f: any) => f.id === resultId || f.optimization_result_id === resultId);
+        if (found) {
+          setSelected(found);
         } else {
-          if (formatted.length > 0) setSelected(formatted[0]);
+          if (formatted.length > 0) {
+            setSelected(formatted[0]);
+          }
         }
+      } else {
+        if (formatted.length > 0) setSelected(formatted[0]);
+      }
       } catch (err) {
         console.error('Labels error:', err);
       } finally {
@@ -230,20 +234,113 @@ export default function LabelsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] h-full">
               
-              {/* Realistic 3D Preview */}
-              <div className="relative border-r border-slate-700/50 bg-[#0a0f18]">
+              {/* Realistic Preview */}
+              <div className="relative border-r border-slate-700/50 bg-[#0a0f18] flex flex-col h-full min-h-[400px]">
                 <div className="absolute top-4 left-4 z-10">
                   <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded border border-white/10 text-xs font-bold text-[#00FFD1] shadow-lg mb-1">
-                    Realistic Label Preview
+                    {previewMode === '3d' ? '3D Box Model Preview' : 'Flat Printed Label Preview'}
                   </div>
-                  <div className="text-[10px] text-slate-500 uppercase tracking-widest px-1">
-                    Drag to rotate • Scroll to zoom
-                  </div>
+                  {previewMode === '3d' && (
+                    <div className="text-[10px] text-slate-500 uppercase tracking-widest px-1">
+                      Drag to rotate • Scroll to zoom
+                    </div>
+                  )}
+                </div>
+
+                {/* 3D vs Flat Toggle */}
+                <div className="absolute top-4 right-4 z-10 flex p-1 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 gap-1">
+                  <button
+                    onClick={() => setPreviewMode('3d')}
+                    className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${previewMode === '3d' ? 'bg-[#00FFD1] text-slate-900 shadow-[0_0_10px_rgba(0,255,209,0.3)] font-black' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    3D Box
+                  </button>
+                  <button
+                    onClick={() => setPreviewMode('flat')}
+                    className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${previewMode === 'flat' ? 'bg-[#00FFD1] text-slate-900 shadow-[0_0_10px_rgba(0,255,209,0.3)] font-black' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    Flat Label
+                  </button>
                 </div>
                 
-                {/* 3D Box With Label */}
-                <BoxWithLabel labelData={getLabelDataFor3D()} />
-                
+                {/* Visualizer content area */}
+                <div className="flex-1 w-full h-full min-h-0 relative flex items-center justify-center">
+                  {previewMode === '3d' ? (
+                    <BoxWithLabel labelData={getLabelDataFor3D()} />
+                  ) : (
+                    <div className="p-6 w-full h-full flex items-center justify-center bg-slate-950/40">
+                      <div className="bg-white text-black p-6 rounded-xl shadow-2xl w-[320px] aspect-[4/6] flex flex-col justify-between relative border border-slate-200">
+                        <div>
+                          <div className="flex justify-between items-start border-b-2 border-black pb-3 mb-3">
+                            <div>
+                              <h2 className="text-xl font-black uppercase tracking-tighter leading-none">{selectedBrand.name}</h2>
+                              <p className="text-[9px] font-bold mt-1">STANDARD OVERNIGHT</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-2xl font-black leading-none">{new Date().getDate()}</p>
+                              <p className="text-[9px] font-bold uppercase">{new Date().toLocaleString('default', { month: 'short' })}</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3 mb-4 text-left">
+                            <div>
+                              <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">From</p>
+                              <p className="text-[10px] font-semibold leading-tight">
+                                {profile?.company_name || 'PackIQ Logistics Center'}<br/>
+                                {profile?.company_address || '123 Innovation Way'}<br/>
+                                San Francisco, CA 94105
+                              </p>
+                            </div>
+                            <div className="border-l-2 border-black pl-3">
+                              <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">To</p>
+                              <p className="text-xs font-black uppercase leading-tight">
+                                {recipientDraft?.name || selected.recipient_name || 'VALUED CUSTOMER'}<br/>
+                                {recipientDraft?.address || selected.recipient_address || '123 DEMO STREET'}<br/>
+                                {`${recipientDraft?.city || selected.recipient_city || 'CITY'}, ${recipientDraft?.state || selected.recipient_state || 'ST'} 00000`}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 border-y-2 border-black py-2 mb-4">
+                            <div>
+                              <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Weight</p>
+                              <p className="text-xs font-black">
+                                {((selected.weight_kg || 0.5) * 2.2).toFixed(1)} LBS
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Dimensions</p>
+                              <p className="text-xs font-black uppercase tracking-tighter">{selected.new_box_dims}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-end justify-between mt-auto">
+                          <div className="space-y-1">
+                            <div className="w-16 h-16 border-2 border-black flex items-center justify-center p-1">
+                              <QRCodeSVG 
+                                value={`https://packiq.vercel.app/track/${selected.id}`}
+                                size={56}
+                                bgColor={"#ffffff"}
+                                fgColor={"#000000"}
+                                level={"Q"}
+                              />
+                            </div>
+                            <p className="text-[7px] font-mono text-center font-bold">SCAN</p>
+                          </div>
+                          
+                          <div className="flex-1 ml-4 h-16 flex flex-col justify-end">
+                            <div className="w-full h-8 bg-black repeating-barcode-bg" style={{ background: 'repeating-linear-gradient(90deg, #000, #000 2px, #fff 2px, #fff 4px)' }} />
+                            <p className="text-[9px] font-mono text-center font-bold mt-1 tracking-[0.1em] truncate">
+                              {selected.tracking_id}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Hidden Printable Label (just for window.print rendering) */}
                 <div className="hidden">
                   <div ref={labelRef} style={{ background: '#ffffff', color: '#000', padding: 20, width: 400, height: 600, boxSizing: 'border-box', position: 'relative' }}>
