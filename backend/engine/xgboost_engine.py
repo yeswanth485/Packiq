@@ -60,8 +60,8 @@ def run_xgboost_optimization(input_data: OptimizationInput) -> OptimizationRespo
     ph = input_data.height_cm
     product_vol = pl * pw * ph
 
-    clearances = {'low': 0.5, 'medium': 1.0, 'high': 2.5, 'extreme': 5.0}
-    clearance = clearances.get(input_data.fragility, 1.0)
+    clearances = {'low': 0.1, 'medium': 0.5, 'high': 1.0, 'extreme': 2.0}
+    clearance = clearances.get(input_data.fragility, 0.5)
 
     baseline_cost = 0.0
     baseline_vol = 0.0
@@ -137,7 +137,10 @@ def run_xgboost_optimization(input_data: OptimizationInput) -> OptimizationRespo
             confidence_score=0,
             reasoning="No suitable box found by XGBoost engine.",
             engine_version="XGBoost-Optimizer v2.0",
-            fit_check_passed=False
+            fit_check_passed=False,
+            dim_weight_reduction=0,
+            volume_saved_cm3=0,
+            sustainability_score=0
         )
 
     # Sort by ML score descending (higher is better)
@@ -177,5 +180,8 @@ def run_xgboost_optimization(input_data: OptimizationInput) -> OptimizationRespo
         reasoning=f"XGBoost selected {w_box.name} with {w_metrics['utilization']:.1f}% volume efficiency.",
         engine_version="XGBoost-Optimizer v2.0",
         fit_check_passed=True,
-        top_alternatives=top_alternatives
+        top_alternatives=top_alternatives,
+        dim_weight_reduction=0,
+        volume_saved_cm3=max(0, baseline_vol - w_metrics['box_vol']),
+        sustainability_score=calculate_sustainability_score(w_box, w_metrics['utilization'] / 100.0)
     )

@@ -1,12 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
-const adminClient = createClient(
+export const dynamic = 'force-dynamic'
+
+const getAdminClient = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export async function GET(request: NextRequest) {
+  const adminClient = getAdminClient()
   try {
     // 1. Get user from auth header
     const authHeader = request.headers.get('Authorization')

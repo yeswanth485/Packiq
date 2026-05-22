@@ -5,7 +5,7 @@ import { runMLOptimization } from '@/lib/optimization/mlOptimizer'
 export const maxDuration = 60
 
 // ━━━ 1. USE SERVICE ROLE CLIENT FOR ALL INSERTS ━━━
-const adminClient = createClient(
+const getAdminClient = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
@@ -18,13 +18,23 @@ const DEFAULT_CATALOG = [
 ]
 
 export async function POST(request: NextRequest) {
+  const adminClient = getAdminClient()
   try {
     // ━━━ 2. GET USER ID CORRECTLY ━━━
     const authHeader = request.headers.get('Authorization')
-    const { data: { user } } = await adminClient.auth.getUser(
-      authHeader?.replace('Bearer ', '') ?? ''
-    )
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const token = authHeader?.replace('Bearer ', '')
+
+    if (!token) {
+      console.error('Optimization API: Missing Authorization header')
+      return NextResponse.json({ error: 'Unauthorized: Missing token' }, { status: 401 })
+    }
+
+    const { data: { user }, error: authError } = await adminClient.auth.getUser(token)
+
+    if (authError || !user) {
+      console.error('Optimization API: Auth error or user not found', authError)
+      return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 })
+    }
 
     const body = await request.json()
     const { products, fileName } = body
@@ -59,7 +69,9 @@ export async function POST(request: NextRequest) {
       width_cm: Number(p.width_cm || p.w || 0),
       height_cm: Number(p.height_cm || p.h || 0),
       weight_kg: Number(p.weight_kg || p.weight || 0.5),
-      fragility: p.fragility || 'low'
+      fragility: p.fragility || 'low',
+      current_box: p.current_box || null,
+      box_price: p.box_price ? Number(p.box_price) : null
     }))
 
     // Call Python Backend for each product or batch
@@ -71,7 +83,13 @@ export async function POST(request: NextRequest) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            ...p,
+            product_name: p.product_name,
+            sku: p.product_id,
+            length_cm: p.length_cm,
+            width_cm: p.width_cm,
+            height_cm: p.height_cm,
+            weight_kg: p.weight_kg,
+            fragility: p.fragility,
             available_boxes: boxes.map(b => ({
               id: b.id,
               name: b.name,
@@ -85,7 +103,11 @@ export async function POST(request: NextRequest) {
               double_wall: b.double_wall
             })),
             destination_zone: 2,
-            shipping_method: 'standard'
+            shipping_method: 'standard',
+            current_box_length: p.current_box ? parseFloat(p.current_box.split('x')[0]) : null,
+            current_box_width: p.current_box ? parseFloat(p.current_box.split('x')[1]) : null,
+            current_box_height: p.current_box ? parseFloat(p.current_box.split('x')[2]) : null,
+            current_box_cost_usd: p.box_price
           })
         })
         return await response.json()

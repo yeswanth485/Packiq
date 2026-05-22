@@ -118,13 +118,14 @@ export default function OptimizationPage() {
 
       if (!res.ok || data.error) throw new Error(data.error || 'Failed to optimize')
 
-      if (data.success) {
+      if (data.success && data.results && data.results.length > 0) {
         setProcessingStep(4)
+        setManualResult(data.results[0])
         toast.success(
           `✓ Optimized ${data.total_optimized} of ${data.total_processed} products. ` +
           `₹${data.total_savings?.toFixed(2)} saved!`
         )
-        setTimeout(() => router.push(`/dashboard/orders?session_id=${data.session_id}&fresh=true`), 1000)
+        // Keep the result on screen for manual entry instead of immediate redirect
       }
     } catch (err: any) {
       toast.error(err.message)
@@ -318,10 +319,61 @@ export default function OptimizationPage() {
 
         {/* Right Column - Results */}
         <div className="lg:col-span-5">
-          <div className="glass p-6 md:p-8 rounded-3xl h-full flex flex-col items-center justify-center text-center opacity-50">
-            <Package className="w-16 h-16 mb-4 text-gray-600" />
-            <p className="text-xs text-gray-400 font-medium">Results will appear in the history and orders tabs after processing.</p>
-          </div>
+          {manualResult ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="glass p-6 md:p-8 rounded-3xl h-full space-y-6"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white uppercase tracking-tight">AI Analysis</h2>
+                <div className="px-3 py-1 bg-[#00FFD1]/10 border border-[#00FFD1]/20 rounded-full">
+                  <span className="text-[10px] font-black text-[#00FFD1] uppercase tracking-widest">Optimized</span>
+                </div>
+              </div>
+
+              <div className="aspect-square w-full">
+                <Box3DViewer
+                  l={manualResult.optimizedDims?.l || 0}
+                  w={manualResult.optimizedDims?.w || 0}
+                  h={manualResult.optimizedDims?.h || 0}
+                  productL={manualResult.lengthCm}
+                  productW={manualResult.widthCm}
+                  productH={manualResult.heightCm}
+                  spaceUtilization={manualResult.volumeUtil}
+                  fragility={manualResult.fragility?.toLowerCase() as any}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-white/[0.03] border border-white/5 rounded-2xl">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Recommended Box</p>
+                  <p className="text-white font-bold">{manualResult.optimizedBox || 'N/A'}</p>
+                </div>
+                <div className="p-4 bg-white/[0.03] border border-white/5 rounded-2xl">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Savings</p>
+                  <p className="text-[#00FFD1] font-bold">{fmt(manualResult.savings || 0)}</p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-white/[0.03] border border-white/5 rounded-2xl">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">AI Reasoning</p>
+                <p className="text-xs text-gray-400 leading-relaxed italic">"{manualResult.reason}"</p>
+              </div>
+
+              <button
+                onClick={() => router.push('/dashboard/orders')}
+                className="w-full py-4 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+              >
+                View in Orders
+              </button>
+            </motion.div>
+          ) : (
+            <div className="glass p-6 md:p-8 rounded-3xl h-full flex flex-col items-center justify-center text-center opacity-50">
+              <Package className="w-16 h-16 mb-4 text-gray-600" />
+              <p className="text-xs text-gray-400 font-medium">Results will appear in the history and orders tabs after processing.</p>
+            </div>
+          )}
         </div>
       </div>
 
