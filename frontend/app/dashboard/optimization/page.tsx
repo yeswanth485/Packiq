@@ -121,6 +121,10 @@ export default function OptimizationPage() {
       if (data.success && data.results && data.results.length > 0) {
         setProcessingStep(4)
         setManualResult(data.results[0])
+
+        // Save to global store
+        setResults(data.results, [])
+
         toast.success(
           `✓ Optimized ${data.total_optimized} of ${data.total_processed} products. ` +
           `₹${data.total_savings?.toFixed(2)} saved!`
@@ -185,6 +189,10 @@ export default function OptimizationPage() {
 
       if (resData.success) {
         setProcessingStep(4)
+
+        // Save to global store
+        setResults(resData.results, [])
+
         toast.success(
           `✓ Optimized ${resData.total_optimized} of ${resData.total_processed} products. ` +
           `₹${resData.total_savings?.toFixed(2)} saved!`
