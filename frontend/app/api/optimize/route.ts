@@ -4,7 +4,8 @@ import { runMLOptimization } from '@/lib/optimization/mlOptimizer'
 
 export const maxDuration = 60
 
-const getAdminClient = () => createClient(
+// ━━━ 1. USE SERVICE ROLE CLIENT FOR ALL INSERTS ━━━
+const adminClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
@@ -17,17 +18,13 @@ const DEFAULT_CATALOG = [
 ]
 
 export async function POST(request: NextRequest) {
-  const adminClient = getAdminClient()
   try {
-    // ━━━ 1. GET USER ID CORRECTLY ━━━
+    // ━━━ 2. GET USER ID CORRECTLY ━━━
     const authHeader = request.headers.get('Authorization')
-    const { data: { user }, error: authError } = await adminClient.auth.getUser(
+    const { data: { user } } = await adminClient.auth.getUser(
       authHeader?.replace('Bearer ', '') ?? ''
     )
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
     const { products, fileName } = body
@@ -81,7 +78,7 @@ export async function POST(request: NextRequest) {
         whyChosen: a.recommendation_reason || 'Best fit.',
         baselineBox: p ? `${p.length_cm}x${p.width_cm}x${p.height_cm}` : 'N/A',
         optimizedBox: a.assignedBox ? a.assignedBox.name : null,
-        baselineCost: a.baselineCost || 10, // Mock baseline
+        baselineCost: a.baselineCost || 10,
         shippingCost: a.assignedBox ? (a.assignedBox.cost + 5) : null,
         savings: a.savings || 0,
         savingsPercent: a.savings ? (a.savings / 10 * 100) : 0,
@@ -99,74 +96,68 @@ export async function POST(request: NextRequest) {
     const totalSavings = optimizedResults.reduce((sum, r) => sum + (r.savings || 0), 0)
 
     // ━━━ 3. CREATE OPTIMIZATION SESSION FIRST ━━━
-    let session: any
-    try {
-      const { data, error: sessionError } = await adminClient
-        .from('optimization_sessions')
-        .insert({
-          user_id: user.id,
-          file_name: fileName ?? 'upload.csv',
-          total_processed: allResults.length,
-          total_optimized: optimizedResults.length,
-          total_not_optimized: notOptimizedResults.length,
-          total_savings: totalSavings,
-          success_rate: allResults.length > 0 ? (optimizedResults.length / allResults.length) * 100 : 0,
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single()
-
-      if (sessionError) throw sessionError
-      session = data
-    } catch (err: any) {
-      console.error('SESSION INSERT ERROR:', {
-        code: err.code,
-        message: err.message,
-        details: err.details,
-        hint: err.hint
+    const { data: session, error: sessionError } = await adminClient
+      .from('optimization_sessions')
+      .insert({
+        user_id: user.id,
+        file_name: fileName ?? 'upload.csv',
+        total_processed: allResults.length,
+        total_optimized: optimizedResults.length,
+        total_not_optimized: notOptimizedResults.length,
+        total_savings: totalSavings,
+        success_rate: (optimizedResults.length / allResults.length) * 100,
+        created_at: new Date().toISOString()
       })
-      return NextResponse.json({ error: err.message }, { status: 500 })
+      .select()
+      .single()
+
+    if (sessionError) {
+      console.error('SESSION INSERT ERROR:', {
+        code: sessionError.code,
+        message: sessionError.message,
+        details: sessionError.details,
+        hint: sessionError.hint
+      })
+      return NextResponse.json({ error: sessionError.message }, { status: 500 })
     }
 
     // ━━━ 4. INSERT OPTIMIZATION_RESULTS (one per product) ━━━
-    try {
-      const resultsToInsert = allResults.map(r => ({
-        session_id: session.id,
-        user_id: user.id,
-        sku: r.sku,
-        product_name: r.productName,
-        optimized: r.optimized,
-        reason_code: r.reasonCode ?? null,
-        reason: r.reason ?? null,
-        explanation: r.explanation ?? null,
-        recommendation: r.recommendation ?? null,
-        fragility: r.fragility,
-        fragility_score: r.fragilityScore,
-        why_chosen: r.whyChosen ?? null,
-        baseline_box: r.baselineBox,
-        optimized_box: r.optimizedBox ?? null,
-        baseline_cost: r.baselineCost,
-        shipping_cost: r.shippingCost ?? null,
-        savings: r.savings ?? 0,
-        savings_percent: r.savingsPercent ?? 0,
-        volume_util: r.volumeUtil ?? 0,
-        weight: r.weight,
-        dimensions: { l: r.lengthCm, w: r.widthCm, h: r.heightCm },
-        optimized_dims: r.optimizedDims ?? null,
-        created_at: new Date().toISOString()
-      }))
+    const resultsToInsert = allResults.map(r => ({
+      session_id: session.id,
+      user_id: user.id,
+      sku: r.sku,
+      product_name: r.productName,
+      optimized: r.optimized,
+      reason_code: r.reasonCode ?? null,
+      reason: r.reason ?? null,
+      explanation: r.explanation ?? null,
+      recommendation: r.recommendation ?? null,
+      fragility: r.fragility,
+      fragility_score: r.fragilityScore,
+      why_chosen: r.whyChosen ?? null,
+      baseline_box: r.baselineBox,
+      optimized_box: r.optimizedBox ?? null,
+      baseline_cost: r.baselineCost,
+      shipping_cost: r.shippingCost ?? null,
+      savings: r.savings ?? 0,
+      savings_percent: r.savingsPercent ?? 0,
+      volume_util: r.volumeUtil ?? 0,
+      weight: r.weight,
+      dimensions: { l: r.lengthCm, w: r.widthCm, h: r.heightCm },
+      optimized_dims: r.optimizedDims ?? null,
+      created_at: new Date().toISOString()
+    }))
 
-      const { error: resultsError } = await adminClient
-        .from('optimization_results')
-        .insert(resultsToInsert)
+    const { error: resultsError } = await adminClient
+      .from('optimization_results')
+      .insert(resultsToInsert)
 
-      if (resultsError) throw resultsError
-    } catch (err: any) {
+    if (resultsError) {
       console.error('RESULTS INSERT ERROR:', {
-        code: err.code,
-        message: err.message,
-        details: err.details,
-        hint: err.hint
+        code: resultsError.code,
+        message: resultsError.message,
+        details: resultsError.details,
+        hint: resultsError.hint
       })
     }
 

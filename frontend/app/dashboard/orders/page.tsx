@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { 
-  Package, Search, Filter, RefreshCw, ShoppingCart,
-  CheckCircle2, ArrowUpRight, TrendingUp, Info, AlertCircle
+  Package, Search, RefreshCw,
+  ArrowUpRight, TrendingDown, Info
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -244,42 +244,49 @@ export default function OrdersPage() {
                         </button>
                       </td>
                     </tr>
-                    {expandedRow === item.id && (
-                      <tr className="bg-black/20">
-                        <td colSpan={7} className="p-6">
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <div className="h-64 rounded-xl overflow-hidden border border-white/10">
-                              <BoxViewer3D
-                                widthCm={item.optimizedDims.w}
-                                heightCm={item.optimizedDims.h}
-                                depthCm={item.optimizedDims.l}
-                              />
-                            </div>
-                            <div className="space-y-4">
-                              <h4 className="text-[#00FFD1] font-bold text-sm uppercase">Shipment Details</h4>
-                              <div className="grid grid-cols-2 gap-4 text-xs">
-                                <div>
-                                  <p className="text-slate-500">Product Dims</p>
-                                  <p>{item.productDims.l}x{item.productDims.w}x{item.productDims.h} cm</p>
-                                </div>
-                                <div>
-                                  <p className="text-slate-500">Weight</p>
-                                  <p>{item.weight} kg</p>
-                                </div>
-                                <div>
-                                  <p className="text-slate-500">Fragility</p>
-                                  <p>{item.fragility}</p>
-                                </div>
-                                <div>
-                                  <p className="text-slate-500">Created At</p>
-                                  <p>{item.timestamp}</p>
+                    <AnimatePresence>
+                      {expandedRow === item.id && (
+                        <motion.tr
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="bg-black/20"
+                        >
+                          <td colSpan={7} className="p-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                              <div className="h-64 rounded-xl overflow-hidden border border-white/10">
+                                <BoxViewer3D
+                                  widthCm={item.optimizedDims.w}
+                                  heightCm={item.optimizedDims.h}
+                                  depthCm={item.optimizedDims.l}
+                                />
+                              </div>
+                              <div className="space-y-4">
+                                <h4 className="text-[#00FFD1] font-bold text-sm uppercase">Shipment Details</h4>
+                                <div className="grid grid-cols-2 gap-4 text-xs">
+                                  <div>
+                                    <p className="text-slate-500">Product Dims</p>
+                                    <p>{item.productDims.l}x{item.productDims.w}x{item.productDims.h} cm</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-slate-500">Weight</p>
+                                    <p>{item.weight} kg</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-slate-500">Fragility</p>
+                                    <p>{item.fragility}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-slate-500">Created At</p>
+                                    <p>{item.timestamp}</p>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
+                          </td>
+                        </motion.tr>
+                      )}
+                    </AnimatePresence>
                   </React.Fragment>
                 ))}
               </tbody>

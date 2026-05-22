@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { 
-  Printer, Package, Truck, Search, CheckCircle2,
-  ChevronRight, MapPin, Barcode, X, Info, RefreshCw
+  Printer, CheckCircle2, X, RefreshCw
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -26,7 +24,7 @@ export default function LabelsPage() {
   const [loading, setLoading] = useState(true)
   const [selectedCarrier, setSelectedCarrier] = useState(CARRIERS[0])
   const [printProduct, setPrintProduct] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [profileName, setProfileName] = useState<string | null>(null)
 
   const supabase = createClient()
   const router = useRouter()
@@ -45,18 +43,19 @@ export default function LabelsPage() {
         const json = await res.json()
         
         // Fetch profile
-        const { data: prof } = await (supabase as any).from('profiles').select('*').eq('id', session.user.id).single()
-        setProfile(prof)
+        const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', session.user.id).single()
+        const profileData = prof as any
+        if (profileData) setProfileName(profileData.full_name)
 
         if (json.orders) {
           const mapped = json.orders.map((order: any) => ({
             id: order.id,
-            sku: order.product_snapshot?.sku ?? order.sku ?? 'N/A',
-            productName: order.product_snapshot?.product_name ?? order.product_name ?? 'Unknown',
-            weight: Number(order.weight ?? order.product_snapshot?.weight_kg ?? 0.5),
+            sku: order.product_snapshot?.sku ?? order.id.slice(0, 8).toUpperCase(),
+            productName: order.product_snapshot?.product_name ?? 'Unknown Product',
+            weight: Number(order.weight ?? order.product_snapshot?.weight_kg ?? 0),
             optimizedDims: order.optimized_dims ?? { l: 30, w: 22, h: 18 },
-            destination: order.product_snapshot?.destination ?? 'India',
-            senderName: (prof as any)?.full_name ?? 'PackIQ Seller',
+            destination: 'India',
+            senderName: profileData?.full_name ?? 'PackIQ Seller',
             senderAddress: 'Warehouse, India',
             receiverName: 'Customer',
             receiverAddress: order.product_snapshot?.destination ?? 'India'
@@ -102,7 +101,7 @@ export default function LabelsPage() {
         <div className="py-20 text-center flex flex-col items-center gap-4">
           <span className="text-6xl">🏷️</span>
           <h3 className="text-xl font-bold">No products to label</h3>
-          <p className="text-slate-500">Optimize products first -{'>'} Labels appear here automatically</p>
+          <p className="text-slate-500">Optimize products first → Labels appear here automatically</p>
           <button
             onClick={() => router.push('/dashboard/optimization')}
             className="px-6 py-2 bg-orange-600 hover:bg-orange-500 rounded-xl font-bold transition-all"
@@ -144,11 +143,9 @@ export default function LabelsPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Items to Ship</h3>
-              {selectedCarrier && (
-                <div className="px-4 py-2 bg-violet-600/10 border border-violet-500/20 rounded-xl text-[10px] font-black text-violet-400 uppercase tracking-widest animate-pulse">
-                  Estimated Total: ₹{totalEstimated.toFixed(2)} for {products.length} shipments via {selectedCarrier.name}
-                </div>
-              )}
+              <div className="px-4 py-2 bg-violet-600/10 border border-violet-500/20 rounded-xl text-[10px] font-black text-violet-400 uppercase tracking-widest">
+                Estimated Total: ₹{totalEstimated.toFixed(2)} for {products.length} shipments via {selectedCarrier.name}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -211,10 +208,6 @@ export default function LabelsPage() {
                       <span className="text-3xl">{selectedCarrier.logo}</span>
                       <span className="font-black italic tracking-tighter text-xl uppercase">{selectedCarrier.name}</span>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-bold">EXPRESS</p>
-                      <p className="text-lg font-black leading-none">P1</p>
-                    </div>
                   </div>
 
                   <div className="p-6 flex-1 space-y-6">
@@ -232,7 +225,7 @@ export default function LabelsPage() {
                         </div>
                       </div>
                       <div className="flex flex-col items-center justify-center gap-4">
-                         {/* 3D Box Simulation CSS only */}
+                         {/* 3D Box Simulation */}
                          <div className="w-24 h-24 relative" style={{ perspective: '500px' }}>
                            <div className="w-full h-full border-[1.5px] border-black/20" style={{ transform: 'rotateX(60deg) rotateZ(45deg)', transformStyle: 'preserve-3d', background: '#fff', boxShadow: '10px 10px 20px rgba(0,0,0,0.1)' }}>
                              <div className="absolute top-0 left-1/2 w-px h-full bg-slate-300" />
