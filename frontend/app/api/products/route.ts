@@ -4,14 +4,15 @@ import { z } from 'zod'
 
 const ProductSchema = z.object({
   name: z.string().min(1),
-  sku: z.string().optional(),
-  weight_kg: z.number().positive().optional(),
-  length_cm: z.number().positive().optional(),
-  width_cm: z.number().positive().optional(),
-  height_cm: z.number().positive().optional(),
+  sku: z.string().optional().nullable(),
+  weight_kg: z.number().positive().optional().nullable(),
+  length_cm: z.number().positive().optional().nullable(),
+  width_cm: z.number().positive().optional().nullable(),
+  height_cm: z.number().positive().optional().nullable(),
   fragile: z.boolean().optional().default(false),
-  category: z.string().optional(),
-  notes: z.string().optional(),
+  fragility_level: z.string().optional().nullable(),
+  category: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
 })
 
 export async function GET() {

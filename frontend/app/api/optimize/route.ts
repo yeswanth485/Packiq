@@ -335,6 +335,8 @@ export async function POST(req: Request) {
     const products: any[] = body.products
     const fileName = body.file_name || 'Bulk Upload'
 
+    console.log(`[Optimize] Processing ${products.length} products for user ${user.id}`)
+
     // Load box catalog from DB or use default
     const { data: dbBoxes } = await supabase.from('box_catalog').select('*')
     const boxes = (dbBoxes && dbBoxes.length > 0)
@@ -366,26 +368,39 @@ export async function POST(req: Request) {
     // Map input products to exact format required by ML optimizer
     const mappedProducts = products.map((p, idx) => {
       let l = 0, w = 0, h = 0
-      const plVal = findValue(p, 'product_length', 'product_l', 'length', 'l', 'len', 'length_cm')
-      const pwVal = findValue(p, 'product_width', 'product_w', 'width', 'w', 'width_cm')
-      const phVal = findValue(p, 'product_height', 'product_h', 'height', 'h', 'height_cm')
 
-      if (plVal && pwVal && phVal) {
-        l = parseFloat(plVal)
-        w = parseFloat(pwVal)
-        h = parseFloat(phVal)
+      // Try direct snake_case/camelCase fields first (already parsed by frontend)
+      const directL = p.length_cm || p.lengthCm || p.length
+      const directW = p.width_cm || p.widthCm || p.width
+      const directH = p.height_cm || p.heightCm || p.height
+
+      if (directL && directW && directH) {
+        l = parseFloat(String(directL))
+        w = parseFloat(String(directW))
+        h = parseFloat(String(directH))
       } else {
-        const prodDimStr = findValue(
-          p, 
-          'product L*W*H', 'product_L*W*H', 'product_L*W*H_cm', 'product_dims', 'product_dimensions',
-          'product_l*w*h', 'dimensions', 'dims', 'lwh', 'product_l_w_h',
-          'item_dims', 'item L*W*H'
-        )
-        const prodDim = parseDimensions(prodDimStr)
-        if (prodDim) {
-          l = prodDim.l
-          w = prodDim.w
-          h = prodDim.h
+        // Fallback to searching variety of CSV column names
+        const plVal = findValue(p, 'product_length', 'product_l', 'length', 'l', 'len', 'length_cm')
+        const pwVal = findValue(p, 'product_width', 'product_w', 'width', 'w', 'width_cm')
+        const phVal = findValue(p, 'product_height', 'product_h', 'height', 'h', 'height_cm')
+
+        if (plVal && pwVal && phVal) {
+          l = parseFloat(plVal)
+          w = parseFloat(pwVal)
+          h = parseFloat(phVal)
+        } else {
+          // Fallback to combined string like "10x20x30"
+          const prodDimStr = findValue(
+            p,
+            'product l*w*h', 'product_l*w*h', 'product_l*w*h_cm', 'product_dims', 'product_dimensions',
+            'dimensions', 'dims', 'lwh', 'product_l_w_h', 'item_dims', 'item l*w*h'
+          )
+          const prodDim = parseDimensions(prodDimStr)
+          if (prodDim) {
+            l = prodDim.l
+            w = prodDim.w
+            h = prodDim.h
+          }
         }
       }
 

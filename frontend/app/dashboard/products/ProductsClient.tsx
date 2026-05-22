@@ -22,7 +22,7 @@ export default function ProductsClient({ initialProducts }: { initialProducts: a
     width_cm: '',
     height_cm: '',
     weight_kg: '',
-    fragility: 'low'
+    fragility_level: 'low'
   })
 
   // Extract unique categories for filter
@@ -47,11 +47,12 @@ export default function ProductsClient({ initialProducts }: { initialProducts: a
           name: formData.name,
           sku: formData.sku,
           category: formData.category,
-          lengthCm: formData.length_cm,
-          widthCm: formData.width_cm,
-          heightCm: formData.height_cm,
-          weightKg: formData.weight_kg,
-          fragility: formData.fragility
+          length_cm: parseFloat(formData.length_cm),
+          width_cm: parseFloat(formData.width_cm),
+          height_cm: parseFloat(formData.height_cm),
+          weight_kg: parseFloat(formData.weight_kg),
+          fragility_level: formData.fragility_level,
+          fragile: formData.fragility_level !== 'low'
         })
       })
 
@@ -225,7 +226,7 @@ export default function ProductsClient({ initialProducts }: { initialProducts: a
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">Fragility</label>
-                  <select required value={formData.fragility} onChange={e => setFormData({...formData, fragility: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#00FFD1] [&>option]:bg-[#0A0A0F]">
+                  <select required value={formData.fragility_level} onChange={e => setFormData({...formData, fragility_level: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#00FFD1] [&>option]:bg-[#0A0A0F]">
                     <option value="low">Low Risk</option>
                     <option value="medium">Medium Risk</option>
                     <option value="high">High Risk</option>
