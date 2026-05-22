@@ -563,14 +563,47 @@ export async function POST(req: Request) {
 
     // Return the mapped API response matching single-product format and include DB ids
     
+    // STEP 3: Upsert products into products master table
+    const productRows = mlResult.assignments.map(originalA => {
+      const a = originalA as any;
+      const pSnapshot = mappedProducts.find(prod => prod.product_id === a.sku) || {} as any;
+      return {
+        user_id:    user.id,
+        sku:        a.sku,
+        name:       a.name || a.sku,
+        length_cm:  a.dimensions?.l || pSnapshot.length_cm || 0,
+        width_cm:   a.dimensions?.w || pSnapshot.width_cm || 0,
+        height_cm:  a.dimensions?.h || pSnapshot.height_cm || 0,
+        weight_kg:  a.weight || pSnapshot.weight_kg || 0,
+        updated_at: new Date().toISOString(),
+      };
+    });
+
+    const productUuidMap = new Map<string, string>();
+    for (let i = 0; i < productRows.length; i += CHUNK) {
+      const { data: upsertedProducts, error: upsertError } = await (supabaseAdmin as any)
+        .from('products')
+        .upsert(
+          productRows.slice(i, i + CHUNK),
+          { onConflict: 'user_id,sku', ignoreDuplicates: false }
+        )
+        .select('id, sku');
+
+      if (upsertError) {
+        console.error('[DB] Products upsert error:', upsertError);
+      } else if (upsertedProducts) {
+        upsertedProducts.forEach((p: any) => productUuidMap.set(p.sku, p.id));
+      }
+    }
+
     // STEP 2.5: Also insert into orders table for immediate appearance in Orders tab
     const orderRows = savedResults.filter(r => r.is_optimized).map(r => ({
       user_id: user.id,
-      product_id: r.product_id || null,
+      product_id: productUuidMap.get(r.sku) || null,
       optimization_result_id: r.id,
       optimization_session_id: sessionId,
       product_snapshot: {
-        id: r.product_id,
+        id: productUuidMap.get(r.sku),
         sku: r.sku,
         name: r.product_name,
         length_cm: r.length_cm,
@@ -602,6 +635,7 @@ export async function POST(req: Request) {
       status: 'pending',
       tracking_number: r.tracking_id,
       carrier: r.carrier,
+      fragility_level: r.fragility_level,
       created_at: new Date().toISOString()
     }));
 
@@ -623,29 +657,6 @@ export async function POST(req: Request) {
         savedOrders.push(...insertedOrders)
         console.log(`[DB] Successfully inserted ${insertedOrders.length} orders`)
       }
-    }
-
-    // STEP 3: Upsert products into products master table
-    const productRows = mlResult.assignments.map(originalA => {
-      const a = originalA as any;
-      const pSnapshot = mappedProducts.find(prod => prod.product_id === a.sku) || {} as any;
-      return {
-        user_id:    user.id,
-        sku:        a.sku,
-        name:       a.name || a.sku,
-        length_cm:  a.dimensions?.l || pSnapshot.length_cm || 0,
-        width_cm:   a.dimensions?.w || pSnapshot.width_cm || 0,
-        height_cm:  a.dimensions?.h || pSnapshot.height_cm || 0,
-        weight_kg:  a.weight || pSnapshot.weight_kg || 0,
-        updated_at: new Date().toISOString(),
-      };
-    });
-
-    for (let i = 0; i < productRows.length; i += CHUNK) {
-      await (supabaseAdmin as any).from('products').upsert(
-        productRows.slice(i, i + CHUNK),
-        { onConflict: 'user_id,sku', ignoreDuplicates: false }
-      );
     }
 
     // Return the mapped API response matching single-product format and include DB ids
