@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, memo } from 'react'
 import { Calendar, Download, TrendingUp, Package, Percent, Box as BoxIcon, Leaf, Wind, Database } from 'lucide-react'
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
@@ -14,7 +14,7 @@ const COLORS = ['#00FFD1', '#4f46e5', '#3b82f6', '#ec4899', '#f59e0b']
 const SUCCESS_COLORS = ['#00FFD1', '#ef4444']
 const RISK_COLORS = { Low: '#10b981', Medium: '#f59e0b', High: '#ef4444' }
 
-export default function AnalyticsClient({ allOptimizations }: { allOptimizations: any[] }) {
+const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { allOptimizations: any[] }) {
   const [dateRange, setDateRange] = useState(30) // days
   const { results: optResults } = useOptimizationStore()
 
@@ -426,4 +426,6 @@ export default function AnalyticsClient({ allOptimizations }: { allOptimizations
       </div>
     </div>
   )
-}
+})
+
+export default AnalyticsClient

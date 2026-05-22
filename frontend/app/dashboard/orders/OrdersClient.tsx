@@ -6,9 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
-import { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 
-export default function OrdersClient({ initialOrders, products }: { initialOrders: any[], products: any[] }) {
+const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { initialOrders: any[], products: any[] }) {
   const { results: optResults } = useOptimizationStore()
   const [orders, setOrders] = useState(initialOrders)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -358,4 +358,6 @@ export default function OrdersClient({ initialOrders, products }: { initialOrder
       )}
     </div>
   )
-}
+})
+
+export default OrdersClient

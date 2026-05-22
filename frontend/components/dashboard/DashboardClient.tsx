@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, memo } from 'react'
 import { Package, Zap, TrendingUp, CheckCircle2, Brain, Sparkles, Activity, DollarSign, Leaf, Weight, Building } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -9,7 +9,7 @@ import { useOptimizationStore } from '@/lib/store/optimizationStore'
 import { StaggerContainer, StaggerItem, CountUpNumber } from '@/components/animations'
 import { useDashboardData } from '@/lib/hooks/useDashboardData'
 
-export default function DashboardClient() {
+const DashboardClient = memo(function DashboardClient() {
   const {
     results: optResults,
     totalSaved,
@@ -412,4 +412,6 @@ export default function DashboardClient() {
       </div>
     </div>
   )
-}
+})
+
+export default DashboardClient
