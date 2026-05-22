@@ -8,11 +8,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('orders')
-    .select(`
-      *,
-      products(name, sku),
-      box_catalog(name, sku)
-    `)
+    .select('*')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
