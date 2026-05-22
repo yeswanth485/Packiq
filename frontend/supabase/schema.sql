@@ -2,7 +2,7 @@
 -- ║  PackIQ — Complete Supabase Schema (Run from scratch)                       ║
 -- ║  Run this in Supabase SQL Editor → New Query → Paste → Run                  ║
 -- ║  This is SAFE to run on a fresh project or existing project.                ║
--- ╚══════════════════════════════════════════════════════════════════════════════╝
+-- ╚═══════════════════════════════════════════════════════════════════════════════
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 0. CLEANUP — Drop existing functions to avoid "cannot change return type" errors
@@ -21,12 +21,13 @@ CREATE TABLE IF NOT EXISTS profiles (
   id                    UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email                 TEXT,
   full_name             TEXT,
-  company               TEXT,
+  company_name          TEXT,
   industry              TEXT,
   company_size          TEXT,
   mobile                TEXT,
   gst_number            TEXT,
   website_url           TEXT,
+  company_website       TEXT,
   unit_system            TEXT DEFAULT 'metric',
   monthly_volume        INTEGER DEFAULT 1000,
   primary_carriers      TEXT[] DEFAULT '{}',
@@ -49,12 +50,13 @@ DO $$
 BEGIN
   -- Each block tries to add a column; if it already exists the exception is caught and ignored.
   BEGIN ALTER TABLE profiles ADD COLUMN full_name TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN company TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE profiles ADD COLUMN company_name TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE profiles ADD COLUMN industry TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE profiles ADD COLUMN company_size TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE profiles ADD COLUMN mobile TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE profiles ADD COLUMN gst_number TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE profiles ADD COLUMN website_url TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE profiles ADD COLUMN company_website TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE profiles ADD COLUMN unit_system TEXT DEFAULT 'metric'; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE profiles ADD COLUMN monthly_volume INTEGER DEFAULT 1000; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE profiles ADD COLUMN primary_carriers TEXT[] DEFAULT '{}'; EXCEPTION WHEN duplicate_column THEN NULL; END;
@@ -76,10 +78,9 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+DROP POLICY IF EXISTS "profiles_own" ON profiles;
 
-CREATE POLICY "Users can view own profile"   ON profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can insert own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
-CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "profiles_own" ON profiles FOR ALL USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
 
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -133,7 +134,8 @@ CREATE TABLE IF NOT EXISTS products (
   fragile     BOOLEAN DEFAULT FALSE,
   category    TEXT,
   notes       TEXT,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, sku)
 );
 
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
@@ -142,71 +144,78 @@ CREATE POLICY "Users manage own products" ON products FOR ALL USING (auth.uid() 
 
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- 4. OPTIMIZATIONS — Each optimization run result
+-- 4. OPTIMIZATION SESSIONS & RESULTS
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-CREATE TABLE IF NOT EXISTS optimizations (
-  id                  UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id             UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  product_id          UUID,
-  batch_id            UUID,
-  file_name           TEXT,
-  status              TEXT DEFAULT 'pending',
-  product_snapshot    JSONB,
-  ai_response         JSONB,
-  recommended_box     TEXT,
-  cost_savings_usd    DECIMAL DEFAULT 0,
-  efficiency_score    DECIMAL DEFAULT 0,
-  space_utilization   DECIMAL DEFAULT 0,
-  co2_savings_kg      DECIMAL DEFAULT 0,
-  ai_model            TEXT DEFAULT 'PackVision Heuristic v2.0',
-  total_items         INTEGER DEFAULT 0,
-  optimized_items     INTEGER DEFAULT 0,
-  unoptimized_items   INTEGER DEFAULT 0,
-  optimization_rate   DECIMAL DEFAULT 0,
-  estimated_savings   DECIMAL DEFAULT 0,
-  results             JSONB DEFAULT '[]'::jsonb,
-  created_at          TIMESTAMPTZ DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS optimization_sessions (
+  id                UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id           UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  file_name         TEXT,
+  file_size_bytes   INTEGER,
+  total_items       INTEGER DEFAULT 0,
+  optimized_items   INTEGER DEFAULT 0,
+  unoptimized_items INTEGER DEFAULT 0,
+  optimization_rate DECIMAL(5,2) DEFAULT 0,
+  estimated_savings DECIMAL(12,2) DEFAULT 0,
+  currency          TEXT DEFAULT 'INR',
+  high_risk_count   INTEGER DEFAULT 0,
+  medium_risk_count INTEGER DEFAULT 0,
+  low_risk_count    INTEGER DEFAULT 0,
+  status            TEXT DEFAULT 'completed',
+  error_message     TEXT,
+  created_at        TIMESTAMPTZ DEFAULT NOW(),
+  completed_at      TIMESTAMPTZ
 );
 
-DO $$
-BEGIN
-  BEGIN ALTER TABLE optimizations ADD COLUMN batch_id UUID; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE optimizations ADD COLUMN file_name TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE optimizations ADD COLUMN co2_savings_kg DECIMAL DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE optimizations ADD COLUMN total_items INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE optimizations ADD COLUMN optimized_items INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE optimizations ADD COLUMN unoptimized_items INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE optimizations ADD COLUMN optimization_rate DECIMAL DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE optimizations ADD COLUMN estimated_savings DECIMAL DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE optimizations ADD COLUMN results JSONB DEFAULT '[]'::jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END;
-END $$;
-
-ALTER TABLE optimizations ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Users manage own optimizations" ON optimizations;
-CREATE POLICY "Users manage own optimizations" ON optimizations FOR ALL USING (auth.uid() = user_id);
-
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- 5. OPTIMIZATION RESULTS — Aggregated batch-level summaries
--- ═══════════════════════════════════════════════════════════════════════════════
+ALTER TABLE optimization_sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "sessions_own" ON optimization_sessions;
+CREATE POLICY "sessions_own" ON optimization_sessions FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 CREATE TABLE IF NOT EXISTS optimization_results (
-  id                      UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id                 UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  batch_id                UUID,
-  file_name               TEXT,
-  total_items             INTEGER DEFAULT 0,
-  optimized_items         INTEGER DEFAULT 0,
-  failed_items            INTEGER DEFAULT 0,
-  total_savings_usd       DECIMAL DEFAULT 0,
-  avg_efficiency_percent  DECIMAL DEFAULT 0,
-  created_at              TIMESTAMPTZ DEFAULT NOW()
+  id                       UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id               UUID REFERENCES optimization_sessions(id) ON DELETE CASCADE NOT NULL,
+  user_id                  UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  sku                      TEXT NOT NULL,
+  product_name             TEXT,
+  length_cm                DECIMAL(10,2),
+  width_cm                 DECIMAL(10,2),
+  height_cm                DECIMAL(10,2),
+  weight_kg                DECIMAL(10,2),
+  quantity                 INTEGER DEFAULT 1,
+  is_optimized             BOOLEAN NOT NULL DEFAULT FALSE,
+  failure_reason           TEXT,
+  old_box_name             TEXT,
+  old_box_dims             TEXT,
+  old_box_cost             DECIMAL(10,2),
+  new_box_id               UUID,
+  new_box_name             TEXT,
+  new_box_dims             TEXT,
+  new_box_cost             DECIMAL(10,2),
+  new_box_length_cm        DECIMAL(10,2),
+  new_box_width_cm         DECIMAL(10,2),
+  new_box_height_cm        DECIMAL(10,2),
+  ml_score                 DECIMAL(8,4),
+  void_percentage          DECIMAL(5,2),
+  volume_utilization       DECIMAL(5,2),
+  savings_pct              DECIMAL(5,2),
+  savings_amount           DECIMAL(10,2),
+  recommendation_reason    TEXT,
+  score_breakdown          JSONB,
+  orientation              JSONB,
+  alternatives             JSONB,
+  fragility_score          INTEGER DEFAULT 0,
+  fragility_level          TEXT DEFAULT 'Low',
+  fragility_label          TEXT,
+  fragility_recommendation TEXT,
+  zone                     TEXT,
+  tracking_id              TEXT,
+  carrier                  TEXT DEFAULT 'Standard',
+  created_at               TIMESTAMPTZ DEFAULT NOW()
 );
 
 ALTER TABLE optimization_results ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Users manage own optimization results" ON optimization_results;
-CREATE POLICY "Users manage own optimization results" ON optimization_results FOR ALL USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "results_own" ON optimization_results;
+CREATE POLICY "results_own" ON optimization_results FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -216,8 +225,18 @@ CREATE POLICY "Users manage own optimization results" ON optimization_results FO
 CREATE TABLE IF NOT EXISTS orders (
   id                        UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id                   UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  optimization_result_id    UUID,
-  optimization_session_id   UUID,
+  product_id                UUID REFERENCES products(id) ON DELETE SET NULL,
+  optimization_result_id    UUID REFERENCES optimization_results(id) ON DELETE SET NULL,
+  optimization_session_id   UUID REFERENCES optimization_sessions(id) ON DELETE SET NULL,
+  sku                       TEXT,
+  product_name              TEXT,
+  length_cm                 DECIMAL(10,2),
+  width_cm                  DECIMAL(10,2),
+  height_cm                 DECIMAL(10,2),
+  weight_kg                 DECIMAL(10,2),
+  fragility_level           TEXT,
+  tracking_number           TEXT,
+  carrier                   TEXT,
   product_snapshot          JSONB,
   box_snapshot              JSONB,
   quantity                  INTEGER DEFAULT 1,
@@ -229,21 +248,11 @@ CREATE TABLE IF NOT EXISTS orders (
 
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "orders_own" ON orders;
-DROP POLICY IF EXISTS "Users manage own orders" ON orders;
 CREATE POLICY "orders_own" ON orders FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
--- Ensure newer columns exist when migrating an existing orders table
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS optimization_result_id UUID;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS optimization_session_id UUID;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS product_snapshot JSONB;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS box_snapshot JSONB;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 1;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS total_cost DECIMAL(12,2) DEFAULT 0;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'INR';
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
 
 CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_orders_opt_result ON orders(optimization_result_id);
+
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 6A. SHIPMENTS — Shipment tracking and print events
@@ -253,7 +262,7 @@ CREATE TABLE IF NOT EXISTS shipments (
   id                        UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id                   UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   order_id                  UUID REFERENCES orders(id) ON DELETE CASCADE,
-  optimization_result_id    UUID,
+  optimization_result_id    UUID REFERENCES optimization_results(id) ON DELETE SET NULL,
   recipient                 JSONB,
   carrier                   TEXT,
   tracking_id               TEXT,
@@ -266,90 +275,43 @@ CREATE TABLE IF NOT EXISTS shipments (
 
 ALTER TABLE shipments ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "shipments_own" ON shipments;
-DROP POLICY IF EXISTS "Users manage own shipments" ON shipments;
 CREATE POLICY "shipments_own" ON shipments FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
--- Ensure newer columns exist when migrating an existing shipments table
-ALTER TABLE shipments ADD COLUMN IF NOT EXISTS optimization_result_id UUID;
-ALTER TABLE shipments ADD COLUMN IF NOT EXISTS recipient JSONB;
-ALTER TABLE shipments ADD COLUMN IF NOT EXISTS carrier TEXT;
-ALTER TABLE shipments ADD COLUMN IF NOT EXISTS tracking_id TEXT;
-ALTER TABLE shipments ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'prepared';
-ALTER TABLE shipments ADD COLUMN IF NOT EXISTS printed_at TIMESTAMPTZ;
-ALTER TABLE shipments ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ;
-ALTER TABLE shipments ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
 
 CREATE INDEX IF NOT EXISTS idx_shipments_user ON shipments(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_shipments_tracking ON shipments(tracking_id);
 
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- 7. INSPECTIONS — Quality inspection data (IoT / AI vision)
--- ═══════════════════════════════════════════════════════════════════════════════
-
-CREATE TABLE IF NOT EXISTS inspections (
-  id                UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  line_id           TEXT NOT NULL,
-  unit_id           TEXT NOT NULL,
-  defect_type       TEXT,
-  confidence_score  DECIMAL,
-  status            TEXT NOT NULL DEFAULT 'pass',
-  image_url         TEXT,
-  model_version     TEXT DEFAULT 'v1.0',
-  created_at        TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE inspections ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Service role full access inspections" ON inspections;
-CREATE POLICY "Service role full access inspections" ON inspections FOR ALL USING (TRUE);
-
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- 8. AI ANALYSES — Stored AI analysis results
--- ═══════════════════════════════════════════════════════════════════════════════
-
-CREATE TABLE IF NOT EXISTS ai_analyses (
-  id                UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  line_id           TEXT,
-  model_used        TEXT,
-  summary           TEXT,
-  anomalies         TEXT[],
-  recommendations   TEXT[],
-  health_score      INTEGER DEFAULT 50,
-  raw_response      JSONB,
-  created_at        TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE ai_analyses ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Service role full access ai_analyses" ON ai_analyses;
-CREATE POLICY "Service role full access ai_analyses" ON ai_analyses FOR ALL USING (TRUE);
-
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- 9. ALERT CONFIGS — User-configurable alert thresholds per production line
--- ═══════════════════════════════════════════════════════════════════════════════
-
-CREATE TABLE IF NOT EXISTS alert_configs (
-  id                        UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  line_id                   TEXT NOT NULL UNIQUE,
-  rejection_rate_threshold  DECIMAL DEFAULT 0.03,
-  confidence_threshold      DECIMAL DEFAULT 0.70,
-  alert_email               TEXT,
-  alert_webhook_url         TEXT,
-  is_active                 BOOLEAN DEFAULT TRUE,
-  updated_at                TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE alert_configs ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Service role full access alert_configs" ON alert_configs;
-CREATE POLICY "Service role full access alert_configs" ON alert_configs FOR ALL USING (TRUE);
-
-
--- ═══════════════════════════════════════════════════════════════════════════════
 -- 10. FUNCTIONS — Dashboard helper RPCs
 -- ═══════════════════════════════════════════════════════════════════════════════
 
--- 10a. get_optimization_summary: Used by the main dashboard to show 30-day KPIs
+-- Auto-create profile + subscription on signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, full_name, email, onboarding_complete)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
+    NEW.email,
+    FALSE
+  )
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Assuming subscriptions table exists as defined in database/database.sql
+  -- If it doesn't, this might need adjustment
+  INSERT INTO public.subscriptions (
+    user_id, plan, monthly_limit, used_this_month,
+    billing_period_start, billing_period_end
+  )
+  VALUES (NEW.id, 'starter', 500, 0, NOW(), NOW() + INTERVAL '1 month')
+  ON CONFLICT (user_id) DO NOTHING;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 10b. get_optimization_summary: Used by the main dashboard to show 30-day KPIs
 CREATE OR REPLACE FUNCTION get_optimization_summary(p_user_id UUID, p_days INTEGER DEFAULT 30)
 RETURNS JSON
 LANGUAGE plpgsql
@@ -374,7 +336,7 @@ END;
 $$;
 
 
--- 10b. get_line_summary: Used by the inspections summary endpoint
+-- 10c. get_line_summary: Used by the inspections summary endpoint
 CREATE OR REPLACE FUNCTION get_line_summary(p_line_id TEXT, p_from TIMESTAMPTZ, p_to TIMESTAMPTZ)
 RETURNS JSON
 LANGUAGE plpgsql
@@ -405,28 +367,11 @@ BEGIN
 END;
 $$;
 
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- 11. STORAGE BUCKETS (optional — uncomment if you need file uploads via storage)
--- ═══════════════════════════════════════════════════════════════════════════════
-
--- INSERT INTO storage.buckets (id, name, public)
--- VALUES ('uploads', 'uploads', false)
--- ON CONFLICT (id) DO NOTHING;
-
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- 12. GOOGLE AUTH — Ensure Google OAuth provider is enabled
--- ═══════════════════════════════════════════════════════════════════════════════
--- Google OAuth is configured in the Supabase Dashboard:
---   Authentication → Providers → Google → Enable
---   Set Client ID and Client Secret from Google Cloud Console
---   Redirect URL: https://<your-project>.supabase.co/auth/v1/callback
---
--- Email/Password Auth is configured in the Supabase Dashboard:
---   Authentication → Providers → Email → Enable
---   Confirm email: Enabled (or Disabled for dev)
-
+-- 10d. Trigger for auth user creation
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- DONE! All tables, policies, and functions are now created.

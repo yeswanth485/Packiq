@@ -423,6 +423,40 @@ export async function POST(req: Request) {
     // Execute XGBoost-inspired ML optimization
     const mlResult = await runMLOptimization(mappedProducts, boxes)
 
+    // STEP 0: Upsert products into products master table FIRST to get UUIDs
+    const productRows = mlResult.assignments.map(originalA => {
+      const a = originalA as any;
+      const pSnapshot = mappedProducts.find(prod => prod.product_id === a.sku) || {} as any;
+      return {
+        user_id:    user.id,
+        sku:        a.sku,
+        name:       a.name || a.sku,
+        length_cm:  a.dimensions?.l || pSnapshot.length_cm || 0,
+        width_cm:   a.dimensions?.w || pSnapshot.width_cm || 0,
+        height_cm:  a.dimensions?.h || pSnapshot.height_cm || 0,
+        weight_kg:  a.weight || pSnapshot.weight_kg || 0,
+        updated_at: new Date().toISOString(),
+      };
+    });
+
+    const CHUNK = 100;
+    const productUuidMap = new Map<string, string>();
+    for (let i = 0; i < productRows.length; i += CHUNK) {
+      const { data: upsertedProducts, error: upsertError } = await (supabaseAdmin as any)
+        .from('products')
+        .upsert(
+          productRows.slice(i, i + CHUNK),
+          { onConflict: 'user_id,sku', ignoreDuplicates: false }
+        )
+        .select('id, sku');
+
+      if (upsertError) {
+        console.error('[DB] Products upsert error:', upsertError);
+      } else if (upsertedProducts) {
+        upsertedProducts.forEach((p: any) => productUuidMap.set(p.sku, p.id));
+      }
+    }
+
     // STEP 1: Create the session record
     const successful = mlResult.assignments.filter(a => a.fits === true && a.assignedBox !== null);
     const failed = mlResult.assignments.filter(a => !a.fits || !a.assignedBox);
@@ -498,7 +532,7 @@ export async function POST(req: Request) {
         session_id:           sessionId,
         user_id:              user.id,
         sku:                  a.sku,
-        product_id:           pSnapshot?.product_id || pSnapshot?.id || null,
+        product_id:           productUuidMap.get(a.sku) || pSnapshot?.product_id || pSnapshot?.id || null,
         product_name:         a.name || a.sku,
         length_cm:            length_cm,
         width_cm:             width_cm,
@@ -545,7 +579,6 @@ export async function POST(req: Request) {
       };
     });
 
-    const CHUNK = 100;
     const savedResults: any[] = []
     for (let i = 0; i < resultRows.length; i += CHUNK) {
       const chunk = resultRows.slice(i, i + CHUNK);
@@ -563,39 +596,6 @@ export async function POST(req: Request) {
 
     // Return the mapped API response matching single-product format and include DB ids
     
-    // STEP 3: Upsert products into products master table
-    const productRows = mlResult.assignments.map(originalA => {
-      const a = originalA as any;
-      const pSnapshot = mappedProducts.find(prod => prod.product_id === a.sku) || {} as any;
-      return {
-        user_id:    user.id,
-        sku:        a.sku,
-        name:       a.name || a.sku,
-        length_cm:  a.dimensions?.l || pSnapshot.length_cm || 0,
-        width_cm:   a.dimensions?.w || pSnapshot.width_cm || 0,
-        height_cm:  a.dimensions?.h || pSnapshot.height_cm || 0,
-        weight_kg:  a.weight || pSnapshot.weight_kg || 0,
-        updated_at: new Date().toISOString(),
-      };
-    });
-
-    const productUuidMap = new Map<string, string>();
-    for (let i = 0; i < productRows.length; i += CHUNK) {
-      const { data: upsertedProducts, error: upsertError } = await (supabaseAdmin as any)
-        .from('products')
-        .upsert(
-          productRows.slice(i, i + CHUNK),
-          { onConflict: 'user_id,sku', ignoreDuplicates: false }
-        )
-        .select('id, sku');
-
-      if (upsertError) {
-        console.error('[DB] Products upsert error:', upsertError);
-      } else if (upsertedProducts) {
-        upsertedProducts.forEach((p: any) => productUuidMap.set(p.sku, p.id));
-      }
-    }
-
     // STEP 2.5: Also insert into orders table for immediate appearance in Orders tab
     const orderRows = savedResults.filter(r => r.is_optimized).map(r => ({
       user_id: user.id,

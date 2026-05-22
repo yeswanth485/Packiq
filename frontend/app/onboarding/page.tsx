@@ -128,6 +128,7 @@ export default function OnboardingWizard() {
         industry: data.industry,
         company_size: data.companySize,
         company_website: data.websiteUrl,
+        website_url: data.websiteUrl,
         monthly_volume: data.monthlyVolume,
         primary_carriers: data.primaryCarriers,
         fulfillment_type: data.fulfillmentType,
