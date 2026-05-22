@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
         risk_level: product.fragility === 'HIGH' || product.fragility === 'CRITICAL' ? 'HIGH' : 'LOW',
         fragility: product.fragility,
         weight: product.weight,
-        status: 'pending',
+        status: 'Ready to Ship',
         created_at: new Date().toISOString()
       })
     })

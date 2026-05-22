@@ -5,8 +5,11 @@ import { Plus, Search, Filter, Package, Truck, Calendar } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { useOptimizationStore } from '@/lib/store/optimizationStore'
+import { useMemo } from 'react'
 
 export default function OrdersClient({ initialOrders, products }: { initialOrders: any[], products: any[] }) {
+  const { results: optResults } = useOptimizationStore()
   const [orders, setOrders] = useState(initialOrders)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
@@ -87,11 +90,41 @@ export default function OrdersClient({ initialOrders, products }: { initialOrder
     quantity: 1,
   })
 
-  const filteredOrders = orders.filter(o => {
+  const mergedOrders = useMemo(() => {
+    const dbList = [...orders]
+    const dbIds = new Set(dbList.map(o => o.id))
+
+    const sessionOrders = optResults.map((r, index) => ({
+      id: `session-${r.product_id}-${index}`,
+      created_at: new Date().toISOString(),
+      status: 'Ready to Ship',
+      carrier: 'Auto-Assigned',
+      tracking_number: 'PENDING',
+      product_name: r.product_name,
+      product: {
+        name: r.product_name,
+        sku: r.sku
+      },
+      product_snapshot: {
+        name: r.product_name,
+        sku: r.sku
+      }
+    }))
+
+    sessionOrders.forEach(so => {
+      if (!dbIds.has(so.id)) {
+        dbList.unshift(so)
+      }
+    })
+
+    return dbList
+  }, [orders, optResults])
+
+  const filteredOrders = mergedOrders.filter(o => {
     const matchesStatus = statusFilter === 'all' || o.status === statusFilter
     const matchesSearch = o.tracking_number?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          o.product?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+                          (o.product?.name || o.product_name || '').toLowerCase().includes(searchTerm.toLowerCase())
     return matchesStatus && matchesSearch
   })
 
@@ -146,6 +179,7 @@ export default function OrdersClient({ initialOrders, products }: { initialOrder
 
   const getStatusColor = (status: string) => {
     switch(status) {
+      case 'Ready to Ship': return 'bg-[#00FFD1]/10 text-[#00FFD1] border border-[#00FFD1]/20'
       case 'pending': return 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
       case 'confirmed': return 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
       case 'shipped': return 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
@@ -177,6 +211,7 @@ export default function OrdersClient({ initialOrders, products }: { initialOrder
               className="appearance-none bg-white/5 border border-white/10 rounded-xl pl-10 pr-8 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
             >
               <option value="all">All Statuses</option>
+              <option value="Ready to Ship">Ready to Ship</option>
               <option value="pending">Pending</option>
               <option value="confirmed">Confirmed</option>
               <option value="shipped">Shipped</option>
@@ -210,11 +245,11 @@ export default function OrdersClient({ initialOrders, products }: { initialOrder
             <tbody>
               {filteredOrders.map((o) => (
                 <tr key={o.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                  <td className="px-6 py-4 font-mono text-gray-300">#{o.id.slice(0, 8).toUpperCase()}</td>
+                  <td className="px-6 py-4 font-mono text-gray-300">#{o.id.startsWith('session') ? 'OPT-' + o.id.slice(-4).toUpperCase() : o.id.slice(0, 8).toUpperCase()}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <Package className="w-4 h-4 text-indigo-400" />
-                      <span className="text-gray-200">{o.product?.name || 'Unknown Product'}</span>
+                      <span className="text-gray-200">{o.product?.name || o.product_name || 'Unknown Product'}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
