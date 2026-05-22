@@ -498,6 +498,7 @@ export async function POST(req: Request) {
         session_id:           sessionId,
         user_id:              user.id,
         sku:                  a.sku,
+        product_id:           pSnapshot?.product_id || pSnapshot?.id || null,
         product_name:         a.name || a.sku,
         length_cm:            length_cm,
         width_cm:             width_cm,
@@ -565,6 +566,7 @@ export async function POST(req: Request) {
     // STEP 2.5: Also insert into orders table for immediate appearance in Orders tab
     const orderRows = savedResults.filter(r => r.is_optimized).map(r => ({
       user_id: user.id,
+      product_id: r.product_id || null,
       sku: r.sku,
       product_name: r.product_name,
       length_cm: r.length_cm,

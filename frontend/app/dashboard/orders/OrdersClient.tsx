@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Search, Filter, Package, Truck, Calendar } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -15,6 +15,33 @@ export default function OrdersClient({ initialOrders, products }: { initialOrder
   
   const router = useRouter()
   const supabase = createClient()
+
+  // Subscribe to realtime inserts on orders for the current user
+  useEffect(() => {
+    let channel: any | null = null
+    let mounted = true
+
+    async function setup() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      channel = supabase
+        .channel(`orders:user=${user.id}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `user_id=eq.${user.id}` }, (payload: any) => {
+          if (!mounted) return
+          const newRow = payload?.new
+          if (newRow) setOrders(prev => [newRow, ...prev])
+        })
+        .subscribe()
+    }
+
+    setup()
+
+    return () => {
+      mounted = false
+      if (channel) supabase.removeChannel(channel)
+    }
+  }, [])
 
   // Form state
   const [formData, setFormData] = useState({

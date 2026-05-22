@@ -13,7 +13,28 @@ export async function GET() {
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ orders: data })
+  const orders = data || []
+
+  // If orders contain product_id, fetch product rows and merge server-side to avoid nested selects
+  const productIds = Array.from(new Set(orders.map((o: any) => o.product_id).filter(Boolean)))
+  let productsMap: Record<string, any> = {}
+  if (productIds.length > 0) {
+    const { data: products, error: prodErr } = await supabase
+      .from('products')
+      .select('*')
+      .in('id', productIds)
+
+    if (!prodErr && products) {
+      productsMap = Object.fromEntries((products as any[]).map(p => [p.id, p]))
+    }
+  }
+
+  const merged = orders.map((o: any) => ({
+    ...o,
+    product: productsMap[o.product_id] || o.product_snapshot || null
+  }))
+
+  return NextResponse.json({ orders: merged })
 }
 
 export async function POST(req: Request) {
