@@ -567,6 +567,7 @@ export async function POST(req: Request) {
     const orderRows = savedResults.filter(r => r.is_optimized).map(r => ({
       user_id: user.id,
       product_id: r.product_id || null,
+      product_snapshot: r.product_id ? { id: r.product_id, name: r.product_name } : (r.product_name ? { name: r.product_name } : null),
       sku: r.sku,
       product_name: r.product_name,
       length_cm: r.length_cm,

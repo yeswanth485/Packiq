@@ -25,14 +25,50 @@ export default function OrdersClient({ initialOrders, products }: { initialOrder
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      channel = supabase
-        .channel(`orders:user=${user.id}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `user_id=eq.${user.id}` }, (payload: any) => {
-          if (!mounted) return
-          const newRow = payload?.new
-          if (newRow) setOrders(prev => [newRow, ...prev])
-        })
-        .subscribe()
+      channel = supabase.channel(`orders:user=${user.id}`)
+
+      // Listen for INSERT and UPDATE events so Orders UI stays in sync
+      channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `user_id=eq.${user.id}` }, async (payload: any) => {
+        if (!mounted) return
+        const newRow = payload?.new
+        if (!newRow) return
+        // Enrich row with product data if not present
+        if (!newRow.product && (newRow.product_id || newRow.product_snapshot)) {
+          try {
+            if (newRow.product_snapshot) {
+              newRow.product = newRow.product_snapshot
+            }
+            if (!newRow.product && newRow.product_id) {
+              const { data: product } = await supabase.from('products').select('*').eq('id', newRow.product_id).single()
+              if (product) newRow.product = product
+            }
+          } catch (err) {
+            // ignore enrichment errors
+          }
+        }
+        setOrders(prev => [newRow, ...prev])
+      })
+
+      channel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `user_id=eq.${user.id}` }, async (payload: any) => {
+        if (!mounted) return
+        const updated = payload?.new
+        if (!updated) return
+        // Enrich as above
+        if (!updated.product && (updated.product_id || updated.product_snapshot)) {
+          try {
+            if (updated.product_snapshot) {
+              updated.product = updated.product_snapshot
+            }
+            if (!updated.product && updated.product_id) {
+              const { data: product } = await supabase.from('products').select('*').eq('id', updated.product_id).single()
+              if (product) updated.product = product
+            }
+          } catch (err) {}
+        }
+        setOrders(prev => prev.map(o => o.id === updated.id ? updated : o))
+      })
+
+      await channel.subscribe()
     }
 
     setup()
