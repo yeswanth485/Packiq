@@ -62,32 +62,95 @@ export async function POST(request: NextRequest) {
       fragility: p.fragility || 'low'
     }))
 
-    const mlResult = await runMLOptimization(mappedProducts, boxes)
-    const allResults = mlResult.assignments.map((a: any) => {
-      const p = mappedProducts.find(mp => mp.product_id === a.sku)
+    // Call Python Backend for each product or batch
+    const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000'
+
+    const resultsFromBackend = await Promise.all(mappedProducts.map(async (p) => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/optimize/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...p,
+            available_boxes: boxes.map(b => ({
+              id: b.id,
+              name: b.name,
+              sku: b.sku,
+              length_cm: b.length_cm,
+              width_cm: b.width_cm,
+              height_cm: b.height_cm,
+              max_weight_kg: b.weight_limit_kg,
+              cost_usd: b.cost,
+              eco_certified: b.eco_certified,
+              double_wall: b.double_wall
+            })),
+            destination_zone: 2,
+            shipping_method: 'standard'
+          })
+        })
+        return await response.json()
+      } catch (err) {
+        console.error('Python Backend Call Failed:', err)
+        return null
+      }
+    }))
+
+    const allResults = resultsFromBackend.map((res, idx) => {
+      const p = mappedProducts[idx]
+      if (!res || res.detail) {
+        return {
+          sku: p.product_id,
+          productName: p.product_name,
+          optimized: false,
+          reasonCode: 'BACKEND_ERROR',
+          reason: 'Python backend failed or returned error',
+          explanation: 'Could not reach optimization engine.',
+          recommendation: 'Try again later.',
+          fragility: p.fragility.toUpperCase(),
+          fragilityScore: 30,
+          whyChosen: 'N/A',
+          baselineBox: `${p.length_cm}x${p.width_cm}x${p.height_cm}`,
+          optimizedBox: null,
+          baselineCost: 15,
+          shippingCost: null,
+          savings: 0,
+          savingsPercent: 0,
+          volumeUtil: 0,
+          weight: p.weight_kg,
+          lengthCm: p.length_cm,
+          widthCm: p.width_cm,
+          heightCm: p.height_cm,
+          optimizedDims: null
+        }
+      }
+
       return {
-        sku: a.sku,
-        productName: a.name || p?.product_name || 'Unknown',
-        optimized: a.fits && !!a.assignedBox,
-        reasonCode: a.fits ? 'SUCCESS' : 'NO_FIT',
-        reason: a.fits ? 'Optimal box found' : (a.failure_reason || 'No suitable box found'),
-        explanation: a.fits ? 'Box selected based on volume utilization.' : 'Product dimensions exceed all available boxes.',
-        recommendation: a.fits ? 'Use recommended box.' : 'Consider custom packaging or splitting shipment.',
-        fragility: (a.fragility || p?.fragility || 'low').toUpperCase(),
-        fragilityScore: a.fragility === 'high' ? 90 : a.fragility === 'medium' ? 60 : 30,
-        whyChosen: a.recommendation_reason || 'Best fit.',
-        baselineBox: p ? `${p.length_cm}x${p.width_cm}x${p.height_cm}` : 'N/A',
-        optimizedBox: a.assignedBox ? a.assignedBox.name : null,
-        baselineCost: a.baselineCost || 10,
-        shippingCost: a.assignedBox ? (a.assignedBox.cost + 5) : null,
-        savings: a.savings || 0,
-        savingsPercent: a.savings ? (a.savings / 10 * 100) : 0,
-        volumeUtil: a.volume_utilization || 0,
-        weight: a.weight || p?.weight_kg || 0,
-        lengthCm: a.dimensions?.l || p?.length_cm || 0,
-        widthCm: a.dimensions?.w || p?.width_cm || 0,
-        heightCm: a.dimensions?.h || p?.height_cm || 0,
-        optimizedDims: a.assignedBox ? { l: a.assignedBox.length_cm, w: a.assignedBox.width_cm, h: a.assignedBox.height_cm } : null
+        sku: p.product_id,
+        productName: p.product_name,
+        optimized: res.fit_check_passed,
+        reasonCode: res.fit_check_passed ? 'SUCCESS' : 'NO_FIT',
+        reason: res.reasoning,
+        explanation: res.reasoning,
+        recommendation: res.fit_check_passed ? 'Use recommended box.' : 'Consider custom packaging.',
+        fragility: p.fragility.toUpperCase(),
+        fragilityScore: res.confidence_score,
+        whyChosen: res.reasoning,
+        baselineBox: `${p.length_cm}x${p.width_cm}x${p.height_cm}`,
+        optimizedBox: res.recommended_box_name,
+        baselineCost: res.baseline_cost,
+        shippingCost: res.total_cost,
+        savings: res.savings,
+        savingsPercent: res.savings_percent,
+        volumeUtil: res.space_utilization,
+        weight: p.weight_kg,
+        lengthCm: p.length_cm,
+        widthCm: p.width_cm,
+        heightCm: p.height_cm,
+        optimizedDims: res.recommended_box_dims ? {
+          l: parseFloat(res.recommended_box_dims.split('x')[0]),
+          w: parseFloat(res.recommended_box_dims.split('x')[1]),
+          h: parseFloat(res.recommended_box_dims.split('x')[2])
+        } : null
       }
     })
 

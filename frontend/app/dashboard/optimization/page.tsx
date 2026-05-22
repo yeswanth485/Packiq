@@ -9,6 +9,7 @@ import {
 import { toast } from 'sonner'
 import { useOptimizationStore, OptimizationResult } from '@/lib/store/optimizationStore'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import Box3DViewer from '@/components/dashboard/Box3DViewer'
 import { LimitGuard } from '@/components/LimitReachedWall'
 import { parseFile, ParseResult, generateCSVTemplate } from '@/lib/fileParser'
@@ -79,6 +80,9 @@ export default function OptimizationPage() {
     }
 
     try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+
       const payload = [{
         product_name: manualInput.productName,
         sku: manualInput.sku,
@@ -97,7 +101,10 @@ export default function OptimizationPage() {
 
       const res = await fetch('/api/optimize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify({ products: payload })
       })
 
@@ -150,9 +157,15 @@ export default function OptimizationPage() {
     setProcessingStep(3)
 
     try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+
       const res = await fetch('/api/optimize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify({ 
           products: data,
           fileName: uploadedFileName || 'Bulk Upload'

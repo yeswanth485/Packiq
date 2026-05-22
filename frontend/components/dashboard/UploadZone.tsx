@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 import { Upload, FileText, Loader2, CheckCircle2, AlertCircle, FileCode } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -26,7 +27,16 @@ export default function UploadZone({ onSuccess }: UploadZoneProps) {
     formData.append('file', file)
 
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Upload failed')
       setMessage(`${data.inserted} products imported — starting optimization...`)
@@ -34,7 +44,10 @@ export default function UploadZone({ onSuccess }: UploadZoneProps) {
       // Immediately call optimize API with parsed products
       const optimizeRes = await fetch('/api/optimize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify({ products: data.products, file_name: file.name })
       })
       const optJson = await optimizeRes.json()
