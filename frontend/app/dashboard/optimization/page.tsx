@@ -118,8 +118,11 @@ export default function OptimizationPage() {
         setManualResult(result)
         addBatchResults([result])
         setProcessingStep(4)
-        toast.success('Optimization complete!')
-        setTimeout(() => router.push('/dashboard/orders'), 1000)
+        toast.success(
+          `✓ Optimized ${data.total_optimized} of ${data.total_processed} products. ` +
+          `₹${data.total_savings?.toFixed(2)} saved!`
+        )
+        setTimeout(() => router.push(`/dashboard/orders?session_id=${data.session_id}&fresh=true`), 1000)
       } else {
         throw new Error(data.results?.[0]?.error || 'Unknown error occurred')
       }
@@ -185,12 +188,16 @@ export default function OptimizationPage() {
         setResults(processedResults, [])
         setProcessingStep(4)
         await new Promise(r => setTimeout(r, 800))
-        toast.success(`Successfully optimized ${processedResults.length} items!`)
+
+        toast.success(
+          `✓ Optimized ${resData.total_optimized} of ${resData.total_processed} products. ` +
+          `₹${resData.total_savings?.toFixed(2)} saved!`
+        )
         
         // Auto-generate summary and navigate
         await handleGenerateSummary(processedResults)
         await new Promise(r => setTimeout(r, 500))
-        router.push('/dashboard/orders')
+        router.push(`/dashboard/orders?session_id=${resData.session_id}&fresh=true`)
       } else {
         throw new Error(resData.error || 'Failed to process optimization')
       }
