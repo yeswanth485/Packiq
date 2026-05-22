@@ -589,11 +589,15 @@ export async function POST(req: Request) {
 
     for (let i = 0; i < orderRows.length; i += CHUNK) {
       const chunk = orderRows.slice(i, i + CHUNK);
-      const { error: orderInsertError } = await (supabaseAdmin as any)
+      const { data: insertedOrders, error: orderInsertError } = await (supabaseAdmin as any)
         .from('orders')
-        .insert(chunk);
+        .insert(chunk)
+        .select('*');
       if (orderInsertError) {
         console.error('[DB] Orders insert error:', orderInsertError);
+        console.error('[DB] Failed chunk:', chunk);
+      } else {
+        console.log(`[DB] Successfully inserted ${insertedOrders?.length || 0} orders`);
       }
     }
 

@@ -1,18 +1,16 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import EmptyState from '@/components/EmptyState';
 import BoxViewer3D from '@/components/3d/BoxViewer3D';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Zap, ArrowRight, ShieldCheck, TrendingDown, TrendingUp, Info, Search, 
-  RefreshCw, ShoppingCart, CheckCircle2, AlertCircle, Calendar, ArrowUpRight
+  TrendingUp, Info, Search, RefreshCw, ShoppingCart, 
+  CheckCircle2, AlertCircle, Calendar, ArrowUpRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function OrdersPage() {
-  const supabase = useMemo(() => createClient(), []);
   
   const [sessions, setSessions] = useState<any[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string>('all');
@@ -26,7 +24,7 @@ export default function OrdersPage() {
   
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
-  // Load upload sessions & results
+  // Load orders and sessions
   const loadData = async () => {
     setLoading(true);
     try {
@@ -37,19 +35,65 @@ export default function OrdersPage() {
         setSessions(data || []);
       }
 
-      // 2. Fetch results (optionally filtered by session)
-      let url = '/api/dashboard-data?type=results';
-      if (selectedSessionId !== 'all') {
-        url += `&session_id=${selectedSessionId}`;
+      // 2. Fetch ORDERS (not optimization results)
+      const ordersRes = await fetch('/api/orders');
+      if (!ordersRes.ok) {
+        const errorText = await ordersRes.text();
+        console.error('Orders API error:', ordersRes.status, errorText);
+        throw new Error(`Failed to fetch orders (${ordersRes.status}): ${errorText}`);
       }
       
-      const resultsRes = await fetch(url);
-      if (!resultsRes.ok) throw new Error('Failed to fetch results');
-      const { data: resultsData } = await resultsRes.json();
-      setResults(resultsData || []);
+      const response = await ordersRes.json();
+      const orders = response.orders || [];
+      console.log(`Loaded ${orders.length} orders from API`);
+      
+      // Transform orders data to match the expected format
+      const transformedResults = orders.map((order: any) => {
+        // If order has optimization_result_id, we need to fetch the optimization result details
+        // For now, use the product_snapshot and box_snapshot
+        const product = order.product_snapshot || {};
+        const box = order.box_snapshot || {};
+        
+        return {
+          id: order.id,
+          session_id: order.optimization_session_id,
+          user_id: order.user_id,
+          sku: product.sku || order.product_id || 'N/A',
+          product_name: product.name || product.product_name || 'Unknown Product',
+          length_cm: product.length_cm || 0,
+          width_cm: product.width_cm || 0,
+          height_cm: product.height_cm || 0,
+          weight_kg: product.weight_kg || 0,
+          quantity: order.quantity || 1,
+          is_optimized: true, // Orders are created from optimized results
+          failure_reason: null,
+          old_box_name: box.old_box_name || 'Standard Box',
+          old_box_dims: box.old_box_dims || 'Not specified',
+          old_box_cost: box.old_box_cost || 0,
+          new_box_id: box.new_box_id || null,
+          new_box_name: box.new_box_name || box.name || 'Optimal Box',
+          new_box_dims: box.new_box_dims || box.dimensions || 'Not specified',
+          new_box_cost: box.new_box_cost || box.cost || 0,
+          new_box_length_cm: box.new_box_length_cm || box.length_cm || 0,
+          new_box_width_cm: box.new_box_width_cm || box.width_cm || 0,
+          new_box_height_cm: box.new_box_height_cm || box.height_cm || 0,
+          savings_amount: order.total_cost ? (box.old_box_cost || 0) - order.total_cost : 0,
+          savings_pct: box.old_box_cost && box.old_box_cost > 0 
+            ? ((box.old_box_cost - (order.total_cost || box.new_box_cost || 0)) / box.old_box_cost) * 100 
+            : 0,
+          fragility_level: product.fragility || 'Low',
+          zone: product.zone || 'ZONE 2',
+          tracking_id: order.tracking_id || `ORD-${order.id?.slice(0, 8)?.toUpperCase() || 'UNKNOWN'}`,
+          carrier: order.carrier || 'Standard',
+          created_at: order.created_at,
+          status: order.status || 'pending'
+        };
+      });
+      
+      setResults(transformedResults || []);
     } catch (err: any) {
-      console.error('Error loading orders/results:', err);
-      toast.error(err.message || 'Error loading dashboard data');
+      console.error('Error loading orders:', err);
+      toast.error(err.message || 'Error loading orders data');
       setResults([]);
     } finally {
       setLoading(false);
