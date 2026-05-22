@@ -77,6 +77,7 @@ export interface OptimizationResult {
   optimizedBox?: string
   reason?: string
   fragility?: string
+  sku?: string
 }
 
 // ─── Store State ──────────────────────────────────────────────────────────
@@ -94,6 +95,7 @@ interface OptimizationState {
   // Sustainability & advanced metrics
   totalVolumeSaved: number       // cm³ saved across all results
   avgSustainabilityScore: number // 0–100
+  avgCostReductionPct: number    // Average % saved across all results
   carbonSavedKg: number          // totalVolumeSaved × 0.0006
   dimWeightSaved: number         // kg of DIM weight eliminated
 
@@ -116,6 +118,9 @@ function computeStats(results: OptimizationResult[]) {
   const avgSustainabilityScore = results.length > 0
     ? results.reduce((acc, r) => acc + (r.sustainability_score || 0), 0) / results.length
     : 0
+  const avgCostReductionPct = results.length > 0
+    ? results.reduce((acc, r) => acc + (r.savings_percent || 0), 0) / results.length
+    : 0
   const carbonSavedKg = totalVolumeSaved * 0.0006
   const dimWeightSaved = results.reduce((acc, r) => acc + (r.dim_weight_reduction || 0), 0)
 
@@ -125,6 +130,7 @@ function computeStats(results: OptimizationResult[]) {
     avgConfidence: Math.round(avgConfidence),
     totalVolumeSaved: Math.round(totalVolumeSaved),
     avgSustainabilityScore: Math.round(avgSustainabilityScore),
+    avgCostReductionPct: Math.round(avgCostReductionPct),
     carbonSavedKg: parseFloat(carbonSavedKg.toFixed(3)),
     dimWeightSaved: parseFloat(dimWeightSaved.toFixed(2)),
   }
@@ -143,6 +149,7 @@ export const useOptimizationStore = create<OptimizationState>()(
       skippedItems: [],
       totalVolumeSaved: 0,
       avgSustainabilityScore: 0,
+      avgCostReductionPct: 0,
       carbonSavedKg: 0,
       dimWeightSaved: 0,
 
@@ -156,6 +163,7 @@ export const useOptimizationStore = create<OptimizationState>()(
         skippedItems: [],
         totalVolumeSaved: 0,
         avgSustainabilityScore: 0,
+        avgCostReductionPct: 0,
         carbonSavedKg: 0,
         dimWeightSaved: 0,
       }),
@@ -195,6 +203,7 @@ export const useOptimizationStore = create<OptimizationState>()(
         skippedItems: [],
         totalVolumeSaved: 0,
         avgSustainabilityScore: 0,
+        avgCostReductionPct: 0,
         carbonSavedKg: 0,
         dimWeightSaved: 0,
       }),

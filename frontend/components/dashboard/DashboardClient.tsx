@@ -15,6 +15,7 @@ export default function DashboardClient() {
     totalSaved,
     totalVolumeSaved,
     avgSustainabilityScore,
+    avgCostReductionPct,
     carbonSavedKg,
     dimWeightSaved,
     lastRun,
@@ -77,7 +78,7 @@ export default function DashboardClient() {
   const kpis = [
     { label: 'Units Optimized',   value: displayRuns,                suffix: '',  icon: Package,    color: '#00FFD1' },
     { label: 'Total Saved ($)',   value: displaySavings,             suffix: '',  icon: DollarSign, color: '#22c55e', decimals: 2 },
-    { label: 'Avg Efficiency',    value: dbStats?.avgEfficiency ?? stats.avgEfficiency, suffix: '%', icon: TrendingUp,  color: '#4361EE', decimals: 1 },
+    { label: 'Avg Cost Reduction', value: avgCostReductionPct || 0, suffix: '%', icon: TrendingUp,  color: '#4361EE', decimals: 1 },
     { label: 'Sustainability',    value: totalSustainability || avgSustainabilityScore, suffix: '',  icon: Leaf,       color: '#10b981' },
     { label: 'DIM Weight Saved',  value: totalDimWeightSaved || dimWeightSaved,             suffix: 'kg',icon: Weight,     color: '#F59E0B', decimals: 2 },
     { label: 'Carbon Saved',      value: totalCarbonSaved || carbonSavedKg,             suffix: 'kg CO₂', icon: Zap,  color: '#8b5cf6', decimals: 3 },
