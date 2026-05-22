@@ -1,28 +1,27 @@
-import SkeletonCard from '@/components/dashboard/SkeletonCard'
-
 export default function DashboardLoading() {
   return (
-    <div className="max-w-[1400px] mx-auto space-y-8 p-4 relative w-full overflow-hidden">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <div className="h-8 w-48 rounded skeleton-shimmer mb-2" />
-          <div className="h-4 w-72 rounded skeleton-shimmer" />
+    <div className="w-full space-y-6 animate-pulse">
+      {/* KPI Skeletons */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="glass p-5 rounded-2xl border-l-4 border-white/5 h-24" />
+        ))}
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        {/* Main Feed Skeleton */}
+        <div className="lg:col-span-8 space-y-6">
+          <div className="glass p-6 rounded-3xl h-[320px]" />
+          <div className="glass p-6 rounded-3xl h-[220px]" />
+          <div className="glass rounded-3xl h-[400px]" />
         </div>
-        <div className="h-10 w-32 rounded-lg skeleton-shimmer" />
-      </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {[1, 2, 3, 4].map(i => (
-          <div key={i} className="h-24 rounded-xl skeleton-shimmer border border-white/5" />
-        ))}
-      </div>
-
-      <div className="h-12 w-full rounded-xl skeleton-shimmer mb-6" />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {[1, 2, 3, 4, 5, 6].map(i => (
-          <SkeletonCard key={i} />
-        ))}
+        {/* Sidebar Skeleton */}
+        <div className="lg:col-span-4 space-y-6">
+          <div className="glass p-8 rounded-3xl h-[300px]" />
+          <div className="glass p-8 rounded-3xl h-[400px]" />
+          <div className="glass p-8 rounded-3xl h-[200px]" />
+        </div>
       </div>
     </div>
   )

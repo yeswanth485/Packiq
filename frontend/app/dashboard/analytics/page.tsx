@@ -1,5 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
-import AnalyticsClient from './AnalyticsClient'
+import { Suspense, lazy } from 'react'
+import DashboardLoading from '../loading'
+
+const AnalyticsClient = lazy(() => import('./AnalyticsClient'))
 
 export const dynamic = 'force-dynamic'
 
@@ -32,5 +35,9 @@ export default async function AnalyticsPage() {
     }
   }
 
-  return <AnalyticsClient allOptimizations={dbOptimizations} />
+  return (
+    <Suspense fallback={<DashboardLoading />}>
+      <AnalyticsClient allOptimizations={dbOptimizations} />
+    </Suspense>
+  )
 }
