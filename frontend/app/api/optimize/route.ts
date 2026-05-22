@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import Papa from 'papaparse'
+import { runMLOptimization } from '@/lib/optimization/mlOptimizer'
 
 export const maxDuration = 60
 
@@ -11,24 +12,13 @@ const getSupabase = () => createClient(
 )
 
 // ━━━ 2. DEFAULT BOX CATALOGUE ━━━
-const BOX_CATALOGUE = [
-  { id: 'box-xs', name: 'Eco-Lite Mailer XS', sku: 'BOX-XS', length_cm: 15, width_cm: 10, height_cm: 5, weight_limit_kg: 2, cost: 0.15 },
-  { id: 'box-s',  name: 'Standard Box S',    sku: 'BOX-S',  length_cm: 20, width_cm: 15, height_cm: 10, weight_limit_kg: 5, cost: 0.35 },
-  { id: 'box-m',  name: 'Fulfillment Box M', sku: 'BOX-M',  length_cm: 30, width_cm: 25, height_cm: 15, weight_limit_kg: 10, cost: 0.65 },
-  { id: 'box-l',  name: 'Heavy Duty Box L',  sku: 'BOX-L',  length_cm: 45, width_cm: 35, height_cm: 25, weight_limit_kg: 20, cost: 1.20 },
-  { id: 'box-xl', name: 'Enterprise Box XL', sku: 'BOX-XL', length_cm: 60, width_cm: 50, height_cm: 40, weight_limit_kg: 35, cost: 2.50 },
+const DEFAULT_BOXES = [
+  { id: 'box-xs', name: 'Eco-Lite Mailer XS', sku: 'BOX-XS', length_cm: 15, width_cm: 10, height_cm: 5, weight_limit_kg: 2, cost: 0.15, eco_certified: true },
+  { id: 'box-s',  name: 'Standard Box S',    sku: 'BOX-S',  length_cm: 20, width_cm: 15, height_cm: 10, weight_limit_kg: 5, cost: 0.35, eco_certified: true },
+  { id: 'box-m',  name: 'Fulfillment Box M', sku: 'BOX-M',  length_cm: 30, width_cm: 25, height_cm: 15, weight_limit_kg: 10, cost: 0.65, eco_certified: true },
+  { id: 'box-l',  name: 'Heavy Duty Box L',  sku: 'BOX-L',  length_cm: 45, width_cm: 35, height_cm: 25, weight_limit_kg: 20, cost: 1.20, eco_certified: true },
+  { id: 'box-xl', name: 'Enterprise Box XL', sku: 'BOX-XL', length_cm: 60, width_cm: 50, height_cm: 40, weight_limit_kg: 35, cost: 2.50, eco_certified: true },
 ]
-
-interface CSVRow {
-  sku: string;
-  product_name: string;
-  weight_kg: number;
-  length_cm: number;
-  width_cm: number;
-  height_cm: number;
-  fragility: string;
-  [key: string]: any;
-}
 
 export async function POST(request: NextRequest) {
   // ── 0. Env guard ──────────────────────────────────────────────
@@ -45,8 +35,8 @@ export async function POST(request: NextRequest) {
     console.log('[optimize] Request received')
 
     // ── 1. Parse body ─────────────────────────────────────────────
-    let userId: string
-    let products: CSVRow[]
+    let userId: string | undefined
+    let products: any[]
     let fileName = 'upload.csv'
 
     const contentType = request.headers.get('content-type') ?? ''
@@ -60,11 +50,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
       }
       if (!uid) {
-        // Fallback: try to get from JWT if available, but prompt says userId required in form
-        return NextResponse.json({ error: 'userId required in form data' }, { status: 400 })
+        // Try Auth Header fallback
+        const authHeader = request.headers.get('Authorization')
+        const token = authHeader?.replace('Bearer ', '')
+        if (token) {
+          const { data: { user } } = await supabase.auth.getUser(token)
+          if (user) userId = user.id
+        }
+      } else {
+        userId = uid.toString()
       }
 
-      userId = uid.toString()
       fileName = file.name
       const csvText = await file.text()
       products = parseCSV(csvText)
@@ -75,7 +71,6 @@ export async function POST(request: NextRequest) {
       fileName = body.fileName || 'api_upload.json'
 
       if (!userId) {
-        // Try to verify token if userId is missing in body
         const authHeader = request.headers.get('Authorization')
         const token = authHeader?.replace('Bearer ', '')
         if (token) {
@@ -90,56 +85,78 @@ export async function POST(request: NextRequest) {
 
     console.log(`[optimize] Starting: ${products.length} products, user: ${userId}`)
 
-    // ── 2. Run optimization ───────────────────────────────────────
-    const { optimized, notOptimized, sessionSummary } = runOptimization(products)
+    // ── 2. Get Box Catalog ────────────────────────────────────────
+    const { data: dbBoxes } = await supabase.from('box_catalog').select('*')
+    const boxCatalog = (dbBoxes && dbBoxes.length > 0) ? dbBoxes.map(b => ({
+      id: b.id,
+      name: b.name,
+      sku: b.sku,
+      length_cm: Number(b.length_cm),
+      width_cm: Number(b.width_cm),
+      height_cm: Number(b.height_cm),
+      weight_limit_kg: Number(b.weight_limit_kg || 30),
+      cost: Number(b.cost || 0.5),
+      eco_certified: b.eco_certified || false
+    })) : DEFAULT_BOXES
 
-    // ── 3. Insert session ─────────────────────────────────────────
+    // ── 3. Run optimization ───────────────────────────────────────
+    const mlResult = await runMLOptimization(products, boxCatalog)
+
+    // ── 4. Insert session ─────────────────────────────────────────
     const { data: session, error: sessionErr } = await supabase
       .from('optimization_sessions')
       .insert({
         user_id: userId,
         file_name: fileName,
-        total_processed: sessionSummary.total_processed,
-        total_optimized: sessionSummary.total_optimized,
-        total_not_optimized: sessionSummary.total_not_optimized,
-        total_savings: sessionSummary.total_savings,
-        success_rate: sessionSummary.success_rate,
+        total_processed: mlResult.total_processed,
+        total_optimized: mlResult.total_optimized,
+        total_not_optimized: mlResult.total_not_optimized,
+        total_savings: mlResult.total_savings,
+        success_rate: mlResult.success_rate,
         created_at: new Date().toISOString()
       })
       .select('id')
       .single()
 
     const sessionId = session?.id ?? null
-    if (sessionErr) {
-      console.error('[optimize] session insert error:', sessionErr.message)
-      // If session fails, we still try to continue if sessionId can be null,
-      // but usually this is a table-missing error (500).
-    }
+    if (sessionErr) console.error('[optimize] session insert error:', sessionErr.message)
 
-    // ── 4. Insert optimization_results in chunks ──────────────────
-    const allResults = [...optimized, ...notOptimized].map(r => ({
-      ...r,
-      user_id: userId,
+    // ── 5. Insert optimization_results in chunks ──────────────────
+    const allResultsToInsert = mlResult.results.map(r => ({
       session_id: sessionId,
+      user_id: userId,
+      sku: r.sku,
+      product_name: r.product_name,
+      optimized: r.optimized,
+      reason_code: r.optimized ? 'SUCCESS' : 'NO_FIT',
+      reason: r.recommendation_reason || r.failure_reason,
+      explanation: r.recommendation_reason,
+      recommendation: r.optimized ? 'Use recommended box.' : 'Consider custom packaging.',
+      fragility: r.fragility,
+      fragility_score: r.score_breakdown.fragility_match_score,
+      why_chosen: r.recommendation_reason,
+      baseline_box: `${r.dimensions.l}x${r.dimensions.w}x${r.dimensions.h}`,
+      optimized_box: r.assigned_box?.name || null,
+      baseline_cost: r.baseline_cost,
+      shipping_cost: r.shipping_cost,
+      savings: r.savings,
+      savings_percent: r.baseline_cost > 0 ? (r.savings / r.baseline_cost) * 100 : 0,
+      volume_util: r.volume_utilization,
+      weight: r.weight,
+      dimensions: r.dimensions,
+      optimized_dims: r.assigned_box ? { l: r.assigned_box.length_cm, w: r.assigned_box.width_cm, h: r.assigned_box.height_cm } : null,
       created_at: new Date().toISOString()
     }))
 
-    let resultInsertErrors = 0
-    for (let i = 0; i < allResults.length; i += 50) {
-      const chunk = allResults.slice(i, i + 50)
+    for (let i = 0; i < allResultsToInsert.length; i += 50) {
+      const chunk = allResultsToInsert.slice(i, i + 50)
       const { error } = await supabase.from('optimization_results').insert(chunk)
-      if (error) {
-        console.error(`[optimize] results chunk ${i} error:`, error.message)
-        resultInsertErrors++
-      }
+      if (error) console.error(`[optimize] results chunk ${i} error:`, error.message)
     }
 
-    // ── 5. Insert orders for optimized products ───────────────────
-    let orderSuccesses = 0
-    const orderErrors: string[] = []
-
-    // Use Promise.allSettled for individual inserts to be resilient
-    const orderPromises = optimized.map(product => {
+    // ── 6. Insert orders for optimized products ───────────────────
+    const optimizedItems = mlResult.results.filter(r => r.optimized)
+    const orderPromises = optimizedItems.map(product => {
       return supabase.from('orders').insert({
         user_id: userId,
         session_id: sessionId,
@@ -152,9 +169,9 @@ export async function POST(request: NextRequest) {
           height_cm: product.dimensions.h,
           fragility: product.fragility
         },
-        optimized_box: product.optimized_box,
-        baseline_box: product.baseline_box,
-        optimized_dims: product.optimized_dims,
+        optimized_box: product.assigned_box?.name,
+        baseline_box: `${product.dimensions.l}x${product.dimensions.w}x${product.dimensions.h}`,
+        optimized_dims: product.assigned_box ? { l: product.assigned_box.length_cm, w: product.assigned_box.width_cm, h: product.assigned_box.height_cm } : null,
         product_dims: product.dimensions,
         savings: product.savings,
         total_cost: product.shipping_cost,
@@ -167,29 +184,35 @@ export async function POST(request: NextRequest) {
       })
     })
 
-    const results = await Promise.allSettled(orderPromises)
-    results.forEach(res => {
-      if (res.status === 'fulfilled' && !res.value.error) {
-        orderSuccesses++
-      } else {
-        const err = res.status === 'fulfilled' ? res.value.error?.message : String(res.reason)
-        orderErrors.push(err || 'Unknown error')
-        console.error('[optimize] order insert error:', err)
-      }
-    })
+    const orderResults = await Promise.allSettled(orderPromises)
+    const orderSuccesses = orderResults.filter(res => res.status === 'fulfilled' && !res.value.error).length
 
-    // ── 6. Return success ─────────────────────────────────────────
+    // ── 7. Return success ─────────────────────────────────────────
     return NextResponse.json({
+      success: true,
       ok: true,
       session_id: sessionId,
-      ...sessionSummary,
+      total_processed: mlResult.total_processed,
+      total_optimized: mlResult.total_optimized,
+      total_not_optimized: mlResult.total_not_optimized,
+      total_savings: mlResult.total_savings,
+      success_rate: mlResult.success_rate,
       order_inserts: {
         success: orderSuccesses,
-        failed: orderErrors.length,
-        errors: orderErrors.slice(0, 5),
+        failed: optimizedItems.length - orderSuccesses,
       },
-      result_insert_errors: resultInsertErrors,
-      results: [...optimized, ...notOptimized],
+      results: mlResult.results.map(r => ({
+        ...r,
+        // Map to frontend expected names
+        productName: r.product_name,
+        volumeUtil: r.volume_utilization,
+        optimizedBox: r.assigned_box?.name,
+        optimizedDims: r.assigned_box ? { l: r.assigned_box.length_cm, w: r.assigned_box.width_cm, h: r.assigned_box.height_cm } : null,
+        lengthCm: r.dimensions.l,
+        widthCm: r.dimensions.w,
+        heightCm: r.dimensions.h,
+        reason: r.recommendation_reason
+      }))
     })
 
   } catch (error: unknown) {
@@ -199,8 +222,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ── Inline CSV parser ─────────────────────────────────────────────
-function parseCSV(text: string): CSVRow[] {
+function parseCSV(text: string): any[] {
   const parsed = Papa.parse(text, {
     header: true,
     skipEmptyLines: true,
@@ -208,117 +230,17 @@ function parseCSV(text: string): CSVRow[] {
   })
 
   return (parsed.data as any[]).map(row => ({
-    sku: String(row.sku || row.SKU || ''),
+    product_id: String(row.sku || row.SKU || row.product_id || ''),
     product_name: String(row.product_name || row.name || row.Product || ''),
-    weight_kg: Number(row.weight_kg || row.weight || 0),
+    weight_kg: Number(row.weight_kg || row.weight || 0.5),
     length_cm: Number(row.length_cm || row.l || row.length || 0),
     width_cm: Number(row.width_cm || row.w || row.width || 0),
     height_cm: Number(row.height_cm || row.h || row.height || 0),
     fragility: String(row.fragility || 'LOW').toUpperCase(),
+    box_price: row.box_price ? Number(row.box_price) : undefined,
+    current_box_length: row.current_box_length ? Number(row.current_box_length) : undefined,
+    current_box_width: row.current_box_width ? Number(row.current_box_width) : undefined,
+    current_box_height: row.current_box_height ? Number(row.current_box_height) : undefined,
     ...row
   }))
-}
-
-// ── Inline optimizer (XGBoost-style heuristic) ───────────────────
-function runOptimization(products: CSVRow[]) {
-  const optimized: any[] = []
-  const notOptimized: any[] = []
-  let totalSavings = 0
-
-  for (const p of products) {
-    // 1. Calculate Baseline Cost (Heuristic: $15 or based on dims)
-    const pVol = p.length_cm * p.width_cm * p.height_cm
-    const baselineCost = p.box_price ? Number(p.box_price) : 15.0
-
-    // 2. Find best fitting box
-    let bestBox: any = null
-    let minVoidVol = Infinity
-
-    for (const box of BOX_CATALOGUE) {
-      // Fit check (allow any orientation)
-      const pDims = [p.length_cm, p.width_cm, p.height_cm].sort((a, b) => b - a)
-      const bDims = [box.length_cm, box.width_cm, box.height_cm].sort((a, b) => b - a)
-
-      const fits = pDims[0] <= bDims[0] && pDims[1] <= bDims[1] && pDims[2] <= bDims[2]
-      const weightFits = p.weight_kg <= box.weight_limit_kg
-
-      if (fits && weightFits) {
-        const boxVol = box.length_cm * box.width_cm * box.height_cm
-        const voidVol = boxVol - pVol
-        if (voidVol < minVoidVol) {
-          minVoidVol = voidVol
-          bestBox = box
-        }
-      }
-    }
-
-    if (bestBox) {
-      const boxVol = bestBox.length_cm * bestBox.width_cm * bestBox.height_cm
-      const volUtil = (pVol / boxVol) * 100
-
-      // Heuristic shipping cost calculation
-      const chargeableWeight = Math.max(p.weight_kg, boxVol / 5000)
-      const shippingCost = Number((chargeableWeight * 0.5 + bestBox.cost).toFixed(2))
-      const savings = Math.max(0, baselineCost - shippingCost)
-
-      const result = {
-        sku: p.sku,
-        product_name: p.product_name,
-        optimized: true,
-        reason_code: 'SUCCESS',
-        reason: `Fitted into ${bestBox.name} with ${volUtil.toFixed(1)}% utilization.`,
-        explanation: `The item was successfully matched to our ${bestBox.name} catalog size.`,
-        recommendation: `Use ${bestBox.name} for shipping.`,
-        fragility: p.fragility,
-        fragility_score: p.fragility === 'CRITICAL' ? 90 : p.fragility === 'HIGH' ? 70 : 30,
-        why_chosen: `Smallest volume box (${bestBox.name}) that safely fits the product dimensions and weight.`,
-        baseline_box: `${p.length_cm}x${p.width_cm}x${p.height_cm}`,
-        optimized_box: bestBox.name,
-        baseline_cost: baselineCost,
-        shipping_cost: shippingCost,
-        savings: savings,
-        savings_percent: (savings / baselineCost) * 100,
-        volume_util: volUtil,
-        weight: p.weight_kg,
-        dimensions: { l: p.length_cm, w: p.width_cm, h: p.height_cm },
-        optimized_dims: { l: bestBox.length_cm, w: bestBox.width_cm, h: bestBox.height_cm }
-      }
-      optimized.push(result)
-      totalSavings += savings
-    } else {
-      notOptimized.push({
-        sku: p.sku,
-        product_name: p.product_name,
-        optimized: false,
-        reason_code: 'NO_FIT',
-        reason: 'Product dimensions or weight exceed all available boxes.',
-        explanation: 'The item is too large or too heavy for our standard catalog.',
-        recommendation: 'Use custom oversized packaging.',
-        fragility: p.fragility,
-        fragility_score: 30,
-        baseline_box: `${p.length_cm}x${p.width_cm}x${p.height_cm}`,
-        optimized_box: null,
-        baseline_cost: baselineCost,
-        shipping_cost: null,
-        savings: 0,
-        savings_percent: 0,
-        volume_util: 0,
-        weight: p.weight_kg,
-        dimensions: { l: p.length_cm, w: p.width_cm, h: p.height_cm },
-        optimized_dims: null
-      })
-    }
-  }
-
-  return {
-    optimized,
-    notOptimized,
-    sessionSummary: {
-      total_processed: products.length,
-      total_optimized: optimized.length,
-      total_not_optimized: notOptimized.length,
-      total_savings: Number(totalSavings.toFixed(2)),
-      success_rate: (optimized.length / products.length) * 100
-    }
-  }
 }

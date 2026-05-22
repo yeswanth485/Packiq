@@ -81,23 +81,22 @@ export async function POST(req: Request) {
 
       // Run local JS ML optimizer (fallback to ensure execution in serverless env)
       const ml = await runMLOptimization(productInput as any, boxes as any)
-      const assignment = ml.assignments && ml.assignments[0]
+      const assignment = ml.results && ml.results[0]
 
       const breakdown = assignment?.score_breakdown || null
-      const finalScore = breakdown ? (Object.values(breakdown as any).reduce((s: any, v: any) => s + Number(v), 0)) : null
+      const finalScore = assignment?.score || 0
 
       const updatePayload: any = {
         ml_score: finalScore,
         score_breakdown: breakdown,
-        alternatives: assignment?.alternatives ? assignment.alternatives : null,
-        new_box_name: assignment?.assignedBox?.name || null,
-        new_box_dims: assignment?.assignedBox ? `${assignment.assignedBox.length_cm}x${assignment.assignedBox.width_cm}x${assignment.assignedBox.height_cm}` : null,
-        new_box_length_cm: assignment?.assignedBox?.length_cm || null,
-        new_box_width_cm: assignment?.assignedBox?.width_cm || null,
-        new_box_height_cm: assignment?.assignedBox?.height_cm || null,
+        new_box_name: assignment?.assigned_box?.name || null,
+        new_box_dims: assignment?.assigned_box ? `${assignment.assigned_box.length_cm}x${assignment.assigned_box.width_cm}x${assignment.assigned_box.height_cm}` : null,
+        new_box_length_cm: assignment?.assigned_box?.length_cm || null,
+        new_box_width_cm: assignment?.assigned_box?.width_cm || null,
+        new_box_height_cm: assignment?.assigned_box?.height_cm || null,
         savings_amount: assignment?.savings || 0,
         volume_utilization: assignment?.volume_utilization || null,
-        is_optimized: assignment?.fits || false,
+        is_optimized: assignment?.optimized || false,
         recommendation_reason: assignment?.recommendation_reason || null,
         failure_reason: assignment?.failure_reason || null,
       }
@@ -115,13 +114,13 @@ export async function POST(req: Request) {
 
       if (ordersForResult && ordersForResult.length > 0) {
         for (const o of ordersForResult) {
-          const boxSnap = assignment?.assignedBox ? {
-            id: assignment.assignedBox.id,
-            name: assignment.assignedBox.name,
-            length_cm: assignment.assignedBox.length_cm,
-            width_cm: assignment.assignedBox.width_cm,
-            height_cm: assignment.assignedBox.height_cm,
-            cost: assignment.assignedBox.cost
+          const boxSnap = assignment?.assigned_box ? {
+            id: assignment.assigned_box.id,
+            name: assignment.assigned_box.name,
+            length_cm: assignment.assigned_box.length_cm,
+            width_cm: assignment.assigned_box.width_cm,
+            height_cm: assignment.assigned_box.height_cm,
+            cost: assignment.assigned_box.cost
           } : o.box_snapshot || null
 
           await admin
