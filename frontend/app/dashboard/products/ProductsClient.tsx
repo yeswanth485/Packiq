@@ -66,7 +66,7 @@ export default function ProductsClient({ initialProducts }: { initialProducts: a
       // Reset form
       setFormData({
         name: '', sku: '', category: 'general',
-        length_cm: '', width_cm: '', height_cm: '', weight_kg: '', fragility: 'low'
+        length_cm: '', width_cm: '', height_cm: '', weight_kg: '', fragility_level: 'low'
       })
     } catch (error: any) {
       toast.error(error.message)
