@@ -12,7 +12,10 @@ export async function GET() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[Orders API] Database error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   const orders = data || []
 
   // If orders contain product_id, fetch product rows and merge server-side to avoid nested selects

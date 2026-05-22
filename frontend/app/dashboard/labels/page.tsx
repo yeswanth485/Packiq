@@ -69,7 +69,9 @@ export default function LabelsPage() {
         
         // Fetch results for the latest batch, or fetch all if none exists
         let resultsUrl = '/api/dashboard-data?type=results';
-        if (latestSession) {
+        // We only narrow to latest session if it's explicitly available,
+        // otherwise let it fetch all results so the page isn't empty.
+        if (latestSession && latestSession.id) {
           resultsUrl += `&session_id=${latestSession.id}`;
         }
 

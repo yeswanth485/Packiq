@@ -44,8 +44,42 @@ export default function OrdersPage() {
       }
       
       const response = await ordersRes.json();
-      const orders = response.orders || [];
+      let orders = response.orders || [];
       console.log(`Loaded ${orders.length} orders from API`);
+
+      // ─── FALLBACK STRATEGY ───
+      // If orders table is empty, try fetching from optimization_results directly
+      if (orders.length === 0) {
+        console.warn('Orders table empty, falling back to optimization_results');
+        const resultsRes = await fetch('/api/dashboard-data?type=results');
+        if (resultsRes.ok) {
+          const { data: fallbackData } = await resultsRes.json();
+          if (fallbackData && fallbackData.length > 0) {
+            console.log(`Fallback: Loaded ${fallbackData.length} records from results`);
+            // Map results to order-like structure
+            orders = fallbackData.map((r: any) => ({
+              ...r,
+              id: r.id,
+              tracking_number: r.tracking_id,
+              product_snapshot: {
+                name: r.product_name,
+                sku: r.sku,
+                length_cm: r.length_cm,
+                width_cm: r.width_cm,
+                height_cm: r.height_cm,
+                weight_kg: r.weight_kg
+              },
+              box_snapshot: {
+                name: r.new_box_name,
+                dims: r.new_box_dims,
+                cost: r.new_box_cost,
+                savings_pct: r.savings_pct,
+                savings_amount: r.savings_amount
+              }
+            }));
+          }
+        }
+      }
       
       // Transform orders data to match the expected format
       const transformedResults = orders.map((order: any) => {

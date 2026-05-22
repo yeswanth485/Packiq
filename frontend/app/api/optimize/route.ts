@@ -659,14 +659,29 @@ export async function POST(req: Request) {
     let totalInsertedOrders = 0
     for (let i = 0; i < orderRows.length; i += CHUNK) {
       const chunk = orderRows.slice(i, i + CHUNK)
+      // Use maybeSingle to avoid issues with select(*) if needed, though insert usually takes arrays
       const { data: insertedOrders, error: orderInsertError } = await (supabaseAdmin as any)
         .from('orders')
         .insert(chunk)
         .select('*')
+
       if (orderInsertError) {
-        console.error('[DB] Orders insert error:', orderInsertError)
-        console.error('[DB] Failed chunk:', chunk)
-        orderInsertErrors.push({ error: orderInsertError, chunk })
+        console.error('[DB] Orders insert error:', orderInsertError.message, orderInsertError.details)
+        // Try individual insertion for this chunk to isolate failure
+        for (const singleOrder of chunk) {
+          const { data: sData, error: sErr } = await (supabaseAdmin as any)
+            .from('orders')
+            .insert(singleOrder)
+            .select('*')
+            .single()
+          if (sErr) {
+            console.error('[DB] Single Order insert failed:', sErr.message, singleOrder.sku)
+            orderInsertErrors.push({ error: sErr, item: singleOrder.sku })
+          } else {
+            totalInsertedOrders++
+            savedOrders.push(sData)
+          }
+        }
       } else if (insertedOrders && Array.isArray(insertedOrders)) {
         totalInsertedOrders += insertedOrders.length
         savedOrders.push(...insertedOrders)
