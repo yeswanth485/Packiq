@@ -19,13 +19,17 @@ export async function GET() {
   const productIds = Array.from(new Set(orders.map((o: any) => o.product_id).filter(Boolean)))
   let productsMap: Record<string, any> = {}
   if (productIds.length > 0) {
-    const { data: products, error: prodErr } = await supabase
-      .from('products')
-      .select('*')
-      .in('id', productIds)
+    try {
+      const { data: products, error: prodErr } = await supabase
+        .from('products')
+        .select('*')
+        .in('id', productIds)
 
-    if (!prodErr && products) {
-      productsMap = Object.fromEntries((products as any[]).map(p => [p.id, p]))
+      if (!prodErr && products) {
+        productsMap = Object.fromEntries((products as any[]).map(p => [p.id, p]))
+      }
+    } catch (e) {
+      console.error('Error fetching products for orders:', e)
     }
   }
 
@@ -43,19 +47,35 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const { product_id, optimization_id, optimization_result_id, box_id, quantity, total_cost_usd, product_snapshot, box_snapshot } = await req.json()
+    const body = await req.json()
+    const {
+      product_id,
+      optimization_session_id,
+      optimization_result_id,
+      box_id,
+      quantity,
+      total_cost,
+      product_snapshot,
+      box_snapshot,
+      currency,
+      status,
+      tracking_number,
+      carrier
+    } = body
 
     const insertPayload: any = {
       user_id: user.id,
       product_id: product_id || (product_snapshot && product_snapshot.id) || null,
-      optimization_id: optimization_id || null,
+      optimization_session_id: optimization_session_id || body.optimization_id || null,
       optimization_result_id: optimization_result_id || null,
-      box_id: box_id || (box_snapshot && box_snapshot.id) || null,
       product_snapshot: product_snapshot || null,
       box_snapshot: box_snapshot || null,
       quantity: quantity || 1,
-      total_cost: total_cost_usd || null,
-      status: 'pending'
+      total_cost: total_cost || body.total_cost_usd || null,
+      currency: currency || 'INR',
+      status: status || 'pending',
+      tracking_number: tracking_number || null,
+      carrier: carrier || null
     }
 
     const { data, error } = await supabase

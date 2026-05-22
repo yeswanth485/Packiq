@@ -22,7 +22,7 @@ export default function DashboardClient() {
 
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [lastAnalysis, setLastAnalysis] = useState<any>(null)
-  const { dbStats, profileData, rawOptimizations, isLoading } = useDashboardData()
+  const { dbStats, profileData, rawOptimizations, isLoading, refreshData } = useDashboardData()
 
   const mergedResults = useMemo(() => {
     const list = [...optResults] as any[]
@@ -35,6 +35,15 @@ export default function DashboardClient() {
     })
     return list
   }, [optResults, rawOptimizations])
+
+  // Listen for storage events or custom optimization events to refresh data
+  useEffect(() => {
+    const handleRefresh = () => {
+      refreshData?.();
+    };
+    window.addEventListener('optimization-complete', handleRefresh);
+    return () => window.removeEventListener('optimization-complete', handleRefresh);
+  }, [refreshData]);
 
   const stats = useMemo(() => {
     const total = mergedResults.length
