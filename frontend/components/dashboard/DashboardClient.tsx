@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, memo } from 'react'
-import { Package, Zap, TrendingUp, CheckCircle2, Brain, Sparkles, Activity, DollarSign, Leaf, Weight, Building } from 'lucide-react'
+import { Package, Zap, TrendingUp, CheckCircle2, Brain, Sparkles, Activity, DollarSign, Leaf, Weight, Building, Box as BoxIcon } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
@@ -172,10 +172,11 @@ const DashboardClient = memo(function DashboardClient() {
                     stroke="#00FFD1" 
                     fillOpacity={1} 
                     fill="url(#colorSavings)" 
-                    strokeWidth={2} 
+                    strokeWidth={4}
                     isAnimationActive={true}
-                    dot={{ r: 3, fill: '#00FFD1', strokeWidth: 1, stroke: '#0A0A0F' }}
-                    activeDot={{ r: 5, strokeWidth: 0 }}
+                    animationDuration={2000}
+                    dot={{ r: 4, fill: '#0A0A0F', strokeWidth: 2, stroke: '#00FFD1' }}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: '#00FFD1' }}
                   />
                   <RechartsTooltip 
                     contentStyle={{ 
@@ -226,7 +227,7 @@ const DashboardClient = memo(function DashboardClient() {
                     }} 
                     itemStyle={{ fontSize: '11px', color: '#FFF' }}
                   />
-                  <Bar dataKey="voidReduction" radius={[6, 6, 0, 0]} background={{ fill: 'rgba(255, 255, 255, 0.02)', radius: 6 }}>
+                  <Bar dataKey="voidReduction" radius={[10, 10, 0, 0]} background={{ fill: 'rgba(255, 255, 255, 0.02)', radius: 10 }} animationDuration={2000}>
                     {wasteChartData.map((entry, index) => {
                       const fill = entry.fill === '#22c55e' ? 'url(#greenBarGrad)' : entry.fill === '#F59E0B' ? 'url(#amberBarGrad)' : 'url(#redBarGrad)'
                       return <Cell key={index} fill={fill} />
@@ -238,22 +239,25 @@ const DashboardClient = memo(function DashboardClient() {
           )}
 
           {/* Recent Optimizations Table */}
-          <div className="glass rounded-3xl overflow-hidden">
-            <div className="p-6 border-b border-white/5 flex justify-between items-center">
-              <h3 className="text-sm font-black text-white uppercase tracking-widest">Recent Optimizations</h3>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest">Live</span>
+          <div className="glass rounded-[40px] overflow-hidden border border-white/5">
+            <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+              <div>
+                <h3 className="text-sm font-black text-white uppercase tracking-widest">Recent Optimizations</h3>
+                <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">Live Feed from XGBoost Engine</p>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[9px] font-black text-green-400 uppercase tracking-widest">Live</span>
               </div>
             </div>
             <div className="max-h-[400px] overflow-y-auto no-scrollbar">
-              <table className="w-full text-left text-sm">
+              <table className="w-full text-left text-sm border-separate border-spacing-0">
                 <thead className="sticky top-0 bg-[#0A0A0F] z-10">
-                  <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5">
-                    <th className="px-6 py-4">Product</th>
+                  <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5 bg-[#0A0A0F]/80 backdrop-blur-md">
+                    <th className="px-8 py-4">Product</th>
                     <th className="px-6 py-4">Old Box</th>
                     <th className="px-6 py-4">AI Box</th>
-                    <th className="px-6 py-4">Savings</th>
+                    <th className="px-6 py-4 text-right pr-8">Savings</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -261,14 +265,30 @@ const DashboardClient = memo(function DashboardClient() {
                     {mergedResults.slice(-50).reverse().map((item, idx) => (
                       <motion.tr
                         key={`${item.product_id || item.id}-${idx}`}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="hover:bg-white/[0.02] transition-colors"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="hover:bg-white/[0.02] transition-all group cursor-default"
                       >
-                        <td className="px-6 py-4 font-mono font-bold text-gray-300">{item.product_name || 'Unknown'}</td>
-                        <td className="px-6 py-4 text-gray-500 text-xs">{item.original_box || '—'}</td>
-                        <td className="px-6 py-4 font-mono text-[#00FFD1] text-xs">{item.optimized_box || 'No Change'}</td>
-                        <td className="px-6 py-4 text-green-400 font-bold">+${(item.savings || item.cost_savings_usd || 0).toFixed(2)}</td>
+                        <td className="px-8 py-5">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-200 group-hover:text-white transition-colors">{item.product_name || 'Unknown'}</span>
+                            <span className="text-[10px] text-gray-600 font-mono">SKU-{idx+100}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <span className="text-xs text-gray-500 line-through decoration-red-500/50">{item.original_box || item.baseline_box || 'Standard'}</span>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-2">
+                            <BoxIcon className="w-3 h-3 text-[#00FFD1]" />
+                            <span className="font-mono text-[#00FFD1] text-xs font-bold uppercase tracking-tighter">{item.optimized_box || 'No Change'}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 text-right pr-8">
+                          <div className="inline-block px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                            <span className="text-emerald-400 font-black text-xs">+${(item.savings || item.cost_savings_usd || 0).toFixed(2)}</span>
+                          </div>
+                        </td>
                       </motion.tr>
                     ))}
                   </AnimatePresence>

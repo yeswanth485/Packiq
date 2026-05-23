@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useMemo, memo } from 'react'
 import {
-  Printer, CheckCircle2, X, RefreshCw, AlertCircle
+  Printer, CheckCircle2, X, RefreshCw, AlertCircle, Eye
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
+import Box3DViewer from '@/components/dashboard/Box3DViewer'
 
 const CARRIERS = [
   { id:'amazon',    name:'Amazon Shipping',    logo:'📦', color:'#FF9900', baseRate:40, perKgRate:25, minCharge:50,  days:'1–2 days' },
@@ -193,12 +194,20 @@ const LabelsClient = memo(function LabelsClient() {
                       </div>
                     )}
 
-                    <button
-                      onClick={() => setPrintProduct(p)}
-                      className="w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
-                    >
-                      <Printer className="w-4 h-4" /> Print Label
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setPrintProduct(p)}
+                        className="flex-1 py-2.5 bg-[#00FFD1] text-[#0A0A0F] hover:bg-[#00FFD1]/90 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                      >
+                        <Printer className="w-4 h-4" /> Print
+                      </button>
+                      <button
+                        onClick={() => setPrintProduct({...p, showPreview: true})}
+                        className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-all border border-white/10"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 )
               })}
@@ -244,11 +253,17 @@ const LabelsClient = memo(function LabelsClient() {
                       </div>
                       <div className="flex flex-col items-center justify-center gap-4">
                          {/* 3D Box Simulation */}
-                         <div className="w-24 h-24 relative" style={{ perspective: '500px' }}>
-                           <div className="w-full h-full border-[1.5px] border-black/20" style={{ transform: 'rotateX(60deg) rotateZ(45deg)', transformStyle: 'preserve-3d', background: '#fff', boxShadow: '10px 10px 20px rgba(0,0,0,0.1)' }}>
-                             <div className="absolute top-0 left-1/2 w-px h-full bg-slate-300" />
-                             <div className="absolute top-1/2 left-0 w-full h-px bg-slate-300" />
-                           </div>
+                         <div className="w-32 h-32 relative bg-slate-50 rounded-xl border border-black/5 overflow-hidden">
+                           <Box3DViewer
+                              l={printProduct.optimizedDims.l}
+                              w={printProduct.optimizedDims.w}
+                              h={printProduct.optimizedDims.h}
+                              productL={10}
+                              productW={10}
+                              productH={10}
+                              spaceUtilization={80}
+                              fragility="low"
+                           />
                          </div>
                         <p className="text-[10px] font-black uppercase text-slate-400">Packaging</p>
                         <p className="text-xs font-bold truncate">{printProduct.boxName}</p>
