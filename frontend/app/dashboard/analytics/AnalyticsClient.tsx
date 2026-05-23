@@ -27,18 +27,18 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
 
   const data = useMemo(() => {
     const dbList = (allOptimizations || []).map(o => ({
-      sku: o.product_snapshot?.sku || o.sku || 'N/A',
-      name: o.product_snapshot?.product_name || o.product_name || 'Unknown',
+      sku: o.sku || 'N/A',
+      name: o.product_name || 'Unknown',
       created_at: o.created_at,
-      savings: o.savings || o.cost_savings_usd || 0,
-      baseline_cost: o.baseline_cost || o.product_snapshot?.current_cost_usd || 0,
-      optimized_cost: o.total_cost || o.ai_response?.new_cost_usd || 0,
+      savings: o.savings || 0,
+      baseline_cost: o.baseline_cost || 0,
+      optimized_cost: o.shipping_cost || 0,
       void_before: o.baseline_void_pct ?? 40,
-      void_after: o.void_pct ?? o.efficiency_score ? (100 - o.efficiency_score) : 20,
-      score: o.match_score || o.efficiency_score || 0,
-      fragility: (o.fragility || o.product_snapshot?.fragility || 'LOW').toUpperCase(),
-      weight: o.weight || o.product_snapshot?.weight_kg || 1,
-      box: o.optimized_box || o.recommended_box || 'Standard'
+      void_after: o.void_pct ?? 0,
+      score: (o.volume_util || 0) * 0.9 + 10, // Match score derived from volume util + constant
+      fragility: (o.fragility || 'LOW').toUpperCase(),
+      weight: o.weight || 1,
+      box: o.optimized_box || 'Standard'
     }))
 
     const dbSkus = new Set(dbList.map(d => d.sku))
@@ -93,10 +93,16 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
       byDay[day].total += ecoScore
       byDay[day].count++
     })
-    return Object.entries(byDay).sort().map(([date, vals]) => ({
+    const data = Object.entries(byDay).sort().map(([date, vals]) => ({
       date,
       score: Math.round(vals.total / vals.count)
     }))
+    if (data.length === 1) {
+      const prev = new Date(data[0].date)
+      prev.setDate(prev.getDate() - 1)
+      return [{ date: prev.toISOString().slice(0, 10), score: 0 }, ...data]
+    }
+    return data
   }, [filteredData])
 
   // 3. Box Cost Efficiency (Box Price vs. Volume Reduction)
@@ -132,10 +138,16 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
       byDay[day] = (byDay[day] || 0) + d.savings
     })
     let runningTotal = 0
-    return Object.entries(byDay).sort().map(([date, savings]) => {
+    const data = Object.entries(byDay).sort().map(([date, savings]) => {
       runningTotal += savings
       return { date, total: Math.round(runningTotal) }
     })
+    if (data.length === 1) {
+      const prev = new Date(data[0].date)
+      prev.setDate(prev.getDate() - 1)
+      return [{ date: prev.toISOString().slice(0, 10), total: 0 }, ...data]
+    }
+    return data
   }, [filteredData])
 
   const fragilityMatrix = useMemo(() => {
@@ -228,7 +240,7 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
               <Leaf className="w-3 h-3 text-emerald-400" /> Eco-Impact Score Over Time
             </h3>
             <div className="h-64">
-              {sustainabilityTrend.length >= 2 ? (
+              {sustainabilityTrend.length >= 1 ? (
                 <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`sus-trend-${sustainabilityTrend.length}-${dateRange}-${lastRun}`}>
                   <AreaChart data={sustainabilityTrend}>
                     <defs>
@@ -305,7 +317,7 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
                 <span className="text-2xl font-black text-white">₹{cumulativeSavings[cumulativeSavings.length-1]?.total.toLocaleString() || '0'}</span>
              </div>
              <div className="h-64">
-                {cumulativeSavings.length >= 2 ? (
+                {cumulativeSavings.length >= 1 ? (
                   <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`cumulative-savings-${cumulativeSavings.length}-${dateRange}-${lastRun}`}>
                     <AreaChart data={cumulativeSavings}>
                         <defs>

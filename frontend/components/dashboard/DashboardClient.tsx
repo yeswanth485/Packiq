@@ -72,7 +72,13 @@ const DashboardClient = memo(function DashboardClient() {
       const day = (r.created_at || new Date().toISOString()).slice(0, 10)
       byDay[day] = (byDay[day] || 0) + 1
     })
-    return Object.entries(byDay).sort().map(([date, count]) => ({ date, count }))
+    const data = Object.entries(byDay).sort().map(([date, count]) => ({ date, count }))
+    if (data.length === 1) {
+      const prev = new Date(data[0].date)
+      prev.setDate(prev.getDate() - 1)
+      return [{ date: prev.toISOString().slice(0, 10), count: 0 }, ...data]
+    }
+    return data
   }, [mergedResults])
 
   // 2. Cost Savings Trend (LineChart - Dual Line)
@@ -84,7 +90,13 @@ const DashboardClient = memo(function DashboardClient() {
       byDay[day].original += (r.baseline_cost || 0)
       byDay[day].optimized += (r.total_cost || r.shipping_cost || 0)
     })
-    return Object.entries(byDay).sort().map(([date, vals]) => ({ date, ...vals }))
+    const data = Object.entries(byDay).sort().map(([date, vals]) => ({ date, ...vals }))
+    if (data.length === 1) {
+      const prev = new Date(data[0].date)
+      prev.setDate(prev.getDate() - 1)
+      return [{ date: prev.toISOString().slice(0, 10), original: 0, optimized: 0 }, ...data]
+    }
+    return data
   }, [mergedResults])
 
   // 3. Box Utilization Distribution (Horizontal BarChart)
@@ -163,7 +175,7 @@ const DashboardClient = memo(function DashboardClient() {
           <div className="lg:col-span-8 glass p-8 rounded-[40px] border border-white/5 min-h-[350px]">
              <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">SKUs Optimized Over Time</h3>
              <div className="h-64">
-                {skuTrendData.length >= 2 ? (
+                {skuTrendData.length >= 1 ? (
                   <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`sku-trend-${skuTrendData.length}-${lastRun}`}>
                     <AreaChart data={skuTrendData}>
                         <defs>
@@ -206,7 +218,7 @@ const DashboardClient = memo(function DashboardClient() {
           <div className="lg:col-span-12 glass p-8 rounded-[40px] border border-white/5 min-h-[350px]">
              <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">Baseline vs AI-Optimized Box & Shipping Cost (INR)</h3>
              <div className="h-64">
-                {costTrendData.length >= 2 ? (
+                {costTrendData.length >= 1 ? (
                   <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`cost-trend-${costTrendData.length}-${lastRun}`}>
                     <LineChart data={costTrendData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />

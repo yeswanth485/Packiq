@@ -26,12 +26,9 @@ export default async function AnalyticsPage() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
-    // Merge session-level + result-level data for analytics
-    if (sessions && results) {
-      dbOptimizations = sessions.map((s: any) => ({
-        ...s,
-        results: results.filter((r: any) => r.session_id === s.id),
-      }))
+    // Pass flat list of results for analytics
+    if (results) {
+      dbOptimizations = results
     }
   }
 

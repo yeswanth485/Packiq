@@ -69,6 +69,15 @@ export interface OptimizationResult {
   volume_saved_cm3?: number
 
   // UI helpers for mapping from /api/optimize
+  created_at?: string
+  baseline_box?: string
+  baseline_box_cost?: number
+  baseline_void_pct?: number
+  void_pct?: number
+  void_pct_before?: number
+  void_pct_after?: number
+  match_score?: number
+  volume_util?: number
   optimizedDims?: { l: number; w: number; h: number }
   lengthCm?: number
   widthCm?: number
