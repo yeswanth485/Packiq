@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Search, Filter, Package, Truck, Calendar } from 'lucide-react'
+import React, { useState, useEffect, useMemo, memo } from 'react'
+import { Plus, Search, Filter, Package, Truck, Calendar, Box as BoxIcon, ChevronDown, ChevronUp, Eye, TrendingDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
-import { useMemo, memo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import Box3DViewer from '@/components/dashboard/Box3DViewer'
 
 const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { initialOrders: any[], products: any[] }) {
   const { results: optResults } = useOptimizationStore()
@@ -15,6 +16,7 @@ const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { i
   const [statusFilter, setStatusFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   
   const router = useRouter()
   const supabase = createClient()
@@ -101,13 +103,25 @@ const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { i
       carrier: 'Auto-Assigned',
       tracking_number: 'PENDING',
       product_name: r.product_name,
+      baseline_box: r.original_box || 'N/A',
+      optimized_box: r.optimized_box || 'N/A',
+      baseline_cost: r.baseline_cost || 0,
+      total_cost: r.total_cost || 0,
+      savings: r.savings || 0,
+      optimized_dims: r.optimizedDims,
+      product_dims: { l: r.lengthCm, w: r.widthCm, h: r.heightCm },
       product: {
         name: r.product_name,
         sku: r.sku
       },
       product_snapshot: {
         name: r.product_name,
-        sku: r.sku
+        sku: r.sku,
+        length_cm: r.lengthCm,
+        width_cm: r.widthCm,
+        height_cm: r.heightCm,
+        weight_kg: r.product_weight || 0,
+        fragility: r.fragility
       }
     }))
 
@@ -180,6 +194,7 @@ const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { i
   const getStatusColor = (status: string) => {
     switch(status) {
       case 'Ready to Ship': return 'bg-[#00FFD1]/10 text-[#00FFD1] border border-[#00FFD1]/20'
+      case 'Ready to Ship': return 'bg-[#00FFD1]/10 text-[#00FFD1] border border-[#00FFD1]/20'
       case 'pending': return 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
       case 'confirmed': return 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
       case 'shipped': return 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
@@ -212,6 +227,7 @@ const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { i
             >
               <option value="all">All Statuses</option>
               <option value="Ready to Ship">Ready to Ship</option>
+              <option value="Ready to Ship">Ready to Ship</option>
               <option value="pending">Pending</option>
               <option value="confirmed">Confirmed</option>
               <option value="shipped">Shipped</option>
@@ -234,43 +250,123 @@ const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { i
           <table className="w-full text-sm whitespace-nowrap">
             <thead>
               <tr className="text-xs text-gray-500 uppercase tracking-widest border-b border-white/5 bg-white/[0.02]">
-                <th className="px-6 py-4 text-left">Order Reference</th>
-                <th className="px-6 py-4 text-left">Product Name</th>
+                <th className="px-6 py-4 text-left">Reference</th>
+                <th className="px-6 py-4 text-left">Product</th>
+                <th className="px-6 py-4 text-left">Optimization</th>
+                <th className="px-6 py-4 text-left">Costs</th>
                 <th className="px-6 py-4 text-left">Status</th>
-                <th className="px-6 py-4 text-left">Carrier</th>
-                <th className="px-6 py-4 text-left">Tracking Number</th>
-                <th className="px-6 py-4 text-right">Date</th>
+                <th className="px-6 py-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody>
               {filteredOrders.map((o) => (
-                <tr key={o.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                  <td className="px-6 py-4 font-mono text-gray-300">#{o.id.startsWith('session') ? 'OPT-' + o.id.slice(-4).toUpperCase() : o.id.slice(0, 8).toUpperCase()}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <Package className="w-4 h-4 text-indigo-400" />
-                      <span className="text-gray-200">{o.product?.name || o.product_name || 'Unknown Product'}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(o.status)}`}>
-                      {o.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2 text-gray-300">
-                      <Truck className="w-4 h-4 text-gray-500" />
-                      {o.carrier || '—'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-mono text-indigo-300">{o.tracking_number || '—'}</td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2 text-gray-400">
-                      <Calendar className="w-4 h-4" />
-                      {new Date(o.created_at).toLocaleDateString()}
-                    </div>
-                  </td>
-                </tr>
+                <React.Fragment key={o.id}>
+                  <tr
+                    onClick={() => setExpandedId(expandedId === o.id ? null : o.id)}
+                    className="border-b border-white/5 hover:bg-white/[0.02] transition-colors cursor-pointer"
+                  >
+                    <td className="px-6 py-4 font-mono text-gray-300 text-xs">
+                      #{o.id.startsWith('session') ? 'OPT-' + o.id.slice(-4).toUpperCase() : o.id.slice(0, 8).toUpperCase()}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-gray-200 font-bold text-sm">{o.product?.name || o.product_name || 'Unknown Product'}</span>
+                        <span className="text-[10px] text-gray-500">{o.product?.sku || o.sku || 'No SKU'}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                           <span className="text-[10px] text-gray-500 uppercase font-black">Old:</span>
+                           <span className="text-[10px] text-gray-400">{o.baseline_box || 'Standard'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <span className="text-[10px] text-[#00FFD1] uppercase font-black">AI:</span>
+                           <span className="text-[10px] text-white font-bold">{o.optimized_box || 'Optimal'}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-gray-400 line-through">${(o.baseline_cost || 0).toFixed(2)}</span>
+                        <span className="text-sm text-[#00FFD1] font-black">${(o.total_cost || 0).toFixed(2)}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getStatusColor(o.status)}`}>
+                        {o.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                       <button className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-[#00FFD1] transition-colors">
+                          {expandedId === o.id ? <ChevronUp className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                       </button>
+                    </td>
+                  </tr>
+                  <AnimatePresence>
+                    {expandedId === o.id && (
+                      <motion.tr
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bg-white/[0.01]"
+                      >
+                        <td colSpan={6} className="px-6 py-8">
+                          <div className="grid lg:grid-cols-2 gap-10">
+                             <div className="h-64 rounded-3xl overflow-hidden border border-white/10 glass relative">
+                                <Box3DViewer
+                                  l={o.optimized_dims?.l || 30}
+                                  w={o.optimized_dims?.w || 22}
+                                  h={o.optimized_dims?.h || 18}
+                                  productL={o.product_dims?.l || 10}
+                                  productW={o.product_dims?.w || 10}
+                                  productH={o.product_dims?.h || 10}
+                                  spaceUtilization={85}
+                                  fragility={(o.product_snapshot?.fragility || 'LOW').toLowerCase() as any}
+                                />
+                                <div className="absolute top-4 left-4 px-3 py-1 bg-black/50 backdrop-blur-md rounded-lg border border-white/10">
+                                   <span className="text-[10px] font-black text-[#00FFD1] uppercase tracking-widest">3D Box Simulation</span>
+                                </div>
+                             </div>
+                             <div className="space-y-6">
+                                <div>
+                                   <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                      <TrendingDown className="w-3 h-3 text-[#00FFD1]" /> Savings Analysis
+                                   </h4>
+                                   <div className="grid grid-cols-2 gap-4">
+                                      <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                                         <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Projected Savings</p>
+                                         <p className="text-xl font-black text-emerald-400">${(o.savings || 0).toFixed(2)}</p>
+                                      </div>
+                                      <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                                         <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Cost Reduction</p>
+                                         <p className="text-xl font-black text-white">{Math.round(((o.savings || 0) / (o.baseline_cost || 1)) * 100)}%</p>
+                                      </div>
+                                   </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-8 text-[10px]">
+                                   <div>
+                                      <p className="font-black text-gray-500 uppercase tracking-widest mb-2">Carrier Details</p>
+                                      <div className="space-y-1">
+                                         <p className="text-gray-300 font-bold">Courier: <span className="text-white">{o.carrier || 'Auto-Assigned'}</span></p>
+                                         <p className="text-gray-300 font-bold">Tracking: <span className="text-indigo-400 font-mono">{o.tracking_number || 'PENDING'}</span></p>
+                                      </div>
+                                   </div>
+                                   <div>
+                                      <p className="font-black text-gray-500 uppercase tracking-widest mb-2">Package Specification</p>
+                                      <div className="space-y-1">
+                                         <p className="text-gray-300 font-bold">Box: <span className="text-white">{o.optimized_box || 'N/A'}</span></p>
+                                         <p className="text-gray-300 font-bold">Dims: <span className="text-white">{o.optimized_dims?.l}x{o.optimized_dims?.w}x{o.optimized_dims?.h} cm</span></p>
+                                      </div>
+                                   </div>
+                                </div>
+                             </div>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    )}
+                  </AnimatePresence>
+                </React.Fragment>
               ))}
               {filteredOrders.length === 0 && (
                 <tr>

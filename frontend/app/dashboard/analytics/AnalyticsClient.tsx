@@ -4,7 +4,8 @@ import { useState, useMemo, memo } from 'react'
 import { Calendar, Download, TrendingUp, Package, Percent, Box as BoxIcon, Leaf, Wind, Database } from 'lucide-react'
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  AreaChart, Area
 } from 'recharts'
 import { toast } from 'sonner'
 import StatCard from '@/components/dashboard/StatCard'
@@ -265,22 +266,70 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
       <div className="grid lg:grid-cols-2 gap-6">
         
         {/* Savings Trend */}
-        <div className="glass p-6 rounded-2xl border border-white/5 col-span-1 lg:col-span-2">
-          <h3 className="text-sm font-semibold text-gray-300 mb-6">Savings Trend Over Time</h3>
-          <div className="h-72">
+        <div className="glass p-8 rounded-[40px] border border-white/5 col-span-1 lg:col-span-2 bg-gradient-to-br from-[#00FFD1]/5 to-transparent">
+          <div className="flex justify-between items-center mb-8">
+            <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-[#00FFD1]" /> Multi-Factor Savings Analysis
+            </h3>
+            <div className="flex gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[#00FFD1]" />
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Optimized Savings</span>
+              </div>
+            </div>
+          </div>
+          <div className="h-80">
             {savingsTrend.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={savingsTrend} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                  <XAxis dataKey="date" stroke="#ffffff50" fontSize={12} tick={{ fill: '#ffffff50' }} />
-                  <YAxis stroke="#ffffff50" fontSize={12} tickFormatter={val => `$${val}`} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', borderRadius: '12px' }}
-                    itemStyle={{ color: '#00FFD1' }}
-                    formatter={(val: any) => [`$${Number(val).toFixed(2)}`, 'Savings']}
+                <AreaChart data={savingsTrend} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorSavingsAnalytics" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00FFD1" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#00FFD1" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#ffffff20"
+                    fontSize={10}
+                    tick={{ fill: '#ffffff40' }}
+                    axisLine={false}
+                    tickLine={false}
+                    dy={10}
                   />
-                  <Line type="monotone" dataKey="savings" stroke="#00FFD1" strokeWidth={3} dot={{ r: 4, fill: '#00FFD1' }} activeDot={{ r: 6 }} />
-                </LineChart>
+                  <YAxis
+                    stroke="#ffffff20"
+                    fontSize={10}
+                    tickFormatter={val => `$${val}`}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'rgba(10,10,15,0.95)',
+                      borderColor: 'rgba(0,255,209,0.2)',
+                      borderRadius: '20px',
+                      backdropFilter: 'blur(10px)',
+                      boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+                    }}
+                    itemStyle={{ color: '#00FFD1', fontWeight: 'bold' }}
+                    labelStyle={{ color: '#666', marginBottom: '8px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}
+                    formatter={(val: any) => [`$${Number(val).toFixed(2)}`, 'Savings Generated']}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="savings"
+                    stroke="#00FFD1"
+                    strokeWidth={4}
+                    fillOpacity={1}
+                    fill="url(#colorSavingsAnalytics)"
+                    isAnimationActive={true}
+                    animationDuration={2000}
+                    dot={{ r: 5, fill: '#0A0A0F', strokeWidth: 2, stroke: '#00FFD1' }}
+                    activeDot={{ r: 8, strokeWidth: 0, fill: '#00FFD1' }}
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-500">No data available for this period.</div>
@@ -303,7 +352,7 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
                     itemStyle={{ color: '#4f46e5' }}
                     formatter={(val: any) => [`$${val}`, 'Savings']}
                   />
-                  <Bar dataKey="savings" fill="#4f46e5" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="savings" fill="#4f46e5" radius={[0, 10, 10, 0]} animationDuration={1500} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -404,6 +453,61 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
 
       </div>
       
+      {/* Per-SKU Optimization Breakdown */}
+      <div className="glass p-8 rounded-[40px] border border-white/5 overflow-hidden">
+        <div className="flex justify-between items-center mb-8">
+          <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+            <Database className="w-4 h-4 text-[#00FFD1]" /> Per-SKU Optimization Breakdown
+          </h3>
+          <div className="px-4 py-1 bg-white/5 rounded-full border border-white/10">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{filteredData.length} Items Analyzed</span>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm border-separate border-spacing-y-2">
+            <thead>
+              <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                <th className="px-6 py-2">Product Name</th>
+                <th className="px-6 py-2">Old Cost</th>
+                <th className="px-6 py-2">New Cost</th>
+                <th className="px-6 py-2">Savings</th>
+                <th className="px-6 py-2">Efficiency</th>
+                <th className="px-6 py-2">Material</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredData.slice(0, 20).map((o, idx) => (
+                <tr key={`${o.id}-${idx}`} className="group">
+                  <td className="px-6 py-4 bg-white/[0.02] rounded-l-2xl border-y border-l border-white/5 group-hover:bg-white/[0.04] transition-colors">
+                    <span className="text-white font-bold">{o.product_snapshot?.name || 'Unknown'}</span>
+                  </td>
+                  <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5 group-hover:bg-white/[0.04] transition-colors">
+                    <span className="text-gray-500 line-through">${(o.product_snapshot?.current_cost_usd || 0).toFixed(2)}</span>
+                  </td>
+                  <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5 group-hover:bg-white/[0.04] transition-colors">
+                    <span className="text-[#00FFD1] font-black">${(o.ai_response?.new_cost_usd || 0).toFixed(2)}</span>
+                  </td>
+                  <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5 group-hover:bg-white/[0.04] transition-colors">
+                    <span className="text-emerald-400 font-bold">+${(o.cost_savings_usd || 0).toFixed(2)}</span>
+                  </td>
+                  <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5 group-hover:bg-white/[0.04] transition-colors">
+                    <div className="flex items-center gap-2">
+                      <div className="w-12 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#00FFD1]" style={{ width: `${o.efficiency_score}%` }} />
+                      </div>
+                      <span className="text-[10px] text-gray-400">{Math.round(o.efficiency_score)}%</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 bg-white/[0.02] rounded-r-2xl border-y border-r border-white/5 group-hover:bg-white/[0.04] transition-colors">
+                    <span className="text-xs text-gray-500">{o.ai_response?.recommended_box?.material || 'Corrugated'}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Sustainability Report Bottom Card */}
       <div className="glass p-8 rounded-2xl border border-white/5 bg-gradient-to-r from-emerald-900/20 to-teal-900/20">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
