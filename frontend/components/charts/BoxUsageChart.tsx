@@ -12,11 +12,17 @@ const GRADIENTS = [
 
 export default function BoxUsageChart({ data }: { data: any[] }) {
   // Expected data format: [{ name: 'Small Box', value: 40 }, ...]
-  if (!data || data.length === 0) return null;
+  if (!data || data.length === 0 || !data.some(d => d.value > 0)) {
+    return (
+      <div className="w-full h-[300px] flex items-center justify-center text-gray-600 text-[10px] font-bold uppercase tracking-widest border border-white/5 rounded-2xl bg-white/[0.01]">
+        No usage data yet
+      </div>
+    )
+  }
 
   return (
     <div className="w-full h-[300px] relative">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={100}>
         <PieChart>
           <defs>
             {GRADIENTS.map((g) => (

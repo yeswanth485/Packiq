@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, memo } from 'react'
+import { useState, useMemo, memo, useEffect } from 'react'
 import { Calendar, Download, TrendingUp, Package, Percent, Box as BoxIcon, Leaf, Wind, Database, BarChart3, Activity, Zap, Percent as PercentIcon } from 'lucide-react'
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
@@ -16,6 +16,14 @@ const COLORS = ['#00FFD1', '#4f46e5', '#3b82f6', '#ec4899', '#f59e0b', '#8b5cf6'
 const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { allOptimizations: any[] }) {
   const [dateRange, setDateRange] = useState(30)
   const { results: optResults } = useOptimizationStore()
+
+  useEffect(() => {
+    // Fix for Recharts ResponsiveContainer not resizing when hidden
+    const timer = setTimeout(() => {
+      window.dispatchEvent(new Event('resize'))
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   const data = useMemo(() => {
     const dbList = (allOptimizations || []).map(o => ({
@@ -190,111 +198,131 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
         <div className="grid lg:grid-cols-2 gap-8">
 
           {/* 1. XGBoost Score Distribution */}
-          <div className="glass p-8 rounded-[40px] border border-white/5 bg-gradient-to-br from-indigo-500/5 to-transparent">
+          <div className="glass p-8 rounded-[40px] border border-white/5 bg-gradient-to-br from-indigo-500/5 to-transparent min-h-[350px]">
             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8 flex items-center gap-2">
               <Zap className="w-3 h-3 text-indigo-400" /> XGBoost Match Score Frequency
             </h3>
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={scoreDistribution}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
-                  <XAxis dataKey="range" stroke="#ffffff20" fontSize={10} />
-                  <YAxis stroke="#ffffff20" fontSize={10} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }}
-                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                  />
-                  <Bar dataKey="count" fill="#4f46e5" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {scoreDistribution.filter(d => d.count > 0).length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                  <BarChart data={scoreDistribution}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                    <XAxis dataKey="range" stroke="#ffffff20" fontSize={10} />
+                    <YAxis stroke="#ffffff20" fontSize={10} domain={['auto', 'auto']} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }}
+                      cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                    />
+                    <Bar dataKey="count" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-600 text-[10px] font-bold uppercase tracking-widest">No matching data</div>
+              )}
             </div>
           </div>
 
           {/* 2. Sustainability Score Trend */}
-          <div className="glass p-8 rounded-[40px] border border-white/5 bg-gradient-to-br from-emerald-500/5 to-transparent">
+          <div className="glass p-8 rounded-[40px] border border-white/5 bg-gradient-to-br from-emerald-500/5 to-transparent min-h-[350px]">
             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8 flex items-center gap-2">
               <Leaf className="w-3 h-3 text-emerald-400" /> Eco-Impact Score Over Time
             </h3>
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={sustainabilityTrend}>
-                  <defs>
-                    <linearGradient id="colorEco" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="date" stroke="#ffffff20" fontSize={10} />
-                  <YAxis stroke="#ffffff20" fontSize={10} domain={[0, 100]} />
-                  <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
-                  <Area type="monotone" dataKey="score" stroke="#10b981" fillOpacity={1} fill="url(#colorEco)" strokeWidth={3} />
-                </AreaChart>
-              </ResponsiveContainer>
+              {sustainabilityTrend.length >= 2 ? (
+                <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                  <AreaChart data={sustainabilityTrend}>
+                    <defs>
+                      <linearGradient id="colorEco" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" stroke="#ffffff20" fontSize={10} />
+                    <YAxis stroke="#ffffff20" fontSize={10} domain={[0, 100]} />
+                    <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
+                    <Area type="monotone" dataKey="score" stroke="#10b981" fillOpacity={1} fill="url(#colorEco)" strokeWidth={3} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-600 text-[10px] font-bold uppercase tracking-widest">Awaiting more data...</div>
+              )}
             </div>
           </div>
 
           {/* 3. Cost Reduction Scatter */}
-          <div className="glass p-8 rounded-[40px] border border-white/5 bg-gradient-to-br from-violet-500/5 to-transparent">
+          <div className="glass p-8 rounded-[40px] border border-white/5 bg-gradient-to-br from-violet-500/5 to-transparent min-h-[350px]">
             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8 flex items-center gap-2">
               <TrendingUp className="w-3 h-3 text-violet-400" /> Weight vs. Savings Efficiency
             </h3>
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                  <CartesianGrid stroke="#ffffff05" />
-                  <XAxis type="number" dataKey="dimWeight" name="Weight" unit="kg" stroke="#ffffff20" fontSize={10} />
-                  <YAxis type="number" dataKey="reduction" name="Reduction" unit="%" stroke="#ffffff20" fontSize={10} />
-                  <ZAxis type="category" dataKey="name" name="SKU" />
-                  <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
-                  <Scatter name="SKUs" data={scatterData} fill="#8b5cf6" />
-                </ScatterChart>
-              </ResponsiveContainer>
+              {scatterData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                  <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                    <CartesianGrid stroke="#ffffff05" />
+                    <XAxis type="number" dataKey="dimWeight" name="Weight" unit="kg" stroke="#ffffff20" fontSize={10} domain={['auto', 'auto']} />
+                    <YAxis type="number" dataKey="reduction" name="Reduction" unit="%" stroke="#ffffff20" fontSize={10} domain={['auto', 'auto']} />
+                    <ZAxis type="category" dataKey="name" name="SKU" />
+                    <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
+                    <Scatter name="SKUs" data={scatterData} fill="#8b5cf6" />
+                  </ScatterChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-600 text-[10px] font-bold uppercase tracking-widest">No data available yet</div>
+              )}
             </div>
           </div>
 
           {/* 4. Token Usage */}
-          <div className="glass p-8 rounded-[40px] border border-white/5">
+          <div className="glass p-8 rounded-[40px] border border-white/5 min-h-[350px]">
             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8 flex items-center gap-2">
               <Database className="w-3 h-3 text-blue-400" /> API & Token Consumption Logs
             </h3>
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={tokenUsage}>
-                  <XAxis dataKey="date" stroke="#ffffff20" fontSize={10} />
-                  <YAxis stroke="#ffffff20" fontSize={10} />
-                  <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold' }} />
-                  <Bar dataKey="optimize" name="Optimization" stackId="a" fill="#4f46e5" />
-                  <Bar dataKey="label" name="Labels" stackId="a" fill="#00FFD1" />
-                  <Bar dataKey="view3d" name="3D Viewer" stackId="a" fill="#f59e0b" />
-                </BarChart>
-              </ResponsiveContainer>
+              {tokenUsage.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                  <BarChart data={tokenUsage}>
+                    <XAxis dataKey="date" stroke="#ffffff20" fontSize={10} />
+                    <YAxis stroke="#ffffff20" fontSize={10} domain={['auto', 'auto']} />
+                    <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold' }} />
+                    <Bar dataKey="optimize" name="Optimization" stackId="a" fill="#4f46e5" />
+                    <Bar dataKey="label" name="Labels" stackId="a" fill="#00FFD1" />
+                    <Bar dataKey="view3d" name="3D Viewer" stackId="a" fill="#f59e0b" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-600 text-[10px] font-bold uppercase tracking-widest">No activity logged</div>
+              )}
             </div>
           </div>
 
           {/* 5. Cumulative Savings */}
-          <div className="glass p-8 rounded-[40px] border border-white/5 col-span-1 lg:col-span-2 bg-gradient-to-r from-emerald-500/10 to-transparent">
+          <div className="glass p-8 rounded-[40px] border border-white/5 col-span-1 lg:col-span-2 bg-gradient-to-r from-emerald-500/10 to-transparent min-h-[350px]">
              <div className="flex justify-between items-center mb-8">
                 <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
                   <Activity className="w-3 h-3 text-emerald-400" /> Cumulative Revenue Saved (INR)
                 </h3>
-                <span className="text-2xl font-black text-white">₹{cumulativeSavings[cumulativeSavings.length-1]?.total.toLocaleString()}</span>
+                <span className="text-2xl font-black text-white">₹{cumulativeSavings[cumulativeSavings.length-1]?.total.toLocaleString() || '0'}</span>
              </div>
              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                   <AreaChart data={cumulativeSavings}>
-                      <defs>
-                        <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="date" hide />
-                      <YAxis hide />
-                      <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
-                      <Area type="stepAfter" dataKey="total" stroke="#10b981" fill="url(#colorTotal)" strokeWidth={4} />
-                   </AreaChart>
-                </ResponsiveContainer>
+                {cumulativeSavings.length >= 2 ? (
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                    <AreaChart data={cumulativeSavings}>
+                        <defs>
+                          <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="date" hide />
+                        <YAxis hide domain={['auto', 'auto']} />
+                        <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
+                        <Area type="stepAfter" dataKey="total" stroke="#10b981" fill="url(#colorTotal)" strokeWidth={4} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-600 text-[10px] font-bold uppercase tracking-widest">Collecting savings history...</div>
+                )}
              </div>
           </div>
 

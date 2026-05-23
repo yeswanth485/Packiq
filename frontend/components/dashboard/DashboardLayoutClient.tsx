@@ -28,7 +28,7 @@ export default function DashboardLayoutClient({ children, profile }: DashboardLa
         <div className="relative z-10 flex flex-col h-screen">
           <TopBar profile={profile} />
           
-          <div className="dashboard-layout-wrapper dashboard-tab flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-10 relative w-full box-border">
+          <div className="dashboard-layout-wrapper dashboard-tab flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-10 relative w-full box-border fade-in">
             {children}
           </div>
         </div>

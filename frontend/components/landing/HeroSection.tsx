@@ -76,18 +76,29 @@ export function HeroSection() {
       <div className="max-w-7xl mx-auto px-6 relative z-10 w-full text-center">
         <StaggerContainer>
           <StaggerItem>
-            <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-2 rounded-full mb-12 backdrop-blur-2xl">
-              <Sparkles className="w-4 h-4 text-[#00FFD1] animate-pulse" />
+              <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-2 rounded-full mb-12 backdrop-blur-2xl group cursor-pointer hover:border-[#00FFD1]/30 transition-all">
+                <div className="relative">
+                  <Sparkles className="w-4 h-4 text-[#00FFD1] animate-pulse" />
+                  <div className="absolute inset-0 bg-[#00FFD1] blur-md opacity-20 group-hover:opacity-40" />
+                </div>
               <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">
-                AI-Powered by <span className="text-[#00FFD1]">Shipzi</span>
+                  AI-Powered by <span className="text-[#00FFD1]">Shipzi</span> × <span className="text-white">Terybi</span>
               </span>
             </div>
           </StaggerItem>
 
           <StaggerItem>
             <h1 className="text-5xl md:text-[100px] font-bold tracking-tighter mb-8 leading-none">
-               The Future of <br/>
-               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-400 to-indigo-600">
+               <motion.span
+                 initial={{ opacity: 0, y: 20 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ duration: 1, delay: 0.2 }}
+                 className="inline-block"
+               >
+                 The Future of
+               </motion.span>
+               <br/>
+               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-[#00FFD1] to-indigo-600 drop-shadow-[0_0_30px_rgba(0,255,209,0.2)]">
                  Packaging {TERMS[termIndex]}
                </span>
             </h1>
@@ -95,7 +106,7 @@ export function HeroSection() {
 
           <StaggerItem>
             <p className="text-lg md:text-2xl text-gray-400 max-w-3xl mx-auto mb-14 leading-relaxed font-medium">
-               PackIQ leverages XGBoost intelligence to eliminate void space and cut logistics costs by up to 32% per shipment.
+               PackIQ leverages <span className="text-white font-bold">XGBoost-Terybi</span> intelligence to eliminate void space and cut logistics costs by up to 32% per shipment.
             </p>
           </StaggerItem>
 

@@ -44,17 +44,12 @@ const SustainabilityClient = memo(function SustainabilityClient() {
   const stats = useMemo(() => {
     if (!mergedResults || mergedResults.length === 0) {
       return {
-        totalVolumeSavedCm3: 845200,
-        carbonReducedKg: 507.12,
-        treesEquivalent: 23,
-        cardboardSavedM2: 142.5,
-        avgEcoScore: 88,
-        materialData: [
-          { name: 'Recycled Cardboard', value: 55 },
-          { name: 'Kraft Paper', value: 25 },
-          { name: 'Compostable Poly', value: 15 },
-          { name: 'Bio-Peanuts', value: 5 }
-        ]
+        totalVolumeSavedCm3: 0,
+        carbonReducedKg: 0,
+        treesEquivalent: 0,
+        cardboardSavedM2: 0,
+        avgEcoScore: 0,
+        materialData: []
       }
     }
 
@@ -65,17 +60,15 @@ const SustainabilityClient = memo(function SustainabilityClient() {
       return acc + vSaved
     }, 0)
 
-    // Baseline fallback if volume saved is 0 (to make UI always look premium)
-    const activeVolume = totalVolumeSaved > 0 ? totalVolumeSaved : 245000
-    const carbonReduced = activeVolume * 0.0006
-    const trees = Math.max(1, Math.round(carbonReduced / 22))
-    const cardboardM2 = activeVolume * 0.00018 // approx surface area based on volume
+    const carbonReduced = totalVolumeSaved * 0.0006
+    const trees = Math.round(carbonReduced / 22)
+    const cardboardM2 = totalVolumeSaved * 0.00018 // approx surface area based on volume
 
     // Calculate avg eco score
     const completed = mergedResults.filter(o => o.status !== 'error' && o.status !== 'failed')
     const avgScore = completed.length > 0
       ? completed.reduce((acc, o) => acc + (o.sustainability_score || 80), 0) / completed.length
-      : 84
+      : 0
 
     // Calculate material distribution
     const counts: Record<string, number> = {}
@@ -90,15 +83,12 @@ const SustainabilityClient = memo(function SustainabilityClient() {
     }))
 
     return {
-      totalVolumeSavedCm3: Math.round(activeVolume),
+      totalVolumeSavedCm3: Math.round(totalVolumeSaved),
       carbonReducedKg: Number(carbonReduced.toFixed(2)),
       treesEquivalent: trees,
       cardboardSavedM2: Number(cardboardM2.toFixed(1)),
       avgEcoScore: Math.round(avgScore),
-      materialData: materialData.length > 0 ? materialData : [
-        { name: 'Recycled Cardboard', value: 60 },
-        { name: 'Kraft Paper', value: 40 }
-      ]
+      materialData
     }
   }, [mergedResults])
 
@@ -307,63 +297,69 @@ const SustainabilityClient = memo(function SustainabilityClient() {
           </div>
 
           <div className="h-56 relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <defs>
-                  {GRADIENTS.map((g) => (
-                    <linearGradient id={g.id} key={g.id} x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor={g.stop1} />
-                      <stop offset="100%" stopColor={g.stop2} />
-                    </linearGradient>
-                  ))}
-                </defs>
-                <Pie
-                  data={stats.materialData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={65}
-                  outerRadius={85}
-                  paddingAngle={5}
-                  dataKey="value"
-                  cornerRadius={4}
-                >
-                  {stats.materialData.map((entry, index) => {
-                    const g = GRADIENTS[index % GRADIENTS.length]
-                    return <Cell key={`cell-${index}`} fill={`url(#${g.id})`} stroke="rgba(255, 255, 255, 0.05)" strokeWidth={1} />
-                  })}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'rgba(10, 10, 15, 0.8)',
-                    backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '16px',
-                    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)'
-                  }}
-                  itemStyle={{ fontSize: '11px', color: '#FFF' }}
-                  labelStyle={{ display: 'none' }}
-                />
-                <Legend
-                  verticalAlign="bottom"
-                  height={36}
-                  iconType="circle"
-                  iconSize={8}
-                  formatter={(value, entry: any, index) => {
-                    const color = GRADIENTS[index % GRADIENTS.length].stop1;
-                    return (
-                      <span className="text-xs font-medium tracking-wide" style={{ color }}>
-                        {value}
-                      </span>
-                    )
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {stats.materialData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                <PieChart>
+                  <defs>
+                    {GRADIENTS.map((g) => (
+                      <linearGradient id={g.id} key={g.id} x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor={g.stop1} />
+                        <stop offset="100%" stopColor={g.stop2} />
+                      </linearGradient>
+                    ))}
+                  </defs>
+                  <Pie
+                    data={stats.materialData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={65}
+                    outerRadius={85}
+                    paddingAngle={5}
+                    dataKey="value"
+                    cornerRadius={4}
+                  >
+                    {stats.materialData.map((entry, index) => {
+                      const g = GRADIENTS[index % GRADIENTS.length]
+                      return <Cell key={`cell-${index}`} fill={`url(#${g.id})`} stroke="rgba(255, 255, 255, 0.05)" strokeWidth={1} />
+                    })}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(10, 10, 15, 0.8)',
+                      backdropFilter: 'blur(20px)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: '16px',
+                      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)'
+                    }}
+                    itemStyle={{ fontSize: '11px', color: '#FFF' }}
+                    labelStyle={{ display: 'none' }}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    height={36}
+                    iconType="circle"
+                    iconSize={8}
+                    formatter={(value, entry: any, index) => {
+                      const color = GRADIENTS[index % GRADIENTS.length].stop1;
+                      return (
+                        <span className="text-xs font-medium tracking-wide" style={{ color }}>
+                          {value}
+                        </span>
+                      )
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-600 text-[10px] font-bold uppercase tracking-widest">No material data</div>
+            )}
 
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none mt-2">
-              <span className="text-xs text-gray-500 font-medium block uppercase tracking-widest">Circular</span>
-              <span className="text-2xl font-black text-white font-mono">100%</span>
-            </div>
+            {stats.materialData.length > 0 && (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none mt-2">
+                <span className="text-xs text-gray-500 font-medium block uppercase tracking-widest">Circular</span>
+                <span className="text-2xl font-black text-white font-mono">100%</span>
+              </div>
+            )}
           </div>
 
           <div className="bg-emerald-500/5 p-4 border border-emerald-500/10 rounded-2xl flex items-center gap-3">
