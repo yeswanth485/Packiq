@@ -34,6 +34,12 @@ export function useDashboardData() {
   const refreshData = () => setRefreshToggle(prev => !prev)
 
   useEffect(() => {
+    const handleRefresh = () => refreshData()
+    window.addEventListener('optimization-complete', handleRefresh)
+    return () => window.removeEventListener('optimization-complete', handleRefresh)
+  }, [])
+
+  useEffect(() => {
     let mounted = true
 
     const fetchDbStats = async () => {

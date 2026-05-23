@@ -65,6 +65,8 @@ export interface OptimizationAssignment {
   savings: number;
   baseline_cost: number;
   shipping_cost: number;
+  baseline_box_cost: number;
+  optimized_box_cost: number;
   void_pct: number;
   baseline_void_pct: number;
   volume_utilization: number;
@@ -121,6 +123,8 @@ export function scoreCandidate(
   volUtil: number;
   dimWeightReduction: number;
   volumeSaved: number;
+  boxCost: number;
+  baselineBoxCost: number;
 } {
   const prodVol = product.length_cm * product.width_cm * product.height_cm;
   const boxVol = box.length_cm * box.width_cm * box.height_cm;
@@ -138,6 +142,7 @@ export function scoreCandidate(
   const boxCost = Number(box.cost ?? box.cost_usd ?? 10); // Standard box cost in INR if not provided
   const newTotalCost = shippingCost + boxCost;
 
+  let baselineBoxCost = 15; // Default baseline box price in INR
   let baselineCost = product.box_price || (chargeableWeight * 1.5 * shippingRate); // Default estimate if no data
   let baselineVoidPct = 40; // Default estimate
 
@@ -146,19 +151,27 @@ export function scoreCandidate(
      const bDimWeight = bVol / 5000;
      const bChargeableWeight = Math.max(product.weight_kg, bDimWeight);
      baselineCost = (bChargeableWeight * shippingRate) + 15; // ₹15 for generic baseline box
+     baselineBoxCost = 15;
      const prodVol = product.length_cm * product.width_cm * product.height_cm;
      baselineVoidPct = Math.max(0, 100 - (prodVol / bVol * 100));
   }
 
   const dimWeightScore = (1 - (chargeableWeight / 50)) * 20; // Favor lower weight, 20 pts max
 
-  // 3. Cost Score
+  // 3. Cost Score (Heavy weighting on Box Price and overall reduction)
   let shippingCostFinal = newTotalCost;
+
   if (shippingCostFinal > baselineCost) {
     shippingCostFinal = baselineCost; // Guard: optimization should never be more expensive
   }
+
   const savings = Math.max(0, baselineCost - shippingCostFinal);
-  const costScore = (savings > 0) ? (Math.min(savings / baselineCost, 1) * 20) : 0; // 20 pts max
+
+  // Scoring prioritizes box price: lower price = higher score component
+  const boxCostScore = (1 - (boxCost / 50)) * 15; // Max 15 pts for cheap boxes
+  const savingsScore = (savings > 0) ? (Math.min(savings / baselineCost, 1) * 15) : 0; // Max 15 pts for high savings
+
+  const costScore = boxCostScore + savingsScore;
 
   // 4. Fragility Match Score
   let fragilityMatchScore = 15; // neutral
@@ -197,7 +210,9 @@ export function scoreCandidate(
     baselineVoidPct,
     volUtil,
     dimWeightReduction,
-    volumeSaved
+    volumeSaved,
+    boxCost,
+    baselineBoxCost
   };
 }
 
@@ -281,6 +296,8 @@ export async function runMLOptimization(
         savings: saving,
         baseline_cost: bestMatch.baselineCost,
         shipping_cost: bestMatch.shippingCost,
+        baseline_box_cost: bestMatch.baselineBoxCost,
+        optimized_box_cost: bestMatch.boxCost,
         void_pct: bestMatch.voidPct,
         baseline_void_pct: bestMatch.baselineVoidPct,
         volume_utilization: bestMatch.volUtil,
@@ -304,6 +321,8 @@ export async function runMLOptimization(
         savings: 0,
         baseline_cost: 100, // Default INR
         shipping_cost: 0,
+        baseline_box_cost: 15,
+        optimized_box_cost: 0,
         void_pct: 0,
         baseline_void_pct: 0,
         volume_utilization: 0,

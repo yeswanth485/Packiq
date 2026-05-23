@@ -210,6 +210,8 @@ export async function POST(request: NextRequest) {
         volumeUtil: r.volume_utilization,
         voidPct: r.void_pct,
         baselineVoidPct: r.baseline_void_pct,
+        baselineBoxCost: r.baseline_box_cost,
+        optimizedBoxCost: r.optimized_box_cost,
         optimizedBox: r.assigned_box?.name,
         originalBox: r.original_box_dims ? `${r.original_box_dims.l}x${r.original_box_dims.w}x${r.original_box_dims.h}` : 'Standard',
         optimizedDims: r.assigned_box ? { l: r.assigned_box.length_cm, w: r.assigned_box.width_cm, h: r.assigned_box.height_cm } : null,

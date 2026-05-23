@@ -20,7 +20,7 @@ const GRADIENTS = [
 ]
 
 const SustainabilityClient = memo(function SustainabilityClient() {
-  const { results: optResults } = useOptimizationStore()
+  const { results: optResults, lastRun } = useOptimizationStore()
   const { dbStats, rawOptimizations, isLoading } = useDashboardData()
 
   // Eco-Simulator States
@@ -321,7 +321,7 @@ const SustainabilityClient = memo(function SustainabilityClient() {
 
           <div className="h-56 relative">
             {stats.materialData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`circularity-${stats.materialData.length}-${lastRun}`}>
                 <PieChart>
                   <defs>
                     {GRADIENTS.map((g) => (
@@ -405,7 +405,7 @@ const SustainabilityClient = memo(function SustainabilityClient() {
           </h3>
           <div className="h-64">
             {co2BarData.length >= 2 ? (
-              <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`co2-bar-${co2BarData.length}-${lastRun}`}>
                 <BarChart data={co2BarData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
                   <XAxis dataKey="name" stroke="#ffffff20" fontSize={10} />
@@ -427,7 +427,7 @@ const SustainabilityClient = memo(function SustainabilityClient() {
           </h3>
           <div className="h-64">
             {ecoTrendData.length >= 2 ? (
-              <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`eco-trend-${ecoTrendData.length}-${lastRun}`}>
                 <LineChart data={ecoTrendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
                   <XAxis dataKey="date" stroke="#ffffff20" fontSize={10} />
