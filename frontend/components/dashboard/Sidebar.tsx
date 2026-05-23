@@ -74,7 +74,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: any) {
           </div>
           <div className="flex flex-col">
             <span className="font-bold text-white text-xl font-syne tracking-tight whitespace-nowrap leading-none">PackIQ</span>
-            <span className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em] mt-0.5">Sipzi Company</span>
+            <span className="text-[8px] font-black text-[#00FFD1] uppercase tracking-[0.3em] mt-0.5">Terybi</span>
           </div>
         </Link>
         <button 

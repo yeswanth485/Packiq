@@ -105,7 +105,10 @@ export function HeroSection() {
           </StaggerItem>
 
           <StaggerItem>
-            <p className="text-lg md:text-2xl text-gray-400 max-w-3xl mx-auto mb-14 leading-relaxed font-medium">
+            <p className="text-lg md:text-3xl text-[#00FFD1] max-w-3xl mx-auto mb-8 font-black uppercase tracking-widest drop-shadow-2xl">
+               Pack Smarter. Ship Leaner. Waste Nothing.
+            </p>
+            <p className="text-lg md:text-xl text-gray-500 max-w-3xl mx-auto mb-14 leading-relaxed font-medium">
                PackIQ leverages <span className="text-white font-bold">XGBoost-Terybi</span> intelligence to eliminate void space and cut logistics costs by up to 32% per shipment.
             </p>
           </StaggerItem>
@@ -174,8 +177,8 @@ export function HeroSection() {
               <iframe 
                 width="100%" 
                 height="100%" 
-                src="https://www.youtube.com/embed/v9X2V9S-F1E?autoplay=1" 
-                title="Shipzi AI Demo"
+                src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
+                title="Terybi — AI Packaging Demo"
                 frameBorder="0" 
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                 allowFullScreen

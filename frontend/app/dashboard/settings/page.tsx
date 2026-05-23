@@ -19,7 +19,6 @@ const CATEGORIES = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'company', label: 'Company', icon: Building },
   { id: 'catalog', label: 'Box Catalog', icon: Box },
-  { id: 'billing', label: 'Billing & Plan', icon: CreditCard },
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'integrations', label: 'Integrations', icon: LinkIcon },
@@ -422,54 +421,6 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              {/* Billing Panel */}
-              {activeTab === 'billing' && (
-                <div className="space-y-8">
-                   <h3 className="text-xl font-bold text-white mb-6">Billing & Plan</h3>
-                   
-                   <div className="grid md:grid-cols-2 gap-6">
-                      <div className="p-8 bg-gradient-to-br from-indigo-900/40 to-[#0A0A0F] border border-indigo-500/20 rounded-3xl relative overflow-hidden">
-                         <div className="absolute top-0 right-0 p-6 opacity-10">
-                            <CreditCard className="w-32 h-32" />
-                         </div>
-                         <h4 className="text-sm font-bold text-indigo-400 mb-1 uppercase tracking-widest">Current Plan</h4>
-                         <p className="text-4xl font-black text-white mb-6">{formData.plan}</p>
-                         <ul className="space-y-3 mb-8 text-sm text-gray-400">
-                            <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-indigo-400" /> Up to 50,000 optimizations/mo</li>
-                            <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-indigo-400" /> API Access</li>
-                            <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-indigo-400" /> Standard Support</li>
-                         </ul>
-                         <button className="bg-white text-[#0A0A0F] hover:bg-gray-200 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg">
-                            Upgrade to Enterprise
-                         </button>
-                      </div>
-
-                      <div className="space-y-6">
-                         <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl">
-                            <h4 className="text-sm font-bold text-white mb-4">Payment Method</h4>
-                            <div className="flex items-center gap-4 p-4 bg-black/40 rounded-2xl border border-white/5">
-                               <div className="w-12 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold italic text-xs">VISA</div>
-                               <div>
-                                  <p className="text-sm font-bold text-white">•••• •••• •••• 4242</p>
-                                  <p className="text-xs text-gray-500">Expires 12/28</p>
-                               </div>
-                               <button className="ml-auto text-xs text-indigo-400 hover:text-white transition-colors">Edit</button>
-                            </div>
-                         </div>
-                         <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl">
-                            <h4 className="text-sm font-bold text-white mb-4">Optimization Usage</h4>
-                            <div className="flex justify-between text-xs text-gray-400 mb-2">
-                               <span>12,450 / 50,000</span>
-                               <span>25%</span>
-                            </div>
-                            <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
-                               <div className="h-full bg-indigo-500 w-[25%]" />
-                            </div>
-                         </div>
-                      </div>
-                   </div>
-                </div>
-              )}
 
               {/* Security Panel */}
               {activeTab === 'security' && (
