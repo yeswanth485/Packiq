@@ -1,14 +1,19 @@
 'use client'
 
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, useRef } from 'react'
 import {
-  Printer, CheckCircle2, X, RefreshCw, AlertCircle, Eye
+  Printer, CheckCircle2, X, RefreshCw, AlertCircle, Eye,
+  Package, Truck, Info, Leaf, RotateCcw
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
-import Box3DViewer from '@/components/dashboard/Box3DViewer'
+import { useSubscriptionStore } from '@/lib/store/subscriptionStore'
+import BoxViewer3D from '@/components/3d/BoxViewer3D'
+import { QRCodeSVG } from 'qrcode.react'
+import * as THREE from 'three'
 
 const CARRIERS = [
   { id:'amazon',    name:'Amazon Shipping',    logo:'📦', color:'#FF9900', baseRate:40, perKgRate:25, minCharge:50,  days:'1–2 days' },
@@ -21,13 +26,26 @@ const CARRIERS = [
   { id:'shadowfax', name:'Shadowfax',          logo:'⚡', color:'#6C3CE1', baseRate:26, perKgRate:16, minCharge:32,  days:'1–3 days' },
 ]
 
+const LABEL_TYPES = [
+  { id: 'shipping', name: 'Shipping Label', icon: Truck, cost: 8 },
+  { id: 'content', name: 'Box Content', icon: Package, cost: 2 },
+  { id: 'voidfill', name: 'Void Fill', icon: Info, cost: 1.5 },
+  { id: 'eco', name: 'Sustainability', icon: Leaf, cost: 1 },
+  { id: 'return', name: 'Return Label', icon: RotateCcw, cost: 8 },
+]
+
 const LabelsClient = memo(function LabelsClient() {
   const { results: optResults } = useOptimizationStore()
+  const { deductTokens, remaining: tokensRemaining } = useSubscriptionStore()
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCarrier, setSelectedCarrier] = useState(CARRIERS[0])
-  const [printProduct, setPrintProduct] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState('shipping')
+  const [viewProduct, setViewProduct] = useState<any>(null)
+  const [show3DModal, setShow3DModal] = useState(false)
   const [profileName, setProfileName] = useState<string | null>(null)
+  const [labelTexture, setLabelTexture] = useState<THREE.CanvasTexture | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const supabase = createClient()
   const router = useRouter()
@@ -37,7 +55,10 @@ const LabelsClient = memo(function LabelsClient() {
       setLoading(true)
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        if (!session) return
+        if (!session) {
+           setLoading(false)
+           return
+        }
 
         // Fetch orders
         const res = await fetch('/api/orders', {
@@ -47,32 +68,54 @@ const LabelsClient = memo(function LabelsClient() {
 
         // Fetch profile
         const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', session.user.id).single()
-        const profileData = prof as any
-        if (profileData) setProfileName(profileData.full_name)
+        if (prof) setProfileName((prof as any).full_name)
 
-        if (json.orders) {
-          const mapped = json.orders.map((order: any) => {
-            const sku = order.product_snapshot?.sku ?? order.id.slice(0, 8).toUpperCase()
-            // Check optimizationStore for latest dims
-            const optMatch = optResults.find(r => r.sku === sku || r.product_id === sku)
+        const dbOrders = json.orders || []
 
-            return {
-              id: order.id,
-              sku: sku,
-              productName: order.product_snapshot?.product_name ?? 'Unknown Product',
-              weight: Number(order.weight ?? order.product_snapshot?.weight_kg ?? 0),
-              optimizedDims: optMatch?.optimizedDims || order.optimized_dims || { l: 30, w: 22, h: 18 },
-              boxName: optMatch?.optimizedBox || order.optimized_box || 'Standard Box',
-              isOptimized: !!(optMatch || order.optimized_dims),
-              destination: 'India',
-              senderName: profileData?.full_name ?? 'PackIQ Seller',
-              senderAddress: 'Warehouse, India',
-              receiverName: 'Customer',
-              receiverAddress: order.product_snapshot?.destination ?? 'India'
-            }
-          })
-          setProducts(mapped)
-        }
+        // Merge with optResults
+        const sessionProducts = optResults.map(r => ({
+          id: `opt-${r.sku || r.product_id}`,
+          sku: r.sku || r.product_id,
+          productName: r.product_name,
+          weight: r.product_weight || 0,
+          optimizedDims: r.optimizedDims || { l: 30, w: 22, h: 18 },
+          boxName: r.optimizedBox || 'Standard Box',
+          isOptimized: true,
+          fragility: r.fragility || 'LOW',
+          voidPct: r.voidPct || 0,
+          trackingId: `SHZ-${r.sku || r.product_id}-${Date.now().toString().slice(-4)}`,
+          senderName: (prof as any)?.full_name || 'PackIQ Seller',
+          senderAddress: '123 Warehouse St, Bangalore, KA',
+          receiverName: 'John Doe',
+          receiverAddress: '456 Delivery Lane, Mumbai, MH'
+        }))
+
+        const dbProducts = dbOrders.map((o: any) => ({
+          id: o.id,
+          sku: o.product_snapshot?.sku || o.sku || 'N/A',
+          productName: o.product_snapshot?.product_name || o.product_name || 'Unknown',
+          weight: o.weight || o.product_snapshot?.weight_kg || 0,
+          optimizedDims: o.optimized_dims || { l: 30, w: 22, h: 18 },
+          boxName: o.optimized_box || 'Standard',
+          isOptimized: !!o.optimized_box,
+          fragility: o.fragility || o.product_snapshot?.fragility || 'LOW',
+          voidPct: o.void_pct || 0,
+          trackingId: o.tracking_number && o.tracking_number !== 'PENDING' ? o.tracking_number : `SHZ-${o.id.slice(-4)}-${Date.now().toString().slice(-4)}`,
+          senderName: (prof as any)?.full_name || 'PackIQ Seller',
+          senderAddress: '123 Warehouse St, Bangalore, KA',
+          receiverName: 'Jane Smith',
+          receiverAddress: '789 Customer Ave, Delhi, DL'
+        }))
+
+        // Deduplicate by SKU
+        const seen = new Set()
+        const merged = [...sessionProducts, ...dbProducts].filter(p => {
+          if (seen.has(p.sku)) return false
+          seen.add(p.sku)
+          return true
+        })
+
+        setProducts(merged)
       } catch (err) {
         console.error('Labels fetch error:', err)
       } finally {
@@ -80,281 +123,297 @@ const LabelsClient = memo(function LabelsClient() {
       }
     }
     fetchData()
-  }, [])
+  }, [optResults])
 
-  function calcCost(carrier: any, weight: number, dims: any) {
-    const volWeight = (dims.l * dims.w * dims.h) / 5000
-    const chargeable = Math.max(weight, volWeight)
-    return Math.max(carrier.baseRate + carrier.perKgRate * chargeable, carrier.minCharge)
-  }
+  // Generate Label Texture for 3D
+  useEffect(() => {
+    if (show3DModal && viewProduct && canvasRef.current) {
+      const canvas = canvasRef.current
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.fillStyle = 'white'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        ctx.fillStyle = 'black'
+        ctx.font = 'bold 40px sans-serif'
+        ctx.fillText('PackIQ Shipping', 20, 60)
+        ctx.font = '24px sans-serif'
+        ctx.fillText(`SKU: ${viewProduct.sku}`, 20, 110)
+        ctx.fillText(`Tracking: ${viewProduct.trackingId}`, 20, 150)
+        ctx.fillText(`To: ${viewProduct.receiverName}`, 20, 190)
+        ctx.font = 'bold 30px monospace'
+        ctx.fillText('|| ||| | || |||| |', 20, 250)
 
-  const totalEstimated = useMemo(() => {
-    return products.reduce((acc, p) => acc + calcCost(selectedCarrier, p.weight, p.optimizedDims), 0)
-  }, [products, selectedCarrier])
+        const texture = new THREE.CanvasTexture(canvas)
+        setLabelTexture(texture)
+      }
+    }
+  }, [show3DModal, viewProduct])
+
+  const labelCosts = useMemo(() => {
+    const perSku = LABEL_TYPES.reduce((acc, t) => acc + t.cost, 0)
+    const total = products.length * perSku
+    return { perSku, total }
+  }, [products])
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 pb-20 text-white min-h-screen bg-[#0d0d1a]">
       {/* Header */}
-      <div>
-        <h1 className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-orange-600 tracking-tight">
-          Shipping Labels
-        </h1>
-        <p className="mt-2 text-slate-400 text-sm font-medium">
-          Generate professional labels for your optimized shipments.
-        </p>
+      <div className="flex flex-wrap justify-between items-end gap-4">
+        <div>
+          <h1 className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-indigo-600 tracking-tight">
+            Smart Labels
+          </h1>
+          <p className="mt-2 text-slate-400 text-sm font-medium">
+            AI-generated labels with precise dimensions and real-time tracking.
+          </p>
+        </div>
+        <div className="flex gap-4">
+          <div className="glass px-4 py-2 rounded-xl border border-white/10">
+            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Total Label Cost</p>
+            <p className="text-lg font-black text-[#00FFD1]">₹{labelCosts.total.toLocaleString()}</p>
+          </div>
+        </div>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <RefreshCw className="w-8 h-8 animate-spin text-orange-500" />
+          <RefreshCw className="w-8 h-8 animate-spin text-indigo-500" />
         </div>
       ) : products.length === 0 ? (
-        <div className="py-20 text-center flex flex-col items-center gap-4">
+        <div className="py-20 text-center flex flex-col items-center gap-4 glass rounded-3xl border border-white/5">
           <span className="text-6xl">🏷️</span>
-          <h3 className="text-xl font-bold">No products to label</h3>
-          <p className="text-slate-500">Optimize products first → Labels appear here automatically</p>
+          <h3 className="text-xl font-bold">Upload and optimize a file to generate labels.</h3>
           <button
             onClick={() => router.push('/dashboard/optimization')}
-            className="px-6 py-2 bg-orange-600 hover:bg-orange-500 rounded-xl font-bold transition-all"
+            className="mt-4 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20"
           >
-            Go to Optimization →
+            Start Optimization →
           </button>
         </div>
       ) : (
-        <div className="space-y-10">
-          {/* Carrier Grid */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Select Carrier Service</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="space-y-8">
+          {/* Tabs */}
+          <div className="flex gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
+            {LABEL_TYPES.map(type => (
+              <button
+                key={type.id}
+                onClick={() => setActiveTab(type.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                  activeTab === type.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:bg-white/5'
+                }`}
+              >
+                <type.icon className="w-4 h-4" />
+                {type.name} (₹{type.cost})
+              </button>
+            ))}
+          </div>
+
+          {/* Carrier Selection for Shipping Labels */}
+          {activeTab === 'shipping' && (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
               {CARRIERS.map(c => (
                 <button
                   key={c.id}
                   onClick={() => setSelectedCarrier(c)}
-                  className={`relative bg-[#1a1a2e] border rounded-2xl p-4 text-left transition-all overflow-hidden group ${
-                    selectedCarrier.id === c.id ? 'ring-2 ring-violet-500 border-transparent shadow-[0_0_20px_rgba(139,92,246,0.2)]' : 'border-white/5 hover:border-white/10'
+                  className={`relative glass border rounded-xl p-3 text-left transition-all ${
+                    selectedCarrier.id === c.id ? 'ring-2 ring-indigo-500 border-transparent' : 'border-white/5 hover:border-white/10'
                   }`}
                 >
-                  <div className="absolute top-0 left-0 w-full h-1.5" style={{ backgroundColor: c.color }} />
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-2xl">{c.logo}</span>
-                    {selectedCarrier.id === c.id && <CheckCircle2 className="w-4 h-4 text-violet-500" />}
-                  </div>
-                  <h4 className="font-bold text-sm mb-1">{c.name}</h4>
-                  <p className="text-[10px] text-slate-500 mb-2">{c.days}</p>
-                  <div className="pt-2 border-t border-white/5 flex justify-between items-center">
-                    <span className="text-[10px] text-slate-400">Starts at</span>
-                    <span className="font-black text-xs">₹{c.minCharge}</span>
-                  </div>
+                  <div className="absolute top-0 left-0 w-full h-1 rounded-t-xl" style={{ backgroundColor: c.color }} />
+                  <span className="text-xl mb-1 block">{c.logo}</span>
+                  <p className="text-[9px] font-black uppercase truncate">{c.name}</p>
                 </button>
               ))}
             </div>
-          </div>
+          )}
 
-          {/* Product List */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Items to Ship</h3>
-              <div className="px-4 py-2 bg-violet-600/10 border border-violet-500/20 rounded-xl text-[10px] font-black text-violet-400 uppercase tracking-widest">
-                Estimated Total: ₹{totalEstimated.toFixed(2)} for {products.length} shipments via {selectedCarrier.name}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.map(p => {
-                const cost = calcCost(selectedCarrier, p.weight, p.optimizedDims)
-                return (
-                  <div key={p.id} className="bg-[#1a1a2e] border border-white/5 rounded-2xl p-5 flex flex-col gap-4">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <span className="px-2 py-0.5 bg-white/5 rounded text-[9px] font-mono font-bold text-slate-500">{p.sku}</span>
-                        <h4 className="font-bold text-sm line-clamp-1">{p.productName}</h4>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-black text-white">₹{cost.toFixed(2)}</p>
-                        <p className="text-[9px] text-slate-500 font-bold uppercase">Estimated</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 text-[10px] text-slate-400 border-y border-white/5 py-3">
-                      <div>
-                        <p className="font-bold text-slate-600 uppercase mb-1">Weight</p>
-                        <p className="text-white">{p.weight} kg</p>
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-600 uppercase mb-1">Box & Dims</p>
-                        <p className="text-white truncate">{p.boxName}</p>
-                        <p className="text-[9px] text-slate-500">{p.optimizedDims.l}x{p.optimizedDims.w}x{p.optimizedDims.h} cm</p>
-                      </div>
-                    </div>
-
-                    {!p.isOptimized && (
-                      <div className="flex items-center gap-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[9px] text-amber-500 font-bold">
-                        <AlertCircle className="w-3 h-3" />
-                        Run optimization first for optimal dims
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setPrintProduct(p)}
-                        className="flex-1 py-2.5 bg-[#00FFD1] text-[#0A0A0F] hover:bg-[#00FFD1]/90 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
-                      >
-                        <Printer className="w-4 h-4" /> Print
-                      </button>
-                      <button
-                        onClick={() => setPrintProduct({...p, showPreview: true})}
-                        className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-all border border-white/10"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </div>
+          {/* Label Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {products.map(p => (
+              <div key={p.id} className="glass border border-white/5 rounded-3xl p-6 flex flex-col gap-6 group hover:border-indigo-500/30 transition-all">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                    <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded text-[9px] font-mono font-bold">{p.sku}</span>
+                    <h4 className="font-bold text-sm text-gray-200 line-clamp-1">{p.productName}</h4>
                   </div>
-                )
-              })}
-            </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-gray-500 font-black uppercase">Label Cost</p>
+                    <p className="text-sm font-black text-[#00FFD1]">₹{LABEL_TYPES.find(t => t.id === activeTab)?.cost}</p>
+                  </div>
+                </div>
+
+                {/* Tab Specific Info */}
+                <div className="flex-1 space-y-4">
+                  {activeTab === 'shipping' && (
+                    <div className="space-y-3">
+                      <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
+                        <p className="text-[9px] font-black text-gray-500 uppercase mb-1">To: {p.receiverName}</p>
+                        <p className="text-[10px] text-gray-300 truncate">{p.receiverAddress}</p>
+                      </div>
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-gray-500">Tracking: <span className="text-indigo-400 font-mono">{p.trackingId}</span></span>
+                        <span className="text-gray-500">Weight: <span className="text-white">{p.weight}kg</span></span>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'content' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
+                        <p className="text-[9px] font-black text-gray-500 uppercase mb-1">Dimensions</p>
+                        <p className="text-xs font-bold text-white">{p.optimizedDims.l}x{p.optimizedDims.w}x{p.optimizedDims.h} cm</p>
+                      </div>
+                      <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
+                        <p className="text-[9px] font-black text-gray-500 uppercase mb-1">Fragility</p>
+                        <p className={`text-xs font-bold ${p.fragility === 'HIGH' ? 'text-orange-400' : 'text-emerald-400'}`}>{p.fragility}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'voidfill' && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                         <span className="text-[10px] text-gray-500 uppercase font-black">Void Space: {p.voidPct.toFixed(1)}%</span>
+                         <span className="text-[10px] text-indigo-400 font-black uppercase">Recommended Fill</span>
+                      </div>
+                      <div className="p-3 bg-indigo-500/5 rounded-2xl border border-indigo-500/10">
+                        <p className="text-xs text-indigo-200">
+                          {p.fragility === 'HIGH' ? 'Double Bubble Wrap + 3 Air Pillows' : 'Single Kraft Paper Wrap'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'eco' && (
+                    <div className="flex items-center gap-4 p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                      <Leaf className="w-6 h-6 text-emerald-400" />
+                      <div>
+                        <p className="text-[10px] font-black text-emerald-500 uppercase">CO₂ Saved</p>
+                        <p className="text-sm font-black text-white">{(p.voidPct * 0.02).toFixed(2)} kg</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'return' && (
+                    <div className="p-3 bg-red-500/5 rounded-2xl border border-red-500/10 opacity-60">
+                      <p className="text-[9px] font-black text-red-400 uppercase mb-1 underline">Return To Sender</p>
+                      <p className="text-[10px] text-gray-300">{p.senderName}</p>
+                      <p className="text-[9px] text-gray-500">{p.senderAddress}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      const { data: { session } } = await supabase.auth.getSession()
+                      const success = await deductTokens(session?.access_token || '', 1, 'label')
+                      if (success) {
+                        toast.success('Label generated & printed')
+                      } else {
+                        toast.error('Token limit reached. Please upgrade.')
+                      }
+                    }}
+                    disabled={tokensRemaining <= 0}
+                    className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border border-white/5 disabled:opacity-50"
+                  >
+                    <Printer className="w-3 h-3" /> Print
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const { data: { session } } = await supabase.auth.getSession()
+                      const success = await deductTokens(session?.access_token || '', 5, 'view3d')
+                      if (success) {
+                        setViewProduct(p)
+                        setShow3DModal(true)
+                      } else {
+                        toast.error('Token limit reached (5 tokens required). Please upgrade.')
+                      }
+                    }}
+                    disabled={tokensRemaining < 5}
+                    className="flex-1 py-3 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border border-indigo-500/20 disabled:opacity-50"
+                  >
+                    <Eye className="w-3 h-3" /> 3D View
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Print Modal */}
+      {/* 3D Modal with Label Texture */}
       <AnimatePresence>
-        {printProduct && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A0A0F]/90 backdrop-blur-md">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="max-w-4xl w-full grid md:grid-cols-2 gap-8"
-            >
-              {/* Label Preview */}
-              <div className="bg-white rounded p-1 shadow-2xl overflow-hidden text-black font-sans">
-                <div className="border-[3px] border-black h-full flex flex-col">
-                  {/* Carrier Header */}
-                  <div className="p-4 flex justify-between items-center text-white" style={{ backgroundColor: selectedCarrier.color }}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-3xl">{selectedCarrier.logo}</span>
-                      <span className="font-black italic tracking-tighter text-xl uppercase">{selectedCarrier.name}</span>
-                    </div>
-                  </div>
+        {show3DModal && viewProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
+             <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="w-full max-w-4xl glass border border-white/10 rounded-[32px] overflow-hidden shadow-2xl relative"
+             >
+                <button
+                  onClick={() => {
+                    setShow3DModal(false)
+                    setLabelTexture(null)
+                  }}
+                  className="absolute top-6 right-6 z-10 p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
 
-                  <div className="p-6 flex-1 space-y-6">
-                    <div className="grid grid-cols-2 gap-8">
-                      <div className="space-y-4">
-                        <div>
-                          <p className="text-[10px] font-black uppercase text-slate-400">From</p>
-                          <p className="text-xs font-bold">{printProduct.senderName}</p>
-                          <p className="text-[10px] text-slate-600">{printProduct.senderAddress}</p>
-                        </div>
-                        <div className="p-3 border-2 border-black rounded-lg">
-                          <p className="text-[10px] font-black uppercase text-slate-400">To</p>
-                          <p className="text-sm font-black">{printProduct.receiverName}</p>
-                          <p className="text-xs font-bold leading-relaxed">{printProduct.receiverAddress}</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-center justify-center gap-4">
-                         {/* 3D Box Simulation */}
-                         <div className="w-32 h-32 relative bg-slate-50 rounded-xl border border-black/5 overflow-hidden">
-                           <Box3DViewer
-                              l={printProduct.optimizedDims.l}
-                              w={printProduct.optimizedDims.w}
-                              h={printProduct.optimizedDims.h}
-                              productL={10}
-                              productW={10}
-                              productH={10}
-                              spaceUtilization={80}
-                              fragility="low"
-                           />
-                         </div>
-                        <p className="text-[10px] font-black uppercase text-slate-400">Packaging</p>
-                        <p className="text-xs font-bold truncate">{printProduct.boxName}</p>
-                        <p className="text-[10px] font-bold font-mono uppercase tracking-widest text-slate-500">
-                           {printProduct.optimizedDims.l}×{printProduct.optimizedDims.w}×{printProduct.optimizedDims.h} CM
-                         </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-4 border-y-2 border-black py-4 font-mono text-[10px] font-bold">
-                      <div className="border-r border-black/10 pr-2">
-                        <p className="text-slate-400 mb-1">SKU</p>
-                        <p className="truncate">{printProduct.sku}</p>
-                      </div>
-                      <div className="border-r border-black/10 pr-2">
-                        <p className="text-slate-400 mb-1">WT</p>
-                        <p>{printProduct.weight} KG</p>
-                      </div>
-                      <div className="border-r border-black/10 pr-2">
-                        <p className="text-slate-400 mb-1">SHIP DATE</p>
-                        <p>{new Date(Date.now() + 86400000).toLocaleDateString()}</p>
-                      </div>
+                <div className="grid md:grid-cols-2 h-[600px]">
+                   <div className="p-8 flex flex-col justify-center gap-6">
                       <div>
-                        <p className="text-slate-400 mb-1">COST</p>
-                        <p>PREPAID</p>
+                        <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 inline-block">
+                           {activeTab} Label Preview
+                        </span>
+                        <h2 className="text-3xl font-black">{viewProduct.productName}</h2>
+                        <p className="text-gray-400 text-sm mt-2">Visualizing real-time label application on optimized packaging.</p>
                       </div>
-                    </div>
 
-                    <div className="flex flex-col items-center justify-center gap-2 pt-4">
-                      <div className="flex gap-[2px] items-end h-16 w-full px-8">
-                        {Array(60).fill(0).map((_, i) => (
-                          <div key={i} className="bg-black flex-1" style={{ height: `${20 + Math.random() * 80}%`, width: i % 7 === 0 ? '4px' : '1px' }} />
-                        ))}
+                      <div className="p-6 bg-white/5 rounded-3xl border border-white/5 space-y-4">
+                         <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-black text-gray-500 uppercase">Label Content</span>
+                            <QRCodeSVG value={viewProduct.trackingId} size={40} bgColor="transparent" fgColor="#4f46e5" />
+                         </div>
+                         <div className="space-y-2">
+                            <div className="flex justify-between text-xs">
+                               <span className="text-gray-500">Carrier</span>
+                               <span className="font-bold">{selectedCarrier.name}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                               <span className="text-gray-500">Tracking</span>
+                               <span className="font-mono text-indigo-400">{viewProduct.trackingId}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                               <span className="text-gray-500">Dimensions</span>
+                               <span className="font-bold">{viewProduct.optimizedDims.l}x{viewProduct.optimizedDims.w}x{viewProduct.optimizedDims.h} cm</span>
+                            </div>
+                         </div>
                       </div>
-                      <p className="text-xs font-mono font-bold tracking-[0.4em]">{printProduct.id.slice(0, 16).toUpperCase()}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              {/* Modal Controls */}
-              <div className="flex flex-col justify-center gap-6">
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-black">{printProduct.isOptimized ? 'Optimized Shipment' : 'Shipment Confirmed'}</h2>
-                  <p className="text-slate-400 text-sm leading-relaxed">
-                    {printProduct.isOptimized
-                      ? `Labels are generated with AI-verified dimensions for ${selectedCarrier.name}. Ensure you use the ${printProduct.boxName} (${printProduct.optimizedDims.l}×${printProduct.optimizedDims.w}×${printProduct.optimizedDims.h} cm) for the calculated rate.`
-                      : `Warning: This shipment uses default dimensions. Run optimization to reduce costs and waste.`}
-                  </p>
-                </div>
+                      <button
+                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-3"
+                      >
+                        <Printer className="w-5 h-5" /> Print This Label
+                      </button>
+                   </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Final Charge</p>
-                    <p className="text-2xl font-black">₹{calcCost(selectedCarrier, printProduct.weight, printProduct.optimizedDims).toFixed(2)}</p>
-                  </div>
-                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Delivery By</p>
-                    <p className="text-xl font-black">{selectedCarrier.days}</p>
-                  </div>
+                   <div className="bg-black/20 h-full">
+                      <BoxViewer3D
+                        widthCm={viewProduct.optimizedDims.w}
+                        heightCm={viewProduct.optimizedDims.h}
+                        depthCm={viewProduct.optimizedDims.l}
+                        sku={viewProduct.sku}
+                        labelTexture={labelTexture}
+                      />
+                   </div>
                 </div>
 
-                <div className="flex gap-4 pt-6">
-                  <button
-                    onClick={() => {
-                      const printContent = document.querySelector('.bg-white.rounded.p-1')
-                      if (!printContent) return
-                      const win = window.open('', '', 'width=800,height=1000')
-                      if (!win) return
-                      win.document.write('<html><head><title>Print Label</title><script src="https://cdn.tailwindcss.com"></script></head><body class="p-10">')
-                      win.document.write(printContent.innerHTML)
-                      win.document.write('</body></html>')
-                      win.document.close()
-                      setTimeout(() => {
-                        win.print()
-                        win.close()
-                      }, 500)
-                    }}
-                    className="flex-1 py-4 bg-violet-600 hover:bg-violet-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-violet-600/30 transition-all flex items-center justify-center gap-3"
-                  >
-                    <Printer className="w-5 h-5" /> Print Now
-                  </button>
-                  <button
-                    onClick={() => setPrintProduct(null)}
-                    className="p-4 bg-white/5 hover:bg-white/10 text-slate-400 rounded-2xl transition-all"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
+                {/* Hidden Canvas for Texture Generation */}
+                <canvas ref={canvasRef} width={512} height={512} className="hidden" />
+             </motion.div>
           </div>
         )}
       </AnimatePresence>

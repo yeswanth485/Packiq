@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
 import { motion, AnimatePresence } from 'framer-motion'
-import Box3DViewer from '@/components/dashboard/Box3DViewer'
+import BoxViewer3D from '@/components/3d/BoxViewer3D'
 
 const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { initialOrders: any[], products: any[] }) {
   const { results: optResults } = useOptimizationStore()
@@ -97,17 +97,21 @@ const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { i
     const dbIds = new Set(dbList.map(o => o.id))
 
     const sessionOrders = optResults.map((r, index) => ({
-      id: `session-${r.product_id}-${index}`,
+      id: `session-${r.sku || r.product_id}-${index}`,
       created_at: new Date().toISOString(),
       status: 'Ready to Ship',
       carrier: 'Auto-Assigned',
       tracking_number: 'PENDING',
       product_name: r.product_name,
-      baseline_box: r.original_box || 'N/A',
-      optimized_box: r.optimized_box || 'N/A',
+      baseline_box: r.originalBox || 'Standard',
+      optimized_box: r.optimizedBox || 'N/A',
       baseline_cost: r.baseline_cost || 0,
-      total_cost: r.total_cost || 0,
+      total_cost: r.total_cost || r.shipping_cost || 0,
       savings: r.savings || 0,
+      savings_percent: r.savings_percent || (r.baseline_cost ? (r.savings / r.baseline_cost * 100) : 0),
+      void_pct_before: r.baselineVoidPct ?? 40,
+      void_pct_after: r.voidPct ?? 0,
+      match_score: r.score || 0,
       optimized_dims: r.optimizedDims,
       product_dims: { l: r.lengthCm, w: r.widthCm, h: r.heightCm },
       product: {
@@ -204,8 +208,34 @@ const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { i
     }
   }
 
+  const summary = useMemo(() => {
+    const totalSKUs = filteredOrders.length
+    const totalOriginalCost = filteredOrders.reduce((acc, o) => acc + (o.baseline_cost || 0), 0)
+    const totalOptimizedCost = filteredOrders.reduce((acc, o) => acc + (o.total_cost || 0), 0)
+    const totalSavings = totalOriginalCost - totalOptimizedCost
+    const avgReduction = totalOriginalCost > 0 ? (totalSavings / totalOriginalCost) * 100 : 0
+
+    return { totalSKUs, totalOriginalCost, totalOptimizedCost, totalSavings, avgReduction }
+  }, [filteredOrders])
+
   return (
     <div className="space-y-6 fade-in">
+      {/* Summary Row */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {[
+          { label: 'Total SKUs', value: summary.totalSKUs, color: 'text-white' },
+          { label: 'Original Cost', value: `₹${summary.totalOriginalCost.toLocaleString()}`, color: 'text-gray-400' },
+          { label: 'Optimized Cost', value: `₹${summary.totalOptimizedCost.toLocaleString()}`, color: 'text-[#00FFD1]' },
+          { label: 'Total Savings', value: `₹${summary.totalSavings.toLocaleString()}`, color: 'text-emerald-400' },
+          { label: 'Avg. Reduction', value: `${summary.avgReduction.toFixed(2)}%`, color: 'text-indigo-400' },
+        ].map((item, i) => (
+          <div key={i} className="glass p-4 rounded-2xl border border-white/5 flex flex-col justify-center">
+            <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest mb-1">{item.label}</p>
+            <p className={`text-xl font-black ${item.color}`}>{item.value}</p>
+          </div>
+        ))}
+      </div>
+
       <div className="flex flex-wrap gap-4 items-center justify-between">
         <div className="flex items-center gap-4 flex-1">
           <div className="relative flex-1 max-w-xs">
@@ -250,11 +280,15 @@ const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { i
           <table className="w-full text-sm whitespace-nowrap">
             <thead>
               <tr className="text-xs text-gray-500 uppercase tracking-widest border-b border-white/5 bg-white/[0.02]">
-                <th className="px-6 py-4 text-left">Reference</th>
-                <th className="px-6 py-4 text-left">Product</th>
-                <th className="px-6 py-4 text-left">Optimization</th>
-                <th className="px-6 py-4 text-left">Costs</th>
-                <th className="px-6 py-4 text-left">Status</th>
+                <th className="px-6 py-4 text-left">SKU ID / Name</th>
+                <th className="px-6 py-4 text-left">Original Box</th>
+                <th className="px-6 py-4 text-left">Optimized Box</th>
+                <th className="px-6 py-4 text-left">Original Cost</th>
+                <th className="px-6 py-4 text-left">Optimized Cost</th>
+                <th className="px-6 py-4 text-left">Saved</th>
+                <th className="px-6 py-4 text-left">%</th>
+                <th className="px-6 py-4 text-left">Void (B/A)</th>
+                <th className="px-6 py-4 text-left">Score</th>
                 <th className="px-6 py-4 text-right">Action</th>
               </tr>
             </thead>
@@ -265,37 +299,47 @@ const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { i
                     onClick={() => setExpandedId(expandedId === o.id ? null : o.id)}
                     className="border-b border-white/5 hover:bg-white/[0.02] transition-colors cursor-pointer"
                   >
-                    <td className="px-6 py-4 font-mono text-gray-300 text-xs">
-                      #{o.id.startsWith('session') ? 'OPT-' + o.id.slice(-4).toUpperCase() : o.id.slice(0, 8).toUpperCase()}
-                    </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="text-gray-200 font-bold text-sm">{o.product?.name || o.product_name || 'Unknown Product'}</span>
-                        <span className="text-[10px] text-gray-500">{o.product?.sku || o.sku || 'No SKU'}</span>
+                        <span className="text-gray-200 font-bold text-xs truncate max-w-[120px]">{o.product?.name || o.product_name || 'Unknown Product'}</span>
+                        <span className="text-[10px] text-gray-500 font-mono">{o.product?.sku || o.sku || 'No SKU'}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
-                           <span className="text-[10px] text-gray-500 uppercase font-black">Old:</span>
-                           <span className="text-[10px] text-gray-400">{o.baseline_box || 'Standard'}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                           <span className="text-[10px] text-[#00FFD1] uppercase font-black">AI:</span>
-                           <span className="text-[10px] text-white font-bold">{o.optimized_box || 'Optimal'}</span>
-                        </div>
+                      <span className="text-[10px] text-gray-400">{o.baseline_box || 'Standard'}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-[10px] text-white font-bold">{o.optimized_box || 'Optimal'}</span>
+                    </td>
+                    <td className="px-6 py-4 group relative">
+                      <span className="text-xs text-gray-400">₹{(o.baseline_cost || 0).toLocaleString()}</span>
+                      <div className="absolute hidden group-hover:block z-10 bg-gray-900 border border-white/10 p-2 rounded text-[9px] -top-8 left-0">
+                         Formula: (L×W×H/5000) × ₹45/kg
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-gray-400 line-through">${(o.baseline_cost || 0).toFixed(2)}</span>
-                        <span className="text-sm text-[#00FFD1] font-black">${(o.total_cost || 0).toFixed(2)}</span>
+                      <span className="text-xs text-[#00FFD1] font-black">₹{(o.total_cost || 0).toLocaleString()}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-xs text-emerald-400">₹{(o.savings || 0).toLocaleString()}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-xs text-indigo-400">{(o.savings_percent || 0).toFixed(2)}%</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1.5 text-[10px]">
+                         <span className="text-gray-500">{(o.void_pct_before ?? 0).toFixed(0)}%</span>
+                         <span className="text-gray-700">→</span>
+                         <span className="text-[#00FFD1] font-bold">{(o.void_pct_after ?? 0).toFixed(0)}%</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getStatusColor(o.status)}`}>
-                        {o.status}
-                      </span>
+                      <div className={`text-[10px] font-black px-2 py-0.5 rounded ${
+                        (o.match_score || 0) > 80 ? 'bg-emerald-500/10 text-emerald-400' :
+                        (o.match_score || 0) > 50 ? 'bg-amber-500/10 text-amber-400' : 'bg-red-500/10 text-red-400'
+                      }`}>
+                         {(o.match_score || 0).toFixed(0)}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                        <button className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-[#00FFD1] transition-colors">
@@ -314,19 +358,12 @@ const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { i
                         <td colSpan={6} className="px-6 py-8">
                           <div className="grid lg:grid-cols-2 gap-10">
                              <div className="h-64 rounded-3xl overflow-hidden border border-white/10 glass relative">
-                                <Box3DViewer
-                                  l={o.optimized_dims?.l || 30}
-                                  w={o.optimized_dims?.w || 22}
-                                  h={o.optimized_dims?.h || 18}
-                                  productL={o.product_dims?.l || 10}
-                                  productW={o.product_dims?.w || 10}
-                                  productH={o.product_dims?.h || 10}
-                                  spaceUtilization={85}
-                                  fragility={(o.product_snapshot?.fragility || 'LOW').toLowerCase() as any}
+                                <BoxViewer3D
+                                  depthCm={o.optimized_dims?.l || 30}
+                                  widthCm={o.optimized_dims?.w || 22}
+                                  heightCm={o.optimized_dims?.h || 18}
+                                  sku={o.product?.sku || o.sku}
                                 />
-                                <div className="absolute top-4 left-4 px-3 py-1 bg-black/50 backdrop-blur-md rounded-lg border border-white/10">
-                                   <span className="text-[10px] font-black text-[#00FFD1] uppercase tracking-widest">3D Box Simulation</span>
-                                </div>
                              </div>
                              <div className="space-y-6">
                                 <div>
@@ -336,11 +373,11 @@ const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { i
                                    <div className="grid grid-cols-2 gap-4">
                                       <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
                                          <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Projected Savings</p>
-                                         <p className="text-xl font-black text-emerald-400">${(o.savings || 0).toFixed(2)}</p>
+                                         <p className="text-xl font-black text-emerald-400">₹{(o.savings || 0).toLocaleString()}</p>
                                       </div>
                                       <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
                                          <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Cost Reduction</p>
-                                         <p className="text-xl font-black text-white">{Math.round(((o.savings || 0) / (o.baseline_cost || 1)) * 100)}%</p>
+                                         <p className="text-xl font-black text-white">{(o.savings_percent || 0).toFixed(2)}%</p>
                                       </div>
                                    </div>
                                 </div>

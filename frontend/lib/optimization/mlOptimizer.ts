@@ -61,10 +61,12 @@ export interface OptimizationAssignment {
     weight_limit_kg: number;
     cost: number;
   } | null;
+  original_box_dims?: { l: number; w: number; h: number };
   savings: number;
   baseline_cost: number;
   shipping_cost: number;
   void_pct: number;
+  baseline_void_pct: number;
   volume_utilization: number;
   fragility: string;
   recommendation_reason: string;
@@ -115,6 +117,7 @@ export function scoreCandidate(
   shippingCost: number;
   baselineCost: number;
   voidPct: number;
+  baselineVoidPct: number;
   volUtil: number;
   dimWeightReduction: number;
   volumeSaved: number;
@@ -130,16 +133,21 @@ export function scoreCandidate(
   // 2. DIM Weight & Shipping Cost
   const boxDimWeight = boxVol / 5000;
   const chargeableWeight = Math.max(product.weight_kg, boxDimWeight);
-  const shippingCost = chargeableWeight * 0.54; // $0.54 per kg base
-  const boxCost = Number(box.cost ?? box.cost_usd ?? 0.50);
+  const shippingRate = 45; // ₹45 per kg
+  const shippingCost = chargeableWeight * shippingRate;
+  const boxCost = Number(box.cost ?? box.cost_usd ?? 10); // Standard box cost in INR if not provided
   const newTotalCost = shippingCost + boxCost;
 
-  let baselineCost = product.box_price || 15.0; // Default or provided
+  let baselineCost = product.box_price || (chargeableWeight * 1.5 * shippingRate); // Default estimate if no data
+  let baselineVoidPct = 40; // Default estimate
+
   if (product.current_box_length && product.current_box_width && product.current_box_height) {
      const bVol = product.current_box_length * product.current_box_width * product.current_box_height;
      const bDimWeight = bVol / 5000;
      const bChargeableWeight = Math.max(product.weight_kg, bDimWeight);
-     baselineCost = (bChargeableWeight * 0.54) + 0.65; // $0.65 for generic baseline box
+     baselineCost = (bChargeableWeight * shippingRate) + 15; // ₹15 for generic baseline box
+     const prodVol = product.length_cm * product.width_cm * product.height_cm;
+     baselineVoidPct = Math.max(0, 100 - (prodVol / bVol * 100));
   }
 
   const dimWeightScore = (1 - (chargeableWeight / 50)) * 20; // Favor lower weight, 20 pts max
@@ -171,7 +179,7 @@ export function scoreCandidate(
   const dimWeightReduction = Math.max(0, (product.current_box_length && product.current_box_width && product.current_box_height ? (product.current_box_length * product.current_box_width * product.current_box_height / 5000) : boxDimWeight * 1.2) - boxDimWeight);
 
   return {
-    finalScore,
+    finalScore: Math.min(100, Math.max(0, finalScore)),
     breakdown: {
       void_space_score: Math.round(voidSpaceScore),
       cost_score: Math.round(costScore),
@@ -179,9 +187,10 @@ export function scoreCandidate(
       sustainability_score: Math.round(sustainabilityScore),
       dim_weight_score: Math.round(dimWeightScore)
     },
-    shippingCost,
+    shippingCost: newTotalCost,
     baselineCost,
     voidPct,
+    baselineVoidPct,
     volUtil,
     dimWeightReduction,
     volumeSaved
@@ -227,7 +236,7 @@ export async function runMLOptimization(
     }
 
     if (bestMatch) {
-      const saving = Math.max(0, bestMatch.baselineCost - (bestMatch.shippingCost + (bestMatch.box.cost || 0.5)));
+      const saving = Math.max(0, bestMatch.baselineCost - bestMatch.shippingCost);
       totalSavings += saving;
 
       assignments.push({
@@ -245,10 +254,16 @@ export async function runMLOptimization(
           weight_limit_kg: bestMatch.box.weight_limit_kg || 30,
           cost: bestMatch.box.cost || 0.5
         },
+        original_box_dims: p.current_box_length ? {
+          l: p.current_box_length,
+          w: p.current_box_width || 0,
+          h: p.current_box_height || 0
+        } : undefined,
         savings: saving,
         baseline_cost: bestMatch.baselineCost,
-        shipping_cost: bestMatch.shippingCost + (bestMatch.box.cost || 0.5),
+        shipping_cost: bestMatch.shippingCost,
         void_pct: bestMatch.voidPct,
+        baseline_void_pct: bestMatch.baselineVoidPct,
         volume_utilization: bestMatch.volUtil,
         fragility: fragility,
         recommendation_reason: `Selected ${bestMatch.box.name} with ${bestMatch.volUtil.toFixed(1)}% utilization and optimized XGBoost score of ${bestMatch.finalScore.toFixed(1)}.`,
@@ -268,9 +283,10 @@ export async function runMLOptimization(
         optimized: false,
         assigned_box: null,
         savings: 0,
-        baseline_cost: 15.0,
+        baseline_cost: 100, // Default INR
         shipping_cost: 0,
         void_pct: 0,
+        baseline_void_pct: 0,
         volume_utilization: 0,
         fragility: fragility,
         recommendation_reason: '',

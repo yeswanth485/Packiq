@@ -23,7 +23,9 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useSubscriptionStore } from '@/lib/store/subscriptionStore'
 
 const navItems = [
   { href: '/dashboard',             label: 'Dashboard',         icon: LayoutDashboard },
@@ -41,6 +43,17 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: any) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const { plan, used, limit, percentage, fetchBalance } = useSubscriptionStore()
+
+  useEffect(() => {
+    async function init() {
+       const { data: { session } } = await supabase.auth.getSession()
+       if (session) {
+         await fetchBalance(session.access_token)
+       }
+    }
+    init()
+  }, [])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -59,7 +72,10 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: any) {
           <div className="w-8 h-8 rounded-lg bg-[#00FFD1] flex items-center justify-center shrink-0">
             <Box className="w-5 h-5 text-[#0A0A0F]" />
           </div>
-          <span className="font-bold text-white text-xl font-syne tracking-tight whitespace-nowrap">PackIQ</span>
+          <div className="flex flex-col">
+            <span className="font-bold text-white text-xl font-syne tracking-tight whitespace-nowrap leading-none">PackIQ</span>
+            <span className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em] mt-0.5">Sipzi Company</span>
+          </div>
         </Link>
         <button 
           onClick={() => setIsCollapsed(!isCollapsed)}
@@ -111,6 +127,28 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: any) {
       <div className="p-4 border-t border-white/5 flex flex-col gap-4">
         {!isCollapsed && (
           <div className="flex flex-col gap-3">
+            {/* Token Usage Bar */}
+            <div className="bg-white/[0.02] p-4 rounded-2xl border border-white/5 space-y-3">
+               <div className="flex justify-between items-center">
+                  <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{plan} plan</span>
+                  <span className="text-[9px] font-bold text-gray-300">{used.toLocaleString()} / {limit.toLocaleString()}</span>
+               </div>
+               <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${percentage}%` }}
+                    className={`h-full rounded-full ${
+                      percentage > 85 ? 'bg-red-500' :
+                      percentage > 60 ? 'bg-yellow-500' : 'bg-green-500'
+                    }`}
+                  />
+               </div>
+               <div className="flex justify-between items-center">
+                  <span className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">{percentage}% used</span>
+                  <Link href="/dashboard/subscription" className="text-[8px] font-black text-indigo-400 uppercase tracking-widest hover:text-indigo-300">Upgrade</Link>
+               </div>
+            </div>
+
             {/* AI Status */}
             <div className="bg-white/[0.02] p-3 rounded-2xl border border-white/5 flex items-center justify-between group/status cursor-default">
               <div className="flex items-center gap-2">

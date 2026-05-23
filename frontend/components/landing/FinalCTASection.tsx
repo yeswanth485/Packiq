@@ -61,7 +61,10 @@ export function Footer() {
             <div className="w-8 h-8 rounded-lg bg-[#00FFD1] flex items-center justify-center group-hover:rotate-12 transition-transform shadow-[0_0_15px_rgba(0,255,209,0.3)]">
               <Boxes className="w-4 h-4 text-[#0A0A0F]" />
             </div>
-            <span className="shipzi-logo text-3xl tracking-tight">Shipzi</span>
+            <div className="flex flex-col">
+              <span className="shipzi-logo text-3xl tracking-tight">Shipzi</span>
+              <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">PackIQ — Shipzi Co.</span>
+            </div>
           </Link>
           <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
             The intelligent FFD engine that optimizes packaging dimensions to reduce DIM weight and shipping costs globally.

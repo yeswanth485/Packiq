@@ -4,10 +4,12 @@ import { useState, useMemo, useEffect, memo } from 'react'
 import { Package, Zap, TrendingUp, CheckCircle2, Brain, Sparkles, Activity, DollarSign, Leaf, Weight, Building, Box as BoxIcon } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line, RadialBarChart, RadialBar, PieChart, Pie, Tooltip, Legend } from 'recharts'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
 import { StaggerContainer, StaggerItem, CountUpNumber } from '@/components/animations'
 import { useDashboardData } from '@/lib/hooks/useDashboardData'
+
+const COLORS = ['#00FFD1', '#4f46e5', '#3b82f6', '#ec4899', '#f59e0b', '#8b5cf6', '#10b981', '#f43f5e']
 
 const DashboardClient = memo(function DashboardClient() {
   const {
@@ -27,9 +29,9 @@ const DashboardClient = memo(function DashboardClient() {
 
   const mergedResults = useMemo(() => {
     const list = [...optResults] as any[]
-    const ids = new Set(list.map(r => r.product_id || (r as any).id))
+    const ids = new Set(list.map(r => r.sku || r.product_id || (r as any).id))
     rawOptimizations.forEach(o => {
-      const oid = (o as any).product_id || (o as any).id
+      const oid = (o as any).sku || (o as any).product_id || (o as any).id
       if (!ids.has(oid)) {
         list.push(o)
       }
@@ -37,7 +39,6 @@ const DashboardClient = memo(function DashboardClient() {
     return list
   }, [optResults, rawOptimizations])
 
-  // Listen for storage events or custom optimization events to refresh data
   useEffect(() => {
     const handleRefresh = () => {
       refreshData?.();
@@ -48,388 +49,210 @@ const DashboardClient = memo(function DashboardClient() {
 
   const stats = useMemo(() => {
     const total = mergedResults.length
-    const successful = mergedResults.filter(i => i.status === 'success' || i.status === 'completed').length
-    const totalSavedCalc = mergedResults.reduce((acc, i) => acc + (i.savings || i.cost_savings_usd || 0), 0)
-    const avgEfficiency = total > 0
-      ? mergedResults.reduce((acc, i) => acc + (i.void_reduction || i.space_utilization || 0), 0) / total
-      : 0
-    return { total, successful, totalSaved: totalSavedCalc, avgEfficiency }
+    const totalOriginalCost = mergedResults.reduce((acc, o) => acc + (o.baseline_cost || 0), 0)
+    const totalOptimizedCost = mergedResults.reduce((acc, o) => acc + (o.total_cost || o.shipping_cost || 0), 0)
+    const totalSavings = totalOriginalCost - totalOptimizedCost
+    const avgReduction = totalOriginalCost > 0 ? (totalSavings / totalOriginalCost) * 100 : 0
+    return { total, totalOriginalCost, totalOptimizedCost, totalSavings, avgReduction }
   }, [mergedResults])
 
-  const totalCarbonSaved = useMemo(() => {
-    return mergedResults.reduce((acc, i) => acc + (i.co2_savings_kg || (i.savings * 0.4) || 0), 0)
+  // 1. SKUs Optimized Over Time (AreaChart)
+  const skuTrendData = useMemo(() => {
+    const byDay: Record<string, number> = {}
+    mergedResults.forEach(r => {
+      const day = (r.created_at || new Date().toISOString()).slice(0, 10)
+      byDay[day] = (byDay[day] || 0) + 1
+    })
+    return Object.entries(byDay).sort().map(([date, count]) => ({ date, count }))
   }, [mergedResults])
 
-  const totalDimWeightSaved = useMemo(() => {
-    return mergedResults.reduce((acc, i) => acc + (i.dim_weight_reduction || (i.savings * 0.2) || 0), 0)
-  }, [mergedResults])
-  
-  const totalSustainability = useMemo(() => {
-    if (mergedResults.length === 0) return 0
-    const count = mergedResults.filter(i => i.status === 'success' || i.status === 'completed').length
-    if (count === 0) return 0
-    return Math.round(mergedResults.reduce((acc, i) => acc + (i.sustainability_score || 90), 0) / count)
+  // 2. Cost Savings Trend (LineChart - Dual Line)
+  const costTrendData = useMemo(() => {
+    const byDay: Record<string, { original: number, optimized: number }> = {}
+    mergedResults.forEach(r => {
+      const day = (r.created_at || new Date().toISOString()).slice(0, 10)
+      if (!byDay[day]) byDay[day] = { original: 0, optimized: 0 }
+      byDay[day].original += (r.baseline_cost || 0)
+      byDay[day].optimized += (r.total_cost || r.shipping_cost || 0)
+    })
+    return Object.entries(byDay).sort().map(([date, vals]) => ({ date, ...vals }))
   }, [mergedResults])
 
-  // Merge DB stats with session stats (session wins if available)
-  const displaySavings = stats.totalSaved > 0 ? stats.totalSaved : (dbStats?.totalSavingsDb ?? 0)
-  const displayRuns    = stats.total > 0 ? stats.total : (dbStats?.totalRuns ?? 0)
+  // 3. Box Utilization Distribution (Horizontal BarChart)
+  const boxDistData = useMemo(() => {
+    const counts: Record<string, number> = {}
+    mergedResults.forEach(r => {
+      const box = r.optimized_box || r.optimizedBox || 'Other'
+      counts[box] = (counts[box] || 0) + 1
+    })
+    return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a,b) => b.count - a.count)
+  }, [mergedResults])
+
+  // 4. Void Space Reduction (RadialBarChart)
+  const voidReductionData = useMemo(() => {
+    const before = mergedResults.length > 0 ? mergedResults.reduce((acc, r) => acc + (r.baseline_void_pct || r.baselineVoidPct || 40), 0) / mergedResults.length : 0
+    const after = mergedResults.length > 0 ? mergedResults.reduce((acc, r) => acc + (r.void_pct || r.voidPct || 0), 0) / mergedResults.length : 0
+    return [
+      { name: 'Before', value: Math.round(before), fill: '#94a3b8' },
+      { name: 'After', value: Math.round(after), fill: '#00FFD1' }
+    ]
+  }, [mergedResults])
+
+  // 5. Top 5 SKUs by Savings (Ranked BarChart)
+  const topSavingsData = useMemo(() => {
+    return mergedResults
+      .map(r => ({ name: (r.product_name || 'Item').substring(0, 12), savings: r.savings || 0 }))
+      .sort((a, b) => b.savings - a.savings)
+      .slice(0, 5)
+  }, [mergedResults])
+
+  // 6. Carrier Rate Breakdown (PieChart)
+  const carrierDistData = useMemo(() => {
+    const counts: Record<string, number> = {}
+    mergedResults.forEach(r => {
+       const weight = r.weight || r.product_weight || 0
+       const tier = weight < 1 ? 'Tier 1 (<1kg)' : weight < 5 ? 'Tier 2 (1-5kg)' : 'Tier 3 (>5kg)'
+       counts[tier] = (counts[tier] || 0) + 1
+    })
+    return Object.entries(counts).map(([name, value]) => ({ name, value }))
+  }, [mergedResults])
 
   const kpis = [
-    { label: 'Units Optimized',   value: displayRuns,                suffix: '',  icon: Package,    color: '#00FFD1' },
-    { label: 'Total Saved ($)',   value: displaySavings,             suffix: '',  icon: DollarSign, color: '#22c55e', decimals: 2 },
-    { label: 'Avg Cost Reduction', value: avgCostReductionPct || 0, suffix: '%', icon: TrendingUp,  color: '#4361EE', decimals: 1 },
-    { label: 'Sustainability',    value: totalSustainability || avgSustainabilityScore, suffix: '',  icon: Leaf,       color: '#10b981' },
-    { label: 'DIM Weight Saved',  value: totalDimWeightSaved || dimWeightSaved,             suffix: 'kg',icon: Weight,     color: '#F59E0B', decimals: 2 },
-    { label: 'Carbon Saved',      value: totalCarbonSaved || carbonSavedKg,             suffix: 'kg CO₂', icon: Zap,  color: '#8b5cf6', decimals: 3 },
+    { label: 'SKUs Optimized', value: stats.total, icon: Package, color: '#4f46e5' },
+    { label: 'Total Saved', value: `₹${stats.totalSavings.toLocaleString()}`, icon: TrendingUp, color: '#22c55e' },
+    { label: 'Avg reduction', value: `${stats.avgReduction.toFixed(1)}%`, icon: Zap, color: '#f59e0b' },
+    { label: 'Carbon Saved', value: `${(stats.totalSavings * 0.05).toFixed(1)}kg`, icon: Leaf, color: '#10b981' },
   ]
 
-  const chartData = useMemo(() => {
-    if (mergedResults.length === 0) return []
-    return mergedResults.slice(-50).map(r => ({
-      name: (r.product_name || 'Item').substring(0, 8),
-      savings: Number((r.savings || r.cost_savings_usd || 0).toFixed(2)),
-    }))
-  }, [mergedResults])
-
-  const wasteChartData = useMemo(() => {
-    if (mergedResults.length === 0) return []
-    return mergedResults.slice(-50).map(r => {
-      const vRed = r.void_reduction || (100 - (r.space_utilization || 80)) || 0
-      return {
-        name: (r.product_name || 'Item').substring(0, 8),
-        voidReduction: vRed,
-        fill: vRed > 30 ? '#22c55e' : vRed > 15 ? '#F59E0B' : '#FF4444',
-      }
-    })
-  }, [mergedResults])
-
-  const runAIAnalysis = async () => {
-    setIsAnalyzing(true)
-    try {
-      const res = await fetch('/api/ai/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          line_id: 'optimization-history',
-          data_sample: mergedResults.slice(0, 10),
-        }),
-      })
-      const data = await res.json()
-      setLastAnalysis(data)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
-
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-10">
+    <div className="max-w-7xl mx-auto space-y-8 pb-10 px-4">
 
-      {/* KPI Grid — 6 cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => (
-          <div key={i} className="glass p-5 rounded-2xl border-l-4" style={{ borderLeftColor: kpi.color }}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-3" style={{ backgroundColor: `${kpi.color}15` }}>
-              <kpi.icon className="w-4 h-4" style={{ color: kpi.color }} />
+          <div key={i} className="glass p-6 rounded-3xl border border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent">
+            <div className="flex items-center gap-3 mb-3">
+               <div className="p-2 rounded-xl" style={{ backgroundColor: `${kpi.color}15` }}>
+                  <kpi.icon className="w-4 h-4" style={{ color: kpi.color }} />
+               </div>
+               <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{kpi.label}</span>
             </div>
-            <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{kpi.label}</p>
-            <h3 className="text-xl font-bold text-white font-mono">
-              <CountUpNumber value={kpi.value} suffix={kpi.suffix} decimals={kpi.decimals ?? (kpi.value % 1 !== 0 ? 1 : 0)} />
-            </h3>
+            <p className="text-2xl font-black text-white">{kpi.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-12 gap-6">
-
-        {/* Main Feed & Charts */}
-        <div className="lg:col-span-8 space-y-6">
-
-          {/* Savings Trend */}
-          <div className="glass p-6 rounded-3xl h-[320px]">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-                <Activity className="w-4 h-4 text-[#00FFD1]" /> AI Cost Savings Trend
-              </h3>
-            </div>
-            <div className="h-full w-full pb-10">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ left: -20, right: 10 }}>
-                  <defs>
-                    <linearGradient id="colorSavings" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#00FFD1" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="#00FFD1" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="rgba(255,255,255,0.03)" />
-                  <XAxis dataKey="name" hide />
-                  <YAxis stroke="rgba(255,255,255,0.15)" fontSize={10} axisLine={false} tickLine={false} />
-                  <Area 
-                    type="monotone" 
-                    dataKey="savings" 
-                    stroke="#00FFD1" 
-                    fillOpacity={1} 
-                    fill="url(#colorSavings)" 
-                    strokeWidth={4}
-                    isAnimationActive={true}
-                    animationDuration={2000}
-                    dot={{ r: 4, fill: '#0A0A0F', strokeWidth: 2, stroke: '#00FFD1' }}
-                    activeDot={{ r: 6, strokeWidth: 0, fill: '#00FFD1' }}
-                  />
-                  <RechartsTooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'rgba(10, 10, 15, 0.8)', 
-                      backdropFilter: 'blur(20px)',
-                      borderColor: 'rgba(255,255,255,0.08)', 
-                      borderRadius: '16px',
-                      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)'
-                    }} 
-                    itemStyle={{ fontSize: '11px', color: '#FFF' }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Waste Reduction Chart */}
-          {wasteChartData.length > 0 && (
-            <div className="glass p-6 rounded-3xl h-[220px]">
-              <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2 mb-4">
-                <Leaf className="w-4 h-4 text-green-400" /> Void Reduction per Product
-              </h3>
-              <ResponsiveContainer width="100%" height={150}>
-                <BarChart data={wasteChartData} barCategoryGap="35%">
-                  <defs>
-                    <linearGradient id="greenBarGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10B981" />
-                      <stop offset="100%" stopColor="#059669" />
-                    </linearGradient>
-                    <linearGradient id="amberBarGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#F59E0B" />
-                      <stop offset="100%" stopColor="#D97706" />
-                    </linearGradient>
-                    <linearGradient id="redBarGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#EF4444" />
-                      <stop offset="100%" stopColor="#DC2626" />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" fontSize={9} stroke="rgba(255,255,255,0.15)" axisLine={false} tickLine={false} />
-                  <YAxis fontSize={9} stroke="rgba(255,255,255,0.15)" unit="%" axisLine={false} tickLine={false} />
-                  <RechartsTooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'rgba(10, 10, 15, 0.8)', 
-                      backdropFilter: 'blur(20px)',
-                      borderColor: 'rgba(255,255,255,0.08)', 
-                      borderRadius: '16px',
-                      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)'
-                    }} 
-                    itemStyle={{ fontSize: '11px', color: '#FFF' }}
-                  />
-                  <Bar dataKey="voidReduction" radius={[10, 10, 0, 0]} background={{ fill: 'rgba(255, 255, 255, 0.02)', radius: 10 }} animationDuration={2000}>
-                    {wasteChartData.map((entry, index) => {
-                      const fill = entry.fill === '#22c55e' ? 'url(#greenBarGrad)' : entry.fill === '#F59E0B' ? 'url(#amberBarGrad)' : 'url(#redBarGrad)'
-                      return <Cell key={index} fill={fill} />
-                    })}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-
-          {/* Recent Optimizations Table */}
-          <div className="glass rounded-[40px] overflow-hidden border border-white/5">
-            <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
-              <div>
-                <h3 className="text-sm font-black text-white uppercase tracking-widest">Recent Optimizations</h3>
-                <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">Live Feed from XGBoost Engine</p>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[9px] font-black text-green-400 uppercase tracking-widest">Live</span>
-              </div>
-            </div>
-            <div className="max-h-[400px] overflow-y-auto no-scrollbar">
-              <table className="w-full text-left text-sm border-separate border-spacing-0">
-                <thead className="sticky top-0 bg-[#0A0A0F] z-10">
-                  <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5 bg-[#0A0A0F]/80 backdrop-blur-md">
-                    <th className="px-8 py-4">Product</th>
-                    <th className="px-6 py-4">Old Box</th>
-                    <th className="px-6 py-4">AI Box</th>
-                    <th className="px-6 py-4 text-right pr-8">Savings</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  <AnimatePresence initial={false}>
-                    {mergedResults.slice(-50).reverse().map((item, idx) => (
-                      <motion.tr
-                        key={`${item.product_id || item.id}-${idx}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="hover:bg-white/[0.02] transition-all group cursor-default"
-                      >
-                        <td className="px-8 py-5">
-                          <div className="flex flex-col">
-                            <span className="font-bold text-gray-200 group-hover:text-white transition-colors">{item.product_name || 'Unknown'}</span>
-                            <span className="text-[10px] text-gray-600 font-mono">SKU-{idx+100}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <span className="text-xs text-gray-500 line-through decoration-red-500/50">{item.original_box || item.baseline_box || 'Standard'}</span>
-                        </td>
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-2">
-                            <BoxIcon className="w-3 h-3 text-[#00FFD1]" />
-                            <span className="font-mono text-[#00FFD1] text-xs font-bold uppercase tracking-tighter">{item.optimized_box || 'No Change'}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5 text-right pr-8">
-                          <div className="inline-block px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                            <span className="text-emerald-400 font-black text-xs">+${(item.savings || item.cost_savings_usd || 0).toFixed(2)}</span>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </AnimatePresence>
-                </tbody>
-              </table>
-              {mergedResults.length === 0 && (
-                <div className="p-20 text-center text-gray-600 italic">No optimizations yet. Upload a CSV or run manual optimization.</div>
-              )}
-            </div>
-          </div>
+      {mergedResults.length === 0 ? (
+        <div className="py-20 text-center glass rounded-[40px] border border-white/5">
+           <Activity className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+           <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No data yet — upload a file to see insights</p>
         </div>
+      ) : (
+        <div className="grid lg:grid-cols-12 gap-8">
 
-        {/* AI Sidebar */}
-        <div className="lg:col-span-4 space-y-6">
-
-          {/* Operations Profile (Onboarding Data Sync) */}
-          {profileData && (
-            <div className="glass p-8 rounded-3xl border border-white/5 relative overflow-hidden bg-gradient-to-br from-indigo-500/5 to-transparent">
-              <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
-                <Building className="w-4 h-4 text-indigo-400" /> Operations Profile
-              </h3>
-              <div className="space-y-4 text-xs">
-                <div className="flex justify-between items-center py-2 border-b border-white/5">
-                  <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Company</span>
-                  <span className="text-white font-bold">{profileData.company || 'Not Specified'}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/5">
-                  <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Industry</span>
-                  <span className="text-white font-medium">{profileData.industry || 'Not Specified'} {profileData.companySize && `(${profileData.companySize})`}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/5">
-                  <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Logistics Goal</span>
-                  <span className="text-[#00FFD1] font-bold uppercase tracking-widest text-[10px]">
-                    {profileData.optimizationGoal === 'void' ? 'Minimize Void' : profileData.optimizationGoal === 'cost' ? 'Reduce Carrier Cost' : profileData.optimizationGoal === 'speed' ? 'Speed of Pack' : 'Not set'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/5">
-                  <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Monthly Volume</span>
-                  <span className="text-white font-semibold">{profileData.monthlyVolume.toLocaleString()} / mo</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/5">
-                  <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Fulfillment</span>
-                  <span className="text-white">{profileData.fulfillmentType} ({profileData.warehousesCount} WH)</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/5">
-                  <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Primary Carriers</span>
-                  <span className="text-white truncate max-w-[150px]">{profileData.primaryCarriers.join(', ') || 'None'}</span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Eco-Mode</span>
-                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${profileData.sustainabilityMode ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-white/5 text-gray-500'}`}>
-                    {profileData.sustainabilityMode ? 'Enabled 🌿' : 'Disabled'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Claude AI Insights */}
-          <div className="bg-gradient-to-br from-[#185FA5]/20 to-[#00FFD1]/20 border border-[#00FFD1]/20 rounded-3xl p-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Brain className="w-20 h-20 text-[#00FFD1]" />
-            </div>
-            <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-[#00FFD1]" /> AI Insights
-            </h3>
-            <p className="text-xs text-gray-400 mb-8 leading-relaxed">Deep analysis on your last batch to identify hidden cost patterns.</p>
-
-            <button
-              onClick={runAIAnalysis}
-              disabled={isAnalyzing || optResults.length === 0}
-              className="w-full py-4 bg-[#00FFD1] text-[#0A0A0F] rounded-xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] transition-all disabled:opacity-50"
-            >
-              {isAnalyzing ? 'Processing Data...' : 'Generate Analysis'}
-            </button>
-
-            <AnimatePresence>
-              {lastAnalysis && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-8 space-y-6">
-                  <div className="p-4 bg-[#0A0A0F]/50 rounded-2xl border border-white/5">
-                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Summary</div>
-                    <p className="text-xs text-gray-300 leading-relaxed">{lastAnalysis.summary}</p>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Recommendations</div>
-                    {lastAnalysis.recommendations?.map((r: string, i: number) => (
-                      <div key={i} className="flex gap-2 text-xs text-gray-400">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#00FFD1] shrink-0 mt-1" />
-                        {r}
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+          {/* 1. SKUs Optimized Over Time */}
+          <div className="lg:col-span-8 glass p-8 rounded-[40px] border border-white/5">
+             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">SKUs Optimized Over Time</h3>
+             <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                   <AreaChart data={skuTrendData}>
+                      <defs>
+                        <linearGradient id="colorSku" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                      <XAxis dataKey="date" stroke="#ffffff20" fontSize={10} />
+                      <YAxis stroke="#ffffff20" fontSize={10} />
+                      <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
+                      <Area type="monotone" dataKey="count" stroke="#4f46e5" fill="url(#colorSku)" strokeWidth={4} />
+                   </AreaChart>
+                </ResponsiveContainer>
+             </div>
           </div>
 
-          {/* System Status (real data) */}
-          <div className="glass p-8 rounded-3xl">
-            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6">Engine Status</h3>
-            <div className="space-y-5">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">AI Model</span>
-                <span className="text-xs font-bold text-[#00FFD1] truncate max-w-[160px] text-right">
-                  {dbStats?.aiModel?.split('/').pop() ?? 'Heuristic v2.0'}
-                </span>
-              </div>
+          {/* 4. Void Space Reduction */}
+          <div className="lg:col-span-4 glass p-8 rounded-[40px] border border-white/5 flex flex-col items-center">
+             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Void Space Reduction</h3>
+             <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                   <RadialBarChart innerRadius="30%" outerRadius="100%" barSize={15} data={voidReductionData}>
+                      <RadialBar label={{ position: 'insideStart', fill: '#fff', fontSize: 10 }} background dataKey="value" />
+                      <Legend iconSize={10} layout="vertical" verticalAlign="middle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase' }} />
+                   </RadialBarChart>
+                </ResponsiveContainer>
+             </div>
+          </div>
 
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Last Run</span>
-                <span className="text-xs font-bold text-white">
-                  {lastRun ? new Date(lastRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
-                </span>
-              </div>
+          {/* 2. Cost Savings Trend */}
+          <div className="lg:col-span-12 glass p-8 rounded-[40px] border border-white/5">
+             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">Original vs Optimized Cost Trend (INR)</h3>
+             <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                   <LineChart data={costTrendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                      <XAxis dataKey="date" stroke="#ffffff20" fontSize={10} />
+                      <YAxis stroke="#ffffff20" fontSize={10} />
+                      <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
+                      <Legend wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase' }} />
+                      <Line type="monotone" dataKey="original" name="Baseline Cost" stroke="#94a3b8" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="optimized" name="AI Optimized Cost" stroke="#00FFD1" strokeWidth={4} dot={{ r: 4 }} />
+                   </LineChart>
+                </ResponsiveContainer>
+             </div>
+          </div>
 
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Runs Today</span>
-                <span className="text-xs font-bold text-white">{dbStats?.runsToday ?? 0}</span>
-              </div>
+          {/* 3. Box Utilization */}
+          <div className="lg:col-span-6 glass p-8 rounded-[40px] border border-white/5">
+             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">Box Size Distribution</h3>
+             <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                   <BarChart data={boxDistData} layout="vertical">
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" stroke="#ffffff40" fontSize={10} width={100} />
+                      <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                      <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                   </BarChart>
+                </ResponsiveContainer>
+             </div>
+          </div>
 
-              <div>
-                <div className="flex justify-between items-end mb-2">
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Engine Uptime</span>
-                  <span className="text-sm font-bold text-white">99.98%</span>
-                </div>
-                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full w-[99%] bg-[#00FFD1]" />
-                </div>
-              </div>
+          {/* 5. Top 5 SKUs */}
+          <div className="lg:col-span-6 glass p-8 rounded-[40px] border border-white/5">
+             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">Top 5 SKUs by Savings</h3>
+             <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                   <BarChart data={topSavingsData}>
+                      <XAxis dataKey="name" stroke="#ffffff20" fontSize={10} />
+                      <YAxis stroke="#ffffff20" fontSize={10} />
+                      <Bar dataKey="savings" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                      <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
+                   </BarChart>
+                </ResponsiveContainer>
+             </div>
+          </div>
 
-              <div className="pt-4 border-t border-white/5">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest">PackVision Engine Online</span>
-                </div>
-              </div>
-            </div>
+          {/* 6. Carrier Breakdown */}
+          <div className="lg:col-span-12 glass p-8 rounded-[40px] border border-white/5 flex flex-col items-center">
+             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">Weight Tier Distribution</h3>
+             <div className="h-80 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                   <PieChart>
+                      <Pie data={carrierDistData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">
+                         {carrierDistData.map((entry, index) => (
+                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                         ))}
+                      </Pie>
+                      <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase' }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
+                   </PieChart>
+                </ResponsiveContainer>
+             </div>
           </div>
 
         </div>
-      </div>
+      )}
     </div>
   )
 })

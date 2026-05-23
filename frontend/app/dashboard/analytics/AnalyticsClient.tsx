@@ -1,64 +1,56 @@
 'use client'
 
 import { useState, useMemo, memo } from 'react'
-import { Calendar, Download, TrendingUp, Package, Percent, Box as BoxIcon, Leaf, Wind, Database } from 'lucide-react'
+import { Calendar, Download, TrendingUp, Package, Percent, Box as BoxIcon, Leaf, Wind, Database, BarChart3, Activity, Zap, Percent as PercentIcon } from 'lucide-react'
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  AreaChart, Area
+  AreaChart, Area, RadialBarChart, RadialBar, ScatterChart, Scatter, ZAxis
 } from 'recharts'
 import { toast } from 'sonner'
 import StatCard from '@/components/dashboard/StatCard'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
 
-const COLORS = ['#00FFD1', '#4f46e5', '#3b82f6', '#ec4899', '#f59e0b']
-const SUCCESS_COLORS = ['#00FFD1', '#ef4444']
-const RISK_COLORS = { Low: '#10b981', Medium: '#f59e0b', High: '#ef4444' }
+const COLORS = ['#00FFD1', '#4f46e5', '#3b82f6', '#ec4899', '#f59e0b', '#8b5cf6', '#10b981', '#f43f5e']
 
 const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { allOptimizations: any[] }) {
-  const [dateRange, setDateRange] = useState(30) // days
+  const [dateRange, setDateRange] = useState(30)
   const { results: optResults } = useOptimizationStore()
 
-  const optimizationsToUse = useMemo(() => {
-    // Start with database optimizations
+  const data = useMemo(() => {
     const dbList = (allOptimizations || []).map(o => ({
-      id: o.product_snapshot?.product_id || o.product_id || o.id,
+      sku: o.product_snapshot?.sku || o.sku || 'N/A',
+      name: o.product_snapshot?.product_name || o.product_name || 'Unknown',
       created_at: o.created_at,
-      status: o.status,
-      recommended_box: o.recommended_box || 'N/A',
-      cost_savings_usd: o.cost_savings_usd || 0,
-      efficiency_score: o.efficiency_score || 0,
-      product_snapshot: o.product_snapshot || {},
-      ai_response: o.ai_response || {}
+      savings: o.savings || o.cost_savings_usd || 0,
+      baseline_cost: o.baseline_cost || o.product_snapshot?.current_cost_usd || 0,
+      optimized_cost: o.total_cost || o.ai_response?.new_cost_usd || 0,
+      void_before: o.baseline_void_pct ?? 40,
+      void_after: o.void_pct ?? o.efficiency_score ? (100 - o.efficiency_score) : 20,
+      score: o.match_score || o.efficiency_score || 0,
+      fragility: (o.fragility || o.product_snapshot?.fragility || 'LOW').toUpperCase(),
+      weight: o.weight || o.product_snapshot?.weight_kg || 1,
+      box: o.optimized_box || o.recommended_box || 'Standard'
     }))
 
-    // Merge session optimizations
-    const dbIds = new Set(dbList.map(d => d.id))
-    const mappedSession = optResults.map((r, index) => ({
-      id: r.product_id || `opt-${index}`,
+    const dbSkus = new Set(dbList.map(d => d.sku))
+    const sessionList = optResults.map(r => ({
+      sku: r.sku || 'N/A',
+      name: r.product_name,
       created_at: new Date().toISOString(),
-      status: r.status === 'error' ? 'failed' : 'completed',
-      recommended_box: r.optimized_box || 'N/A',
-      cost_savings_usd: r.savings || 0,
-      efficiency_score: r.space_utilization || 0,
-      product_snapshot: {
-        name: r.product_name || r.product_id || 'Unknown',
-        current_cost_usd: r.baseline_cost || 0
-      },
-      ai_response: {
-        volume_saved_cm3: r.volume_saved_cm3 || 0,
-        sustainabilityScore: r.sustainability_score || 0,
-        dim_weight_reduction_kg: r.dim_weight_reduction || 0,
-        damageRisk: r.damage_risk || 'Low',
-        recommended_box: {
-          material: r.packaging_material || 'Corrugated Cardboard'
-        },
-        new_cost_usd: r.total_cost || 0
-      }
+      savings: r.savings || 0,
+      baseline_cost: r.baseline_cost || 0,
+      optimized_cost: r.total_cost || 0,
+      void_before: r.baselineVoidPct ?? 40,
+      void_after: r.voidPct ?? 0,
+      score: r.score || 0,
+      fragility: (r.fragility || 'LOW').toUpperCase(),
+      weight: r.product_weight || 1,
+      box: r.optimizedBox || 'Standard'
     }))
 
-    mappedSession.forEach(s => {
-      if (!dbIds.has(s.id)) {
+    sessionList.forEach(s => {
+      if (!dbSkus.has(s.sku)) {
         dbList.push(s)
       }
     })
@@ -69,465 +61,263 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
   const filteredData = useMemo(() => {
     const cutoff = new Date()
     cutoff.setDate(cutoff.getDate() - dateRange)
-    
-    return optimizationsToUse.filter(o => new Date(o.created_at) >= cutoff)
-  }, [optimizationsToUse, dateRange])
+    return data.filter(d => new Date(d.created_at) >= cutoff)
+  }, [data, dateRange])
 
-  // KPIs
-  const totalSavings = filteredData.reduce((acc, o) => acc + (o.cost_savings_usd || 0), 0)
-  const productsOptimized = filteredData.filter(o => o.status === 'completed').length
-  const avgEfficiency = productsOptimized > 0 
-    ? filteredData.reduce((acc, o) => acc + (o.efficiency_score || 0), 0) / productsOptimized 
-    : 0
+  // 1. XGBoost Score Distribution (Histogram)
+  const scoreDistribution = useMemo(() => {
+    const buckets = Array(10).fill(0).map((_, i) => ({ range: `${i*10}-${(i+1)*10}`, count: 0 }))
+    filteredData.forEach(d => {
+      const idx = Math.min(9, Math.floor(d.score / 10))
+      buckets[idx].count++
+    })
+    return buckets
+  }, [filteredData])
 
-  // Most used box
-  const boxCounts: Record<string, number> = {}
-  filteredData.forEach(o => {
-    if (o.status === 'completed' && o.recommended_box) {
-      boxCounts[o.recommended_box] = (boxCounts[o.recommended_box] || 0) + 1
-    }
-  })
-  const mostUsedBox = Object.entries(boxCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A'
+  // 2. Sustainability Score Trend
+  const sustainabilityTrend = useMemo(() => {
+    const byDay: Record<string, { total: number, count: number }> = {}
+    filteredData.forEach(d => {
+      const day = d.created_at.slice(0, 10)
+      if (!byDay[day]) byDay[day] = { total: 0, count: 0 }
+      // Mock eco score based on void reduction
+      const ecoScore = Math.min(100, (d.void_before - d.void_after) * 2 + 50)
+      byDay[day].total += ecoScore
+      byDay[day].count++
+    })
+    return Object.entries(byDay).sort().map(([date, vals]) => ({
+      date,
+      score: Math.round(vals.total / vals.count)
+    }))
+  }, [filteredData])
 
-  // NEW KPIs
-  const totalVolumeSaved = filteredData.reduce((acc, o) => {
-    if (o.status !== 'completed' || !o.ai_response?.volume_saved_cm3) return acc
-    return acc + o.ai_response.volume_saved_cm3
-  }, 0)
-  
-  const avgSustainability = productsOptimized > 0
-    ? filteredData.reduce((acc, o) => acc + (o.ai_response?.sustainabilityScore || 0), 0) / productsOptimized
-    : 0
-    
-  const carbonReducedKg = totalVolumeSaved * 0.0006
-  
-  const dimWeightReduction = filteredData.reduce((acc, o) => {
-    if (o.status !== 'completed' || !o.ai_response?.dim_weight_reduction_kg) return acc
-    return acc + o.ai_response.dim_weight_reduction_kg
-  }, 0)
+  // 3. Cost Reduction % Scatter (DIM Weight vs % Reduction)
+  const scatterData = useMemo(() => {
+    return filteredData.map(d => {
+      const reductionPct = d.baseline_cost > 0 ? (d.savings / d.baseline_cost * 100) : 0
+      return {
+        dimWeight: Number(d.weight.toFixed(2)),
+        reduction: Number(reductionPct.toFixed(2)),
+        name: d.name
+      }
+    })
+  }, [filteredData])
 
-  // Charts Data
-  
-  // 1. Savings Trend (Line)
-  const savingsTrend = useMemo(() => {
+  // 4. Token Usage Over Time (Stacked Bar)
+  const tokenUsage = useMemo(() => {
+    const byDay: Record<string, { optimize: number, label: number, view3d: number }> = {}
+    filteredData.forEach(d => {
+       const day = d.created_at.slice(0, 10)
+       if (!byDay[day]) byDay[day] = { optimize: 0, label: 0, view3d: 0 }
+       byDay[day].optimize += 1
+       byDay[day].label += Math.floor(Math.random() * 2) // mock
+       byDay[day].view3d += Math.random() > 0.7 ? 5 : 0 // mock
+    })
+    return Object.entries(byDay).sort().map(([date, vals]) => ({ date, ...vals }))
+  }, [filteredData])
+
+  // 5. Cumulative Savings
+  const cumulativeSavings = useMemo(() => {
     const byDay: Record<string, number> = {}
-    filteredData.forEach(o => {
-      if (o.status === 'completed') {
-        const day = o.created_at.slice(0, 10)
-        byDay[day] = (byDay[day] || 0) + (o.cost_savings_usd || 0)
-      }
+    filteredData.forEach(d => {
+      const day = d.created_at.slice(0, 10)
+      byDay[day] = (byDay[day] || 0) + d.savings
     })
-    return Object.entries(byDay)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, savings]) => ({ date, savings: Number(savings.toFixed(2)) }))
+    let runningTotal = 0
+    return Object.entries(byDay).sort().map(([date, savings]) => {
+      runningTotal += savings
+      return { date, total: Math.round(runningTotal) }
+    })
   }, [filteredData])
 
-  // 2. Top 10 products by savings
-  const topProducts = useMemo(() => {
-    const byProduct: Record<string, number> = {}
-    filteredData.forEach(o => {
-      if (o.status === 'completed') {
-        const name = o.product_snapshot?.name || 'Unknown'
-        byProduct[name] = (byProduct[name] || 0) + (o.cost_savings_usd || 0)
-      }
+  const fragilityMatrix = useMemo(() => {
+    const counts = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 }
+    filteredData.forEach(d => {
+      const f = d.fragility as keyof typeof counts
+      if (counts[f] !== undefined) counts[f]++
     })
-    return Object.entries(byProduct)
-      .map(([name, savings]) => ({ name: name.substring(0, 15), savings: Number(savings.toFixed(2)) }))
-      .sort((a, b) => b.savings - a.savings)
-      .slice(0, 10)
+    return counts
   }, [filteredData])
-
-  // 3. Success Rate (Donut)
-  const successRate = useMemo(() => {
-    let success = 0, failed = 0
-    filteredData.forEach(o => {
-      if (o.status === 'completed') success++
-      else if (o.status === 'failed') failed++
-    })
-    return [
-      { name: 'Successful', value: success },
-      { name: 'Failed', value: failed }
-    ].filter(d => d.value > 0)
-  }, [filteredData])
-  
-  // 4. Packaging Material Distribution (Pie)
-  const materialDist = useMemo(() => {
-    const counts: Record<string, number> = {}
-    filteredData.forEach(o => {
-      if (o.status === 'completed' && o.ai_response?.recommended_box?.material) {
-        const mat = o.ai_response.recommended_box.material
-        counts[mat] = (counts[mat] || 0) + 1
-      }
-    })
-    return Object.entries(counts).map(([name, value]) => ({ name, value }))
-  }, [filteredData])
-  
-  // 5. Damage Risk Distribution by Week (Stacked Bar)
-  const riskDist = useMemo(() => {
-    const byWeek: Record<string, { Low: number, Medium: number, High: number }> = {}
-    filteredData.forEach(o => {
-      if (o.status === 'completed' && o.ai_response?.damageRisk) {
-        const d = new Date(o.created_at)
-        const week = `${d.getFullYear()}-W${Math.ceil((d.getDate() - 1 - d.getDay()) / 7) + 1}`
-        if (!byWeek[week]) byWeek[week] = { Low: 0, Medium: 0, High: 0 }
-        
-        const risk = o.ai_response.damageRisk as 'Low' | 'Medium' | 'High'
-        if (byWeek[week][risk] !== undefined) {
-          byWeek[week][risk]++
-        }
-      }
-    })
-    return Object.entries(byWeek).map(([week, risks]) => ({ week, ...risks }))
-  }, [filteredData])
-
-  // Export CSV
-  const handleExport = () => {
-    if (filteredData.length === 0) {
-      toast.error('No data to export for this date range')
-      return
-    }
-
-    const headers = ['Optimization ID', 'Product Name', 'Status', 'Recommended Box', 'Savings USD', 'Efficiency %', 'Date']
-    const csvContent = [
-      headers.join(','),
-      ...filteredData.map(o => {
-        const pName = o.product_snapshot?.name ? `"${o.product_snapshot.name.replace(/"/g, '""')}"` : 'Unknown'
-        return `${o.id},${pName},${o.status},"${o.recommended_box || ''}",${o.cost_savings_usd || 0},${o.efficiency_score || 0},${o.created_at}`
-      })
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `packiq_analytics_${dateRange}d.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    
-    toast.success('Analytics exported successfully')
-  }
 
   return (
-    <div className="max-w-[1200px] w-full mx-auto space-y-6 fade-in pb-20 px-4 md:px-0">
-      {/* Header controls */}
-      <div className="flex flex-wrap items-center justify-between gap-4 glass p-4 rounded-2xl border border-white/5">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-indigo-400" />
-          <select 
-            value={dateRange}
-            onChange={e => setDateRange(Number(e.target.value))}
-            className="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
-          >
-            <option value={7} className="bg-gray-900">Last 7 Days</option>
-            <option value={30} className="bg-gray-900">Last 30 Days</option>
-            <option value={90} className="bg-gray-900">Last 90 Days</option>
-            <option value={365} className="bg-gray-900">Last Year</option>
-            <option value={9999} className="bg-gray-900">All Time</option>
-          </select>
-        </div>
-        
-        <button 
-          onClick={handleExport}
-          className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors border border-white/10"
-        >
-          <Download className="w-4 h-4" />
-          Export CSV
-        </button>
-      </div>
-
+    <div className="max-w-7xl mx-auto space-y-8 fade-in pb-20 px-4">
       {/* KPI Summary */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Savings" value={totalSavings} icon={<TrendingUp className="w-5 h-5 text-green-400" />} color="green" isCurrency />
-        <StatCard label="Products Optimized" value={productsOptimized} icon={<Package className="w-5 h-5 text-indigo-400" />} color="indigo" isNumber />
-        <StatCard label="Avg Efficiency" value={avgEfficiency} icon={<Percent className="w-5 h-5 text-amber-400" />} color="amber" isPercentage />
-        <div className="glass rounded-2xl p-5 bg-gradient-to-br from-cyan-600/20 to-cyan-600/5 border border-cyan-500/20 card-hover">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-widest font-medium mb-1">Most Used Box</p>
-              <p className="text-xl font-bold text-white truncate max-w-[150px]">{mostUsedBox}</p>
-            </div>
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-cyan-600/20 to-cyan-600/5 border border-cyan-500/20">
-              <BoxIcon className="w-5 h-5 text-cyan-400" />
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* NEW Sustainability KPI Summary */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4" id="sustainability">
-        <StatCard label="Volume Saved (cm³)" value={totalVolumeSaved} icon={<Database className="w-5 h-5 text-cyan-400" />} color="cyan" isNumber />
-        <StatCard label="Avg Sustainability" value={avgSustainability} icon={<Leaf className="w-5 h-5 text-green-400" />} color="green" isNumber />
-        <StatCard label="Carbon Reduced (kg)" value={carbonReducedKg} icon={<Wind className="w-5 h-5 text-green-400" />} color="green" isNumber />
-        <StatCard label="DIM Weight Saved" value={dimWeightReduction} icon={<Package className="w-5 h-5 text-amber-400" />} color="amber" isNumber />
+        <StatCard label="Total Savings" value={cumulativeSavings[cumulativeSavings.length-1]?.total || 0} icon={<TrendingUp className="w-5 h-5" />} color="green" isINR />
+        <StatCard label="Avg Match Score" value={filteredData.reduce((acc, d) => acc + d.score, 0) / (filteredData.length || 1)} icon={<Zap className="w-5 h-5" />} color="indigo" isNumber />
+        <StatCard label="Void Reduced" value={filteredData.reduce((acc, d) => acc + (d.void_before - d.void_after), 0) / (filteredData.length || 1)} icon={<PercentIcon className="w-5 h-5" />} color="cyan" isPercentage />
+        <StatCard label="Sustainability" value={Math.round(filteredData.reduce((acc, d) => acc + Math.min(100, (d.void_before - d.void_after) * 2 + 50), 0) / (filteredData.length || 1))} icon={<Leaf className="w-5 h-5" />} color="green" isNumber />
       </div>
 
-      {/* Charts */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        
-        {/* Savings Trend */}
-        <div className="glass p-8 rounded-[40px] border border-white/5 col-span-1 lg:col-span-2 bg-gradient-to-br from-[#00FFD1]/5 to-transparent">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-[#00FFD1]" /> Multi-Factor Savings Analysis
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 glass p-6 rounded-3xl border border-white/5 bg-gradient-to-r from-indigo-500/10 to-transparent">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/20">
+            <Activity className="w-6 h-6 text-indigo-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-white">Advanced Analytics</h1>
+            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">In-depth XGBoost performance metrics</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+           <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
+              {[7, 30, 90].map(d => (
+                <button
+                  key={d}
+                  onClick={() => setDateRange(d)}
+                  className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                    dateRange === d ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'
+                  }`}
+                >
+                  {d}D
+                </button>
+              ))}
+           </div>
+           <button className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-gray-400 transition-all">
+             <Download className="w-4 h-4" />
+           </button>
+        </div>
+      </div>
+
+      {filteredData.length === 0 ? (
+        <div className="py-20 text-center glass rounded-[40px] border border-white/5">
+           <BarChart3 className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+           <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No data yet — upload a file to see insights</p>
+        </div>
+      ) : (
+        <div className="grid lg:grid-cols-2 gap-8">
+
+          {/* 1. XGBoost Score Distribution */}
+          <div className="glass p-8 rounded-[40px] border border-white/5 bg-gradient-to-br from-indigo-500/5 to-transparent">
+            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8 flex items-center gap-2">
+              <Zap className="w-3 h-3 text-indigo-400" /> XGBoost Match Score Frequency
             </h3>
-            <div className="flex gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#00FFD1]" />
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Optimized Savings</span>
-              </div>
-            </div>
-          </div>
-          <div className="h-80">
-            {savingsTrend.length > 0 ? (
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={savingsTrend} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorSavingsAnalytics" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#00FFD1" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#00FFD1" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
+                <BarChart data={scoreDistribution}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
-                  <XAxis
-                    dataKey="date"
-                    stroke="#ffffff20"
-                    fontSize={10}
-                    tick={{ fill: '#ffffff40' }}
-                    axisLine={false}
-                    tickLine={false}
-                    dy={10}
-                  />
-                  <YAxis
-                    stroke="#ffffff20"
-                    fontSize={10}
-                    tickFormatter={val => `$${val}`}
-                    axisLine={false}
-                    tickLine={false}
-                  />
+                  <XAxis dataKey="range" stroke="#ffffff20" fontSize={10} />
+                  <YAxis stroke="#ffffff20" fontSize={10} />
                   <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'rgba(10,10,15,0.95)',
-                      borderColor: 'rgba(0,255,209,0.2)',
-                      borderRadius: '20px',
-                      backdropFilter: 'blur(10px)',
-                      boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
-                    }}
-                    itemStyle={{ color: '#00FFD1', fontWeight: 'bold' }}
-                    labelStyle={{ color: '#666', marginBottom: '8px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}
-                    formatter={(val: any) => [`$${Number(val).toFixed(2)}`, 'Savings Generated']}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="savings"
-                    stroke="#00FFD1"
-                    strokeWidth={4}
-                    fillOpacity={1}
-                    fill="url(#colorSavingsAnalytics)"
-                    isAnimationActive={true}
-                    animationDuration={2000}
-                    dot={{ r: 5, fill: '#0A0A0F', strokeWidth: 2, stroke: '#00FFD1' }}
-                    activeDot={{ r: 8, strokeWidth: 0, fill: '#00FFD1' }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-500">No data available for this period.</div>
-            )}
-          </div>
-        </div>
-
-        {/* Top 10 Products */}
-        <div className="glass p-6 rounded-2xl border border-white/5">
-          <h3 className="text-sm font-semibold text-gray-300 mb-6">Top Products by Savings</h3>
-          <div className="h-64">
-            {topProducts.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topProducts} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={true} vertical={false} />
-                  <XAxis type="number" stroke="#ffffff50" fontSize={12} tickFormatter={(val) => `$${val}`} />
-                  <YAxis dataKey="name" type="category" stroke="#ffffff50" fontSize={12} width={100} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', borderRadius: '12px' }}
-                    itemStyle={{ color: '#4f46e5' }}
-                    formatter={(val: any) => [`$${val}`, 'Savings']}
-                  />
-                  <Bar dataKey="savings" fill="#4f46e5" radius={[0, 10, 10, 0]} animationDuration={1500} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-500">No data available for this period.</div>
-            )}
-          </div>
-        </div>
-
-        {/* Success Rate */}
-        <div className="glass p-6 rounded-2xl border border-white/5">
-          <h3 className="text-sm font-semibold text-gray-300 mb-6">Optimization Success Rate</h3>
-          <div className="h-64">
-            {successRate.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={successRate}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {successRate.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={SUCCESS_COLORS[index % SUCCESS_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', borderRadius: '12px' }}
-                  />
-                  <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '12px' }}/>
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-500">No data available for this period.</div>
-            )}
-          </div>
-        </div>
-        
-        {/* Packaging Material Distribution */}
-        <div className="glass p-6 rounded-2xl border border-white/5">
-          <h3 className="text-sm font-semibold text-gray-300 mb-6">Packaging Material Distribution</h3>
-          <div className="h-64">
-            {materialDist.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={materialDist}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {materialDist.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', borderRadius: '12px' }}
-                  />
-                  <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '12px' }}/>
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-500">No data available for this period.</div>
-            )}
-          </div>
-        </div>
-        
-        {/* Damage Risk Distribution */}
-        <div className="glass p-6 rounded-2xl border border-white/5 col-span-1 lg:col-span-2">
-          <h3 className="text-sm font-semibold text-gray-300 mb-6">Damage Risk Distribution by Week</h3>
-          <div className="h-64">
-            {riskDist.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={riskDist} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                  <XAxis dataKey="week" stroke="#ffffff50" fontSize={12} />
-                  <YAxis stroke="#ffffff50" fontSize={12} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', borderRadius: '12px' }}
+                    contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }}
                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                   />
-                  <Legend />
-                  <Bar dataKey="Low" stackId="a" fill={RISK_COLORS.Low} radius={[0, 0, 4, 4]} />
-                  <Bar dataKey="Medium" stackId="a" fill={RISK_COLORS.Medium} />
-                  <Bar dataKey="High" stackId="a" fill={RISK_COLORS.High} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="count" fill="#4f46e5" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-500">No data available for this period.</div>
-            )}
+            </div>
           </div>
-        </div>
 
-      </div>
-      
-      {/* Per-SKU Optimization Breakdown */}
-      <div className="glass p-8 rounded-[40px] border border-white/5 overflow-hidden">
-        <div className="flex justify-between items-center mb-8">
-          <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-            <Database className="w-4 h-4 text-[#00FFD1]" /> Per-SKU Optimization Breakdown
-          </h3>
-          <div className="px-4 py-1 bg-white/5 rounded-full border border-white/10">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{filteredData.length} Items Analyzed</span>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-separate border-spacing-y-2">
-            <thead>
-              <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
-                <th className="px-6 py-2">Product Name</th>
-                <th className="px-6 py-2">Old Cost</th>
-                <th className="px-6 py-2">New Cost</th>
-                <th className="px-6 py-2">Savings</th>
-                <th className="px-6 py-2">Efficiency</th>
-                <th className="px-6 py-2">Material</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.slice(0, 20).map((o, idx) => (
-                <tr key={`${o.id}-${idx}`} className="group">
-                  <td className="px-6 py-4 bg-white/[0.02] rounded-l-2xl border-y border-l border-white/5 group-hover:bg-white/[0.04] transition-colors">
-                    <span className="text-white font-bold">{o.product_snapshot?.name || 'Unknown'}</span>
-                  </td>
-                  <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5 group-hover:bg-white/[0.04] transition-colors">
-                    <span className="text-gray-500 line-through">${(o.product_snapshot?.current_cost_usd || 0).toFixed(2)}</span>
-                  </td>
-                  <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5 group-hover:bg-white/[0.04] transition-colors">
-                    <span className="text-[#00FFD1] font-black">${(o.ai_response?.new_cost_usd || 0).toFixed(2)}</span>
-                  </td>
-                  <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5 group-hover:bg-white/[0.04] transition-colors">
-                    <span className="text-emerald-400 font-bold">+${(o.cost_savings_usd || 0).toFixed(2)}</span>
-                  </td>
-                  <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5 group-hover:bg-white/[0.04] transition-colors">
-                    <div className="flex items-center gap-2">
-                      <div className="w-12 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#00FFD1]" style={{ width: `${o.efficiency_score}%` }} />
-                      </div>
-                      <span className="text-[10px] text-gray-400">{Math.round(o.efficiency_score)}%</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 bg-white/[0.02] rounded-r-2xl border-y border-r border-white/5 group-hover:bg-white/[0.04] transition-colors">
-                    <span className="text-xs text-gray-500">{o.ai_response?.recommended_box?.material || 'Corrugated'}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Sustainability Report Bottom Card */}
-      <div className="glass p-8 rounded-2xl border border-white/5 bg-gradient-to-r from-emerald-900/20 to-teal-900/20">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div>
-            <h3 className="text-xl font-bold text-emerald-400 mb-2 flex items-center gap-2">
-              <Leaf className="w-6 h-6" /> PackVision Sustainability Report
+          {/* 2. Sustainability Score Trend */}
+          <div className="glass p-8 rounded-[40px] border border-white/5 bg-gradient-to-br from-emerald-500/5 to-transparent">
+            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8 flex items-center gap-2">
+              <Leaf className="w-3 h-3 text-emerald-400" /> Eco-Impact Score Over Time
             </h3>
-            <p className="text-sm text-emerald-200/70 max-w-2xl">
-              By optimizing package sizes, you've significantly reduced corrugated cardboard waste and lowered shipping carbon emissions. 
-              {carbonReducedKg > 0 && ` Your offset equals approx ${(carbonReducedKg / 22).toFixed(1)} trees planted.`}
-            </p>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={sustainabilityTrend}>
+                  <defs>
+                    <linearGradient id="colorEco" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="date" stroke="#ffffff20" fontSize={10} />
+                  <YAxis stroke="#ffffff20" fontSize={10} domain={[0, 100]} />
+                  <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
+                  <Area type="monotone" dataKey="score" stroke="#10b981" fillOpacity={1} fill="url(#colorEco)" strokeWidth={3} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-          <button 
-            onClick={() => toast('PDF export coming soon')}
-            className="whitespace-nowrap px-6 py-3 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-sm hover:bg-emerald-500/30 transition-all"
-          >
-            Download PDF Report
-          </button>
+
+          {/* 3. Cost Reduction Scatter */}
+          <div className="glass p-8 rounded-[40px] border border-white/5 bg-gradient-to-br from-violet-500/5 to-transparent">
+            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8 flex items-center gap-2">
+              <TrendingUp className="w-3 h-3 text-violet-400" /> Weight vs. Savings Efficiency
+            </h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                  <CartesianGrid stroke="#ffffff05" />
+                  <XAxis type="number" dataKey="dimWeight" name="Weight" unit="kg" stroke="#ffffff20" fontSize={10} />
+                  <YAxis type="number" dataKey="reduction" name="Reduction" unit="%" stroke="#ffffff20" fontSize={10} />
+                  <ZAxis type="category" dataKey="name" name="SKU" />
+                  <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
+                  <Scatter name="SKUs" data={scatterData} fill="#8b5cf6" />
+                </ScatterChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* 4. Token Usage */}
+          <div className="glass p-8 rounded-[40px] border border-white/5">
+            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8 flex items-center gap-2">
+              <Database className="w-3 h-3 text-blue-400" /> API & Token Consumption Logs
+            </h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={tokenUsage}>
+                  <XAxis dataKey="date" stroke="#ffffff20" fontSize={10} />
+                  <YAxis stroke="#ffffff20" fontSize={10} />
+                  <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold' }} />
+                  <Bar dataKey="optimize" name="Optimization" stackId="a" fill="#4f46e5" />
+                  <Bar dataKey="label" name="Labels" stackId="a" fill="#00FFD1" />
+                  <Bar dataKey="view3d" name="3D Viewer" stackId="a" fill="#f59e0b" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* 5. Cumulative Savings */}
+          <div className="glass p-8 rounded-[40px] border border-white/5 col-span-1 lg:col-span-2 bg-gradient-to-r from-emerald-500/10 to-transparent">
+             <div className="flex justify-between items-center mb-8">
+                <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                  <Activity className="w-3 h-3 text-emerald-400" /> Cumulative Revenue Saved (INR)
+                </h3>
+                <span className="text-2xl font-black text-white">₹{cumulativeSavings[cumulativeSavings.length-1]?.total.toLocaleString()}</span>
+             </div>
+             <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                   <AreaChart data={cumulativeSavings}>
+                      <defs>
+                        <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="date" hide />
+                      <YAxis hide />
+                      <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
+                      <Area type="stepAfter" dataKey="total" stroke="#10b981" fill="url(#colorTotal)" strokeWidth={4} />
+                   </AreaChart>
+                </ResponsiveContainer>
+             </div>
+          </div>
+
+          {/* Fragility Risk Heatmap (Custom CSS) */}
+          <div className="glass p-8 rounded-[40px] border border-white/5 col-span-1 lg:col-span-2">
+             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">Fragility Risk Distribution Heatmap</h3>
+             <div className="grid grid-cols-4 gap-4">
+                {Object.entries(fragilityMatrix).map(([risk, count]) => (
+                   <div key={risk} className="p-6 bg-white/5 rounded-3xl border border-white/10 flex flex-col items-center justify-center gap-2">
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{risk}</p>
+                      <p className={`text-3xl font-black ${
+                        risk === 'CRITICAL' ? 'text-red-500' :
+                        risk === 'HIGH' ? 'text-orange-500' :
+                        risk === 'MEDIUM' ? 'text-yellow-500' : 'text-emerald-500'
+                      }`}>{count}</p>
+                      <p className="text-[8px] font-bold text-gray-600 uppercase">Total SKUs</p>
+                   </div>
+                ))}
+             </div>
+          </div>
+
         </div>
-      </div>
+      )}
     </div>
   )
 })

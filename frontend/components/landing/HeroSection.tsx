@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, Play, Box } from 'lucide-react'
+import { ArrowRight, Play, Box, Zap, Sparkles, Globe } from 'lucide-react'
 import { StaggerContainer, StaggerItem } from '@/components/animations'
 import BoxPreview from '@/components/3d/BoxPreview'
 
@@ -35,7 +35,7 @@ const FloatingBox = ({ delay = 0, x = '10%', y = '10%', size = 40 }) => (
   </motion.div>
 )
 
-const TERMS = ['Fulfillment', 'Packaging', 'DIM Weight', 'Distribution', 'Supply Chain', 'Logistics']
+const TERMS = ['Optimization', 'Intelligence', 'Automation', 'Sustainability', 'Efficiency', 'Packaging']
 
 export function HeroSection() {
   const [mounted, setMounted] = useState(false)
@@ -53,139 +53,91 @@ export function HeroSection() {
   if (!mounted) return null
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center pt-20 pb-32 overflow-hidden">
+    <section className="relative min-h-screen flex flex-col items-center justify-center pt-20 pb-32 overflow-hidden bg-[#0A0A0F]">
       {/* Background layers */}
-      <div className="absolute inset-0 bg-[#0A0A0F] pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#185FA5]/15 via-transparent to-[#0A0A0F] pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#4f46e5]/10 via-transparent to-[#0A0A0F] pointer-events-none" />
 
       {/* Grid overlay */}
       <div
-        className="absolute inset-0 opacity-[0.05] pointer-events-none"
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
         style={{
           backgroundImage: `linear-gradient(rgba(0,255,209,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,209,0.3) 1px, transparent 1px)`,
           backgroundSize: '100px 100px',
         }}
       />
 
-      {/* Floating boxes */}
+      {/* Floating elements */}
       <FloatingBox x="5%" y="15%" size={80} delay={0} />
       <FloatingBox x="88%" y="10%" size={120} delay={2} />
       <FloatingBox x="82%" y="75%" size={70} delay={4} />
       <FloatingBox x="10%" y="80%" size={90} delay={6} />
-      <FloatingBox x="45%" y="5%" size={45} delay={3} />
 
-      {/* Glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[1000px] h-[1000px] bg-[#00FFD1]/5 rounded-full blur-[200px] pointer-events-none animate-pulse" />
-      <div className="absolute -bottom-1/4 -right-1/4 w-[600px] h-[600px] bg-[#185FA5]/10 rounded-full blur-[150px] pointer-events-none" />
+      {/* Hero Content */}
+      <div className="max-w-7xl mx-auto px-6 relative z-10 w-full text-center">
+        <StaggerContainer>
+          <StaggerItem>
+            <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-2 rounded-full mb-12 backdrop-blur-2xl">
+              <Sparkles className="w-4 h-4 text-[#00FFD1] animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">
+                AI-Powered by <span className="text-[#00FFD1]">Shipzi</span>
+              </span>
+            </div>
+          </StaggerItem>
 
-      <div className="max-w-[1400px] mx-auto px-10 relative z-10 w-full">
-        <StaggerContainer className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
+          <StaggerItem>
+            <h1 className="text-5xl md:text-[100px] font-bold tracking-tighter mb-8 leading-none">
+               The Future of <br/>
+               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-400 to-indigo-600">
+                 Packaging {TERMS[termIndex]}
+               </span>
+            </h1>
+          </StaggerItem>
 
-          {/* Left — Text */}
-          <div className="text-left">
-            <StaggerItem>
-              <div className="inline-flex items-center gap-3 bg-[#00FFD1]/5 border border-[#00FFD1]/20 px-5 py-2.5 rounded-full mb-10 backdrop-blur-md">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#00FFD1] shadow-[0_0_10px_#00FFD1] animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#00FFD1]">
-                  Next-Gen Logistics Engine
-                </span>
-              </div>
-            </StaggerItem>
+          <StaggerItem>
+            <p className="text-lg md:text-2xl text-gray-400 max-w-3xl mx-auto mb-14 leading-relaxed font-medium">
+               PackIQ leverages XGBoost intelligence to eliminate void space and cut logistics costs by up to 32% per shipment.
+            </p>
+          </StaggerItem>
 
-            <StaggerItem>
-              <h1 className="text-6xl md:text-[80px] font-bold font-syne tracking-tighter mb-8 leading-[0.95]">
-                The AI Brain<br />
-                Behind Modern<br />
-                <span className="relative inline-block overflow-hidden h-[75px] md:h-[95px] w-full pt-1">
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={termIndex}
-                      initial={{ y: 50, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      exit={{ y: -50, opacity: 0 }}
-                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                      className="absolute left-0 text-transparent bg-clip-text bg-gradient-to-r from-[#00FFD1] via-[#00d4b0] to-[#185FA5] w-full block"
-                    >
-                      {TERMS[termIndex]}
-                    </motion.span>
-                  </AnimatePresence>
-                </span>
-              </h1>
-            </StaggerItem>
-
-            <StaggerItem>
-              <p className="text-2xl text-gray-500 max-w-xl mb-14 font-medium leading-relaxed">
-                Reduce packaging waste. Cut shipping costs. Optimize every shipment — automatically.
-              </p>
-            </StaggerItem>
-
-            <StaggerItem>
-              <div className="flex flex-col sm:flex-row items-center gap-6">
-                <Link
-                  href="/auth/signup"
-                  className="w-full sm:w-auto bg-[#00FFD1] text-[#0A0A0F] px-12 py-6 rounded-[28px] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-4 hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(0,255,209,0.3)] group"
-                >
-                  Start Optimizing <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <button 
-                  onClick={() => setShowVideo(true)}
-                  className="w-full sm:w-auto bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] text-white px-12 py-6 rounded-[28px] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all backdrop-blur-xl group"
-                >
-                  <div className="w-10 h-10 rounded-full bg-[#00FFD1]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Play className="w-4 h-4 text-[#00FFD1] fill-[#00FFD1]" />
-                  </div>
-                  Watch Demo
-                </button>
-              </div>
-            </StaggerItem>
-            
-            <StaggerItem>
-              <div className="flex flex-wrap items-center gap-4 mt-12">
-                {['🤖 AI-Powered Engine', '📦 3D Box Visualization', '💰 Avg 23% Cost Reduction'].map(badge => (
-                  <div key={badge} className="bg-white/[0.02] border border-white/10 px-4 py-2 rounded-full text-[11px] font-bold text-gray-400">
-                    {badge}
-                  </div>
-                ))}
-              </div>
-            </StaggerItem>
-          </div>
-
-          {/* Right — 3D Box */}
-          <div className="relative flex justify-center lg:justify-end">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              transition={{ duration: 1.8, ease: [0.16, 1, 0.3, 1] }}
-              className="relative w-full max-w-[640px] aspect-square"
-            >
-              <div className="absolute inset-0 bg-[#00FFD1]/8 rounded-[80px] blur-[100px] animate-pulse" />
-              <div className="relative z-10 w-full h-full border border-white/10 bg-white/[0.01] backdrop-blur-3xl rounded-[80px] p-6 flex items-center justify-center shadow-2xl">
-                <BoxPreview width={580} height={580} />
-              </div>
-
-              {/* Badges */}
-              <motion.div
-                animate={{ y: [0, -15, 0] }}
-                transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute -top-10 -left-10 bg-[#0A0A0F]/80 backdrop-blur-2xl border border-white/10 p-7 rounded-[32px] z-20 shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+          <StaggerItem>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+              <Link
+                href="/auth/signup"
+                className="w-full sm:w-auto bg-indigo-600 text-white px-12 py-6 rounded-[32px] font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-4 hover:bg-indigo-500 hover:scale-105 transition-all shadow-2xl shadow-indigo-600/30 group"
               >
-                <div className="text-3xl font-bold text-[#00FFD1] tracking-tighter">-32%</div>
-                <div className="text-[10px] text-gray-600 uppercase font-black tracking-widest mt-1">DIM Waste Reduced</div>
-              </motion.div>
-
-              <motion.div
-                animate={{ y: [0, 15, 0] }}
-                transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-                className="absolute -bottom-6 -right-6 bg-[#0A0A0F]/80 backdrop-blur-2xl border border-white/10 p-7 rounded-[32px] z-20 shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+                Start Free Trial <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <button
+                onClick={() => setShowVideo(true)}
+                className="w-full sm:w-auto bg-white/5 border border-white/10 text-white px-12 py-6 rounded-[32px] font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-4 hover:bg-white/10 transition-all backdrop-blur-xl"
               >
-                <div className="text-3xl font-bold text-[#185FA5] tracking-tighter">99.4%</div>
-                <div className="text-[10px] text-gray-600 uppercase font-black tracking-widest mt-1">Spatial Accuracy</div>
-              </motion.div>
-            </motion.div>
-          </div>
+                <Play className="w-4 h-4 text-[#00FFD1] fill-[#00FFD1]" /> Watch Demo
+              </button>
+            </div>
+          </StaggerItem>
 
+          <StaggerItem>
+             <div className="mt-20 pt-20 border-t border-white/5 flex flex-wrap justify-center gap-12 md:gap-24 opacity-40 grayscale">
+                <div className="flex items-center gap-3">
+                   <Globe className="w-6 h-6" />
+                   <span className="font-black text-xl tracking-tighter italic">Global Logistics</span>
+                </div>
+                <div className="flex items-center gap-3">
+                   <Zap className="w-6 h-6" />
+                   <span className="font-black text-xl tracking-tighter italic">Instant Scans</span>
+                </div>
+                <div className="flex items-center gap-3">
+                   <Box className="w-6 h-6" />
+                   <span className="font-black text-xl tracking-tighter italic">Smart Boxes</span>
+                </div>
+             </div>
+          </StaggerItem>
         </StaggerContainer>
       </div>
+
+      {/* Decorative Glows */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-[20%] -right-20 w-[400px] h-[400px] bg-[#00FFD1]/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Video Modal */}
       <AnimatePresence>
@@ -194,29 +146,28 @@ export function HeroSection() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0A0A0F]/95 backdrop-blur-2xl p-6"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-2xl p-6"
           >
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-6xl aspect-video bg-black rounded-[40px] overflow-hidden border border-white/10 shadow-[0_0_150px_rgba(0,255,209,0.2)]"
+              className="relative w-full max-w-6xl aspect-video bg-black rounded-[40px] overflow-hidden border border-white/10 shadow-2xl"
             >
               <button 
                 onClick={() => setShowVideo(false)} 
-                className="absolute top-8 right-8 z-20 w-14 h-14 bg-black/60 text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-all backdrop-blur-xl border border-white/10 group"
+                className="absolute top-8 right-8 z-20 w-12 h-12 bg-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-all backdrop-blur-xl border border-white/10"
               >
-                <div className="w-6 h-6 group-hover:scale-110 transition-transform flex items-center justify-center">✕</div>
+                ✕
               </button>
               <iframe 
                 width="100%" 
                 height="100%" 
                 src="https://www.youtube.com/embed/v9X2V9S-F1E?autoplay=1" 
-                title="Shipzi AI Workflow Demo" 
+                title="Shipzi AI Demo"
                 frameBorder="0" 
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                 allowFullScreen
-                className="opacity-90"
               ></iframe>
             </motion.div>
           </motion.div>
