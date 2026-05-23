@@ -12,6 +12,7 @@ interface StatCardProps {
   isCurrency?: boolean
   isNumber?: boolean
   isPercentage?: boolean
+  isINR?: boolean
 }
 
 const colorMap = {
@@ -21,7 +22,7 @@ const colorMap = {
   amber:  'from-amber-600/20 to-amber-600/5 border-amber-500/20 text-amber-400',
 }
 
-export default function StatCard({ label, value, sub, icon, color = 'indigo', isCurrency, isNumber, isPercentage }: StatCardProps) {
+export default function StatCard({ label, value, sub, icon, color = 'indigo', isCurrency, isNumber, isPercentage, isINR }: StatCardProps) {
   const colors = colorMap[color]
   
   // Parse numeric value
@@ -40,7 +41,9 @@ export default function StatCard({ label, value, sub, icon, color = 'indigo', is
     setMounted(true)
     const controls = springValue.on('change', (current) => {
       let formatted: string | number = current
-      if (isCurrency) {
+      if (isINR) {
+        formatted = `₹${Math.round(current).toLocaleString()}`
+      } else if (isCurrency) {
         formatted = `$${current.toFixed(2)}`
       } else if (isPercentage) {
         formatted = `${current.toFixed(1)}%`
@@ -51,7 +54,7 @@ export default function StatCard({ label, value, sub, icon, color = 'indigo', is
     })
     springValue.set(numericValue || 0)
     return () => controls()
-  }, [numericValue, springValue, isCurrency, isPercentage, isNumber])
+  }, [numericValue, springValue, isCurrency, isPercentage, isNumber, isINR])
 
   return (
     <div className={`glass rounded-2xl p-5 bg-gradient-to-br card-hover border ${colors}`}>

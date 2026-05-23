@@ -48,7 +48,10 @@ export default function LandingPage() {
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#00FFD1] to-[#185FA5] flex items-center justify-center group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 shadow-[0_0_30px_rgba(0,255,209,0.4)] transform-style-3d">
               <Rocket className="w-6 h-6 text-white drop-shadow-md" />
             </div>
-            <span className="shipzi-logo text-3xl">Shipzi</span>
+            <div className="flex flex-col">
+              <span className="shipzi-logo text-3xl leading-none">Shipzi</span>
+              <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mt-0.5">Sipzi Company</span>
+            </div>
           </button>
 
           {/* Desktop Nav */}
@@ -167,7 +170,10 @@ export default function LandingPage() {
                   <strong className="text-white">Shipzi</strong> — Where &apos;Ship&apos; meets &apos;Zi&apos; (meaning &apos;intelligence&apos; in the digital age). We are the smart shipping brain.
                 </p>
                 <p>
-                  Shipzi is an AI-powered packaging & shipping intelligence platform that uses advanced Claude AI to optimize every box, reduce DIM weight waste, and cut shipping costs by up to 32%.
+                  Shipzi is an AI-powered packaging & shipping intelligence platform that uses advanced XGBoost intelligence to optimize every box, reduce DIM weight waste, and cut shipping costs by up to 32%.
+                </p>
+                <p>
+                  In collaboration with <strong className="text-[#00FFD1]">Terybi</strong>, the world's most powerful logistics network, we ensure your goods travel smarter, faster, and cheaper.
                 </p>
                 <p>
                   Built for modern e-commerce brands who refuse to overpay for air.

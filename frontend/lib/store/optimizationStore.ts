@@ -74,10 +74,14 @@ export interface OptimizationResult {
   widthCm?: number
   heightCm?: number
   volumeUtil?: number
+  voidPct?: number
+  baselineVoidPct?: number
   optimizedBox?: string
+  originalBox?: string
   reason?: string
   fragility?: string
   sku?: string
+  score?: number
 }
 
 // ─── Store State ──────────────────────────────────────────────────────────

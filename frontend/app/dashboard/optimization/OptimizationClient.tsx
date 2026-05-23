@@ -8,9 +8,10 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useOptimizationStore, OptimizationResult } from '@/lib/store/optimizationStore'
+import { useSubscriptionStore } from '@/lib/store/subscriptionStore'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import Box3DViewer from '@/components/dashboard/Box3DViewer'
+import BoxViewer3D from '@/components/3d/BoxViewer3D'
 import { LimitGuard } from '@/components/LimitReachedWall'
 import { parseFile, ParseResult, generateCSVTemplate } from '@/lib/fileParser'
 
@@ -19,6 +20,7 @@ const OptimizationClient = memo(function OptimizationClient() {
   const [isOptimizing, setIsOptimizing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { results, setResults, setRunning, addBatchResults } = useOptimizationStore()
+  const { deductTokens, remaining: tokensRemaining } = useSubscriptionStore()
   const [uploadedFileName, setUploadedFileName] = useState('')
   const router = useRouter()
 
@@ -38,7 +40,7 @@ const OptimizationClient = memo(function OptimizationClient() {
   })
   const [currency, setCurrency] = useState<'USD' | 'INR'>('USD')
   const INR_RATE = 83.5
-  const [manualResult, setManualResult] = useState<OptimizationResult | null>(null)
+  const [manualResult, setManualResult] = useState<any>(null)
   const [summaryReport, setSummaryReport] = useState<any>(null)
 
   const [processingStep, setProcessingStep] = useState(0)
@@ -100,6 +102,15 @@ const OptimizationClient = memo(function OptimizationClient() {
       }]
 
       setProcessingStep(2)
+      // Deduct tokens
+      const success = await deductTokens(session?.access_token || '', payload.length, 'optimization')
+      if (!success) {
+        setQuotaExceededError('Your token limit has been reached. Please upgrade to continue.')
+        setShowUpgradeModal(true)
+        setIsOptimizing(false)
+        return
+      }
+
       const res = await fetch('/api/optimize', {
         method: 'POST',
         headers: {
@@ -132,7 +143,6 @@ const OptimizationClient = memo(function OptimizationClient() {
           `✓ Optimized ${data.total_optimized} of ${data.total_processed} products. ` +
           `₹${data.total_savings?.toFixed(2)} saved!`
         )
-        // Keep the result on screen for manual entry instead of immediate redirect
       }
     } catch (err: any) {
       toast.error(err.message)
@@ -168,6 +178,15 @@ const OptimizationClient = memo(function OptimizationClient() {
       const { data: { session } } = await supabase.auth.getSession()
 
       setProcessingStep(2)
+      // Deduct tokens
+      const success = await deductTokens(session?.access_token || '', data.length, 'optimization')
+      if (!success) {
+        setQuotaExceededError('Your token limit has been reached. Please upgrade to continue.')
+        setShowUpgradeModal(true)
+        setIsOptimizing(false)
+        return
+      }
+
       const res = await fetch('/api/optimize', {
         method: 'POST',
         headers: {
@@ -286,9 +305,10 @@ const OptimizationClient = memo(function OptimizationClient() {
 
                   <button
                     onClick={handleManualOptimize}
-                    className="w-full bg-[#00FFD1] text-[#0A0A0F] py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(0,255,209,0.2)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4"
+                    disabled={tokensRemaining <= 0}
+                    className="w-full bg-[#00FFD1] text-[#0A0A0F] py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(0,255,209,0.2)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-50 disabled:grayscale"
                   >
-                    <Brain className="w-4 h-4" /> Run AI Optimization
+                    <Brain className="w-4 h-4" /> {tokensRemaining <= 0 ? 'Limit Reached' : 'Run AI Optimization'}
                   </button>
                 </motion.div>
               ) : (
@@ -319,8 +339,12 @@ const OptimizationClient = memo(function OptimizationClient() {
                         </p>
                         <button onClick={() => setParseResult(null)} className="text-xs text-gray-500 hover:text-white">Clear</button>
                       </div>
-                      <button onClick={() => processBulkData(parseResult.data)} className="w-full bg-[#00FFD1] text-[#0A0A0F] py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(0,255,209,0.2)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2">
-                        <Brain className="w-4 h-4" /> Run Batch Optimization
+                      <button
+                        onClick={() => processBulkData(parseResult.data)}
+                        disabled={tokensRemaining < parseResult.data.length}
+                        className="w-full bg-[#00FFD1] text-[#0A0A0F] py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(0,255,209,0.2)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
+                      >
+                        <Brain className="w-4 h-4" /> {tokensRemaining < parseResult.data.length ? 'Insufficient Tokens' : 'Run Batch Optimization'}
                       </button>
                     </div>
                   )}
@@ -346,15 +370,11 @@ const OptimizationClient = memo(function OptimizationClient() {
               </div>
 
               <div className="aspect-square w-full">
-                <Box3DViewer
-                  l={manualResult.optimizedDims?.l || 0}
-                  w={manualResult.optimizedDims?.w || 0}
-                  h={manualResult.optimizedDims?.h || 0}
-                  productL={manualResult.lengthCm}
-                  productW={manualResult.widthCm}
-                  productH={manualResult.heightCm}
-                  spaceUtilization={manualResult.volumeUtil}
-                  fragility={manualResult.fragility?.toLowerCase() as any}
+                <BoxViewer3D
+                  depthCm={manualResult.optimizedDims?.l || 0}
+                  widthCm={manualResult.optimizedDims?.w || 0}
+                  heightCm={manualResult.optimizedDims?.h || 0}
+                  sku={manualResult.sku}
                 />
               </div>
 

@@ -1,124 +1,122 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
-import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Html, Edges } from '@react-three/drei'
-import { useSpring, animated } from '@react-spring/three'
+import { useRef, useState, useEffect, Suspense, useMemo } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
+import { OrbitControls, Html, Edges, Grid } from '@react-three/drei'
 import * as THREE from 'three'
 
 interface BoxViewer3DProps {
   widthCm: number
   heightCm: number
   depthCm: number // length
-  openDelay?: number
+  sku?: string
+  labelTexture?: THREE.CanvasTexture | null
 }
 
-// Convert cm to 3D units (scale down for display)
 const scale = 0.1
 
-export default function BoxViewer3D({ widthCm, heightCm, depthCm, openDelay = 500 }: BoxViewer3DProps) {
+function DimensionLabel({ position, text, color = "#00E5CC" }: { position: [number, number, number], text: string, color?: string }) {
+  return (
+    <Html position={position} center className="pointer-events-none">
+      <div className="bg-gray-900/90 text-white px-2 py-0.5 rounded text-[10px] font-black whitespace-nowrap border border-white/10 shadow-xl" style={{ color }}>
+        {text}
+      </div>
+    </Html>
+  )
+}
+
+function SingleBox({ widthCm, heightCm, depthCm, labelTexture }: BoxViewer3DProps) {
   const w = widthCm * scale
   const h = heightCm * scale
   const d = depthCm * scale
 
-  const [isOpen, setIsOpen] = useState(false)
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsOpen(true), openDelay)
-    return () => clearTimeout(timer)
-  }, [openDelay])
-
-  // Animate the lid (top plane) rotating around its back edge
-  const { lidRotation } = useSpring({
-    lidRotation: isOpen ? Math.PI / 1.5 : 0, // Opens ~120 degrees
-    config: { mass: 1, tension: 170, friction: 26 }
-  })
-
-  // Material for the box: semi-transparent, teal edges will be added via <Edges />
-  const materialProps = {
+  // Materials
+  const boxMaterial = useMemo(() => new THREE.MeshStandardMaterial({
     color: '#002222',
     transparent: true,
-    opacity: 0.6,
+    opacity: 0.85,
     side: THREE.DoubleSide,
-    depthWrite: false,
-  }
+    roughness: 0.3,
+    metalness: 0.8,
+  }), [])
+
+  const labelMaterial = useMemo(() => {
+    if (!labelTexture) return boxMaterial
+    return new THREE.MeshStandardMaterial({
+      map: labelTexture,
+      transparent: true,
+      side: THREE.DoubleSide,
+    })
+  }, [labelTexture, boxMaterial])
+
+  const materials = [
+    boxMaterial, // Right
+    boxMaterial, // Left
+    boxMaterial, // Top
+    boxMaterial, // Bottom
+    labelMaterial, // Front (label goes here)
+    boxMaterial, // Back
+  ]
 
   return (
-    <div className="w-full h-96 bg-gray-900 rounded-2xl overflow-hidden relative">
-      <Canvas camera={{ position: [w * 2, h * 2, d * 2], fov: 45 }}>
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[10, 20, 10]} intensity={1} />
-        
-        <group position={[0, -h/2, 0]}>
-          {/* Bottom */}
-          <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[w, d]} />
-            <meshStandardMaterial {...materialProps} />
-            <Edges color="#00E5CC" threshold={15} />
-          </mesh>
+    <group position={[0, h / 2, 0]}>
+      <mesh material={materials}>
+        <boxGeometry args={[w, h, d]} />
+        <Edges color="#00E5CC" threshold={15} />
+      </mesh>
 
-          {/* Back */}
-          <mesh position={[0, h/2, -d/2]}>
-            <planeGeometry args={[w, h]} />
-            <meshStandardMaterial {...materialProps} />
-            <Edges color="#00E5CC" threshold={15} />
-            
-            {/* Dimension label for height */}
-            <Html position={[w/2 + 0.1, 0, 0]} center className="pointer-events-none">
-              <div className="bg-gray-800/80 text-[#00E5CC] px-2 py-0.5 rounded text-xs whitespace-nowrap border border-[#00E5CC]/30">
-                H: {heightCm}cm
-              </div>
-            </Html>
-          </mesh>
+      {/* Dimension Labels */}
+      <DimensionLabel position={[w / 2 + 0.2, 0, 0]} text={`H: ${heightCm}cm`} />
+      <DimensionLabel position={[0, -h / 2 - 0.2, d / 2]} text={`W: ${widthCm}cm`} />
+      <DimensionLabel position={[w / 2, -h / 2 - 0.2, 0]} text={`L: ${depthCm}cm`} />
+    </group>
+  )
+}
 
-          {/* Front */}
-          <mesh position={[0, h/2, d/2]}>
-            <planeGeometry args={[w, h]} />
-            <meshStandardMaterial {...materialProps} />
-            <Edges color="#00E5CC" threshold={15} />
-            
-            {/* Dimension label for width */}
-            <Html position={[0, -h/2 - 0.2, 0]} center className="pointer-events-none">
-              <div className="bg-gray-800/80 text-[#00E5CC] px-2 py-0.5 rounded text-xs whitespace-nowrap border border-[#00E5CC]/30">
-                W: {widthCm}cm
-              </div>
-            </Html>
-          </mesh>
+export default function BoxViewer3D({ widthCm, heightCm, depthCm, sku }: BoxViewer3DProps) {
+  if (!widthCm || !heightCm || !depthCm) {
+    return (
+      <div className="w-full h-96 bg-gray-900 rounded-2xl flex items-center justify-center border border-red-500/20">
+        <p className="text-red-400 text-xs font-bold uppercase tracking-widest">Error: Invalid Dimensions</p>
+      </div>
+    )
+  }
 
-          {/* Left */}
-          <mesh position={[-w/2, h/2, 0]} rotation={[0, Math.PI / 2, 0]}>
-            <planeGeometry args={[d, h]} />
-            <meshStandardMaterial {...materialProps} />
-            <Edges color="#00E5CC" threshold={15} />
-          </mesh>
+  const w = widthCm * scale
+  const h = heightCm * scale
+  const d = depthCm * scale
 
-          {/* Right */}
-          <mesh position={[w/2, h/2, 0]} rotation={[0, -Math.PI / 2, 0]}>
-            <planeGeometry args={[d, h]} />
-            <meshStandardMaterial {...materialProps} />
-            <Edges color="#00E5CC" threshold={15} />
-            
-            {/* Dimension label for depth (length) */}
-            <Html position={[0, -h/2 - 0.2, 0]} center className="pointer-events-none">
-              <div className="bg-gray-800/80 text-[#00E5CC] px-2 py-0.5 rounded text-xs whitespace-nowrap border border-[#00E5CC]/30">
-                L: {depthCm}cm
-              </div>
-            </Html>
-          </mesh>
+  return (
+    <div className="w-full h-96 bg-gray-900 rounded-2xl overflow-hidden relative border border-white/5 shadow-2xl">
+      <Suspense fallback={
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm z-10">
+          <div className="w-8 h-8 border-4 border-[#00FFD1] border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      }>
+        <Canvas camera={{ position: [w * 2.5, h * 2.5, d * 2.5], fov: 45 }} shadows>
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[10, 20, 10]} intensity={1.2} castShadow />
+          <pointLight position={[-10, -10, -10]} intensity={0.5} />
 
-          {/* Top (Lid) - Animated */}
-          <animated.group position={[0, h, -d/2]} rotation-x={lidRotation.to(r => -r)}>
-            {/* We offset the mesh so it hinges at the back edge */}
-            <mesh position={[0, 0, d/2]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[w, d]} />
-              <meshStandardMaterial {...materialProps} />
-              <Edges color="#00E5CC" threshold={15} />
-            </mesh>
-          </animated.group>
-        </group>
+          <SingleBox widthCm={widthCm} heightCm={heightCm} depthCm={depthCm} sku={sku} />
 
-        <OrbitControls makeDefault enableZoom={true} enablePan={true} autoRotate autoRotateSpeed={1} />
-      </Canvas>
+          <Grid
+            infiniteGrid
+            fadeDistance={20}
+            sectionSize={1}
+            sectionThickness={1}
+            sectionColor="#1e1e2e"
+            cellSize={0.5}
+            cellColor="#11111b"
+          />
+
+          <OrbitControls makeDefault enableZoom={true} enablePan={true} autoRotate={false} />
+        </Canvas>
+      </Suspense>
+
+      <div className="absolute top-4 left-4 px-3 py-1 bg-black/50 backdrop-blur-md rounded-lg border border-white/10 pointer-events-none">
+        <span className="text-[10px] font-black text-[#00FFD1] uppercase tracking-widest">3D Optimized View: {sku || 'Unit'}</span>
+      </div>
     </div>
   )
 }
