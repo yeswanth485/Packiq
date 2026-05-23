@@ -128,8 +128,8 @@ const DashboardClient = memo(function DashboardClient() {
 
   const kpis = [
     { label: 'SKUs Optimized', value: stats.total, icon: Package, color: '#4f46e5' },
-    { label: 'Total Saved', value: `₹${stats.totalSavings.toLocaleString()}`, icon: TrendingUp, color: '#22c55e' },
-    { label: 'Avg reduction', value: `${stats.avgReduction.toFixed(1)}%`, icon: Zap, color: '#f59e0b' },
+    { label: 'Total Box Savings', value: `₹${stats.totalSavings.toLocaleString()}`, icon: TrendingUp, color: '#22c55e' },
+    { label: 'Waste Eliminated', value: `${stats.avgReduction.toFixed(1)}%`, icon: Zap, color: '#f59e0b' },
     { label: 'Carbon Saved', value: `${(stats.totalSavings * 0.05).toFixed(1)}kg`, icon: Leaf, color: '#10b981' },
   ]
 
@@ -164,7 +164,7 @@ const DashboardClient = memo(function DashboardClient() {
              <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">SKUs Optimized Over Time</h3>
              <div className="h-64">
                 {skuTrendData.length >= 2 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`sku-trend-${skuTrendData.length}-${lastRun}`}>
                     <AreaChart data={skuTrendData}>
                         <defs>
                           <linearGradient id="colorSku" x1="0" y1="0" x2="0" y2="1">
@@ -190,7 +190,7 @@ const DashboardClient = memo(function DashboardClient() {
              <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Void Space Reduction</h3>
              <div className="h-64 w-full">
                 {voidReductionData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`void-reduction-${voidReductionData.length}-${lastRun}`}>
                     <RadialBarChart innerRadius="30%" outerRadius="100%" barSize={15} data={voidReductionData}>
                         <RadialBar label={{ position: 'insideStart', fill: '#fff', fontSize: 10 }} background dataKey="value" />
                         <Legend iconSize={10} layout="vertical" verticalAlign="middle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase' }} />
@@ -204,10 +204,10 @@ const DashboardClient = memo(function DashboardClient() {
 
           {/* 2. Cost Savings Trend */}
           <div className="lg:col-span-12 glass p-8 rounded-[40px] border border-white/5 min-h-[350px]">
-             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">Original vs Optimized Cost Trend (INR)</h3>
+             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">Baseline vs AI-Optimized Box & Shipping Cost (INR)</h3>
              <div className="h-64">
                 {costTrendData.length >= 2 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`cost-trend-${costTrendData.length}-${lastRun}`}>
                     <LineChart data={costTrendData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
                         <XAxis dataKey="date" stroke="#ffffff20" fontSize={10} />
@@ -229,7 +229,7 @@ const DashboardClient = memo(function DashboardClient() {
              <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">Box Size Distribution</h3>
              <div className="h-64">
                 {boxDistData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`box-dist-${boxDistData.length}-${lastRun}`}>
                     <BarChart data={boxDistData} layout="vertical">
                         <XAxis type="number" hide />
                         <YAxis dataKey="name" type="category" stroke="#ffffff40" fontSize={10} width={100} />
@@ -248,7 +248,7 @@ const DashboardClient = memo(function DashboardClient() {
              <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">Top 5 SKUs by Savings</h3>
              <div className="h-64">
                 {topSavingsData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`top-savings-${topSavingsData.length}-${lastRun}`}>
                     <BarChart data={topSavingsData}>
                         <XAxis dataKey="name" stroke="#ffffff20" fontSize={10} />
                         <YAxis stroke="#ffffff20" fontSize={10} domain={['auto', 'auto']} />
@@ -267,7 +267,7 @@ const DashboardClient = memo(function DashboardClient() {
              <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">Weight Tier Distribution</h3>
              <div className="h-80 w-full">
                 {carrierDistData.some(d => d.value > 0) ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`carrier-dist-${carrierDistData.length}-${lastRun}`}>
                     <PieChart>
                         <Pie data={carrierDistData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">
                           {carrierDistData.map((entry, index) => (

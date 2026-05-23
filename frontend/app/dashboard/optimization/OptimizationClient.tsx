@@ -138,6 +138,7 @@ const OptimizationClient = memo(function OptimizationClient() {
 
         // Save to global store
         setResults(data.results, [])
+        window.dispatchEvent(new Event('optimization-complete'))
 
         toast.success(
           `✓ Optimized ${data.total_optimized} of ${data.total_processed} products. ` +
@@ -216,6 +217,7 @@ const OptimizationClient = memo(function OptimizationClient() {
 
         // Save to global store
         setResults(resData.results, [])
+        window.dispatchEvent(new Event('optimization-complete'))
 
         toast.success(
           `✓ Optimized ${resData.total_optimized} of ${resData.total_processed} products. ` +
@@ -300,6 +302,17 @@ const OptimizationClient = memo(function OptimizationClient() {
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Weight (kg)</label>
                       <input type="number" value={manualInput.weight} onChange={e => setManualInput(s => ({...s, weight: e.target.value}))} placeholder="0.5" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Current Box Name</label>
+                      <input type="text" value={manualInput.currentBox} onChange={e => setManualInput(s => ({...s, currentBox: e.target.value}))} placeholder="Standard Mailer" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Current Box Price (₹)</label>
+                      <input type="number" value={manualInput.currentBoxCost} onChange={e => setManualInput(s => ({...s, currentBoxCost: e.target.value}))} placeholder="15" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-[#00FFD1] transition-all" />
                     </div>
                   </div>
 

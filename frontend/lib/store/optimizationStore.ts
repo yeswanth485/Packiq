@@ -76,6 +76,8 @@ export interface OptimizationResult {
   volumeUtil?: number
   voidPct?: number
   baselineVoidPct?: number
+  baselineBoxCost?: number
+  optimizedBoxCost?: number
   optimizedBox?: string
   originalBox?: string
   reason?: string

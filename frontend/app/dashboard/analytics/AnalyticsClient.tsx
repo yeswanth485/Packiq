@@ -15,7 +15,7 @@ const COLORS = ['#00FFD1', '#4f46e5', '#3b82f6', '#ec4899', '#f59e0b', '#8b5cf6'
 
 const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { allOptimizations: any[] }) {
   const [dateRange, setDateRange] = useState(30)
-  const { results: optResults } = useOptimizationStore()
+  const { results: optResults, lastRun } = useOptimizationStore()
 
   useEffect(() => {
     // Fix for Recharts ResponsiveContainer not resizing when hidden
@@ -99,13 +99,13 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
     }))
   }, [filteredData])
 
-  // 3. Cost Reduction % Scatter (DIM Weight vs % Reduction)
+  // 3. Box Cost Efficiency (Box Price vs. Volume Reduction)
   const scatterData = useMemo(() => {
     return filteredData.map(d => {
-      const reductionPct = d.baseline_cost > 0 ? (d.savings / d.baseline_cost * 100) : 0
+      const volReduction = Math.max(0, d.void_before - d.void_after);
       return {
-        dimWeight: Number(d.weight.toFixed(2)),
-        reduction: Number(reductionPct.toFixed(2)),
+        boxPrice: Number(d.baseline_cost.toFixed(2)),
+        reduction: Number(volReduction.toFixed(2)),
         name: d.name
       }
     })
@@ -151,10 +151,10 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
     <div className="max-w-7xl mx-auto space-y-8 fade-in pb-20 px-4">
       {/* KPI Summary */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Savings" value={cumulativeSavings[cumulativeSavings.length-1]?.total || 0} icon={<TrendingUp className="w-5 h-5" />} color="green" isINR />
-        <StatCard label="Avg Match Score" value={filteredData.reduce((acc, d) => acc + d.score, 0) / (filteredData.length || 1)} icon={<Zap className="w-5 h-5" />} color="indigo" isNumber />
-        <StatCard label="Void Reduced" value={filteredData.reduce((acc, d) => acc + (d.void_before - d.void_after), 0) / (filteredData.length || 1)} icon={<PercentIcon className="w-5 h-5" />} color="cyan" isPercentage />
-        <StatCard label="Sustainability" value={Math.round(filteredData.reduce((acc, d) => acc + Math.min(100, (d.void_before - d.void_after) * 2 + 50), 0) / (filteredData.length || 1))} icon={<Leaf className="w-5 h-5" />} color="green" isNumber />
+        <StatCard label="Cumulative Box Savings" value={cumulativeSavings[cumulativeSavings.length-1]?.total || 0} icon={<TrendingUp className="w-5 h-5" />} color="green" isINR />
+        <StatCard label="Average Fit Score" value={filteredData.reduce((acc, d) => acc + d.score, 0) / (filteredData.length || 1)} icon={<Zap className="w-5 h-5" />} color="indigo" isNumber />
+        <StatCard label="Dimensional Waste Eliminated" value={filteredData.reduce((acc, d) => acc + (d.void_before - d.void_after), 0) / (filteredData.length || 1)} icon={<PercentIcon className="w-5 h-5" />} color="cyan" isPercentage />
+        <StatCard label="Average Eco Score" value={Math.round(filteredData.reduce((acc, d) => acc + Math.min(100, (d.void_before - d.void_after) * 2 + 50), 0) / (filteredData.length || 1))} icon={<Leaf className="w-5 h-5" />} color="green" isNumber />
       </div>
 
       {/* Header */}
@@ -204,7 +204,7 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
             </h3>
             <div className="h-64">
               {scoreDistribution.filter(d => d.count > 0).length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`score-dist-${scoreDistribution.length}-${dateRange}-${lastRun}`}>
                   <BarChart data={scoreDistribution}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
                     <XAxis dataKey="range" stroke="#ffffff20" fontSize={10} />
@@ -229,7 +229,7 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
             </h3>
             <div className="h-64">
               {sustainabilityTrend.length >= 2 ? (
-                <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`sus-trend-${sustainabilityTrend.length}-${dateRange}-${lastRun}`}>
                   <AreaChart data={sustainabilityTrend}>
                     <defs>
                       <linearGradient id="colorEco" x1="0" y1="0" x2="0" y2="1">
@@ -249,18 +249,18 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
             </div>
           </div>
 
-          {/* 3. Cost Reduction Scatter */}
+          {/* 3. Box Cost vs Volume Reduction Scatter */}
           <div className="glass p-8 rounded-[40px] border border-white/5 bg-gradient-to-br from-violet-500/5 to-transparent min-h-[350px]">
             <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8 flex items-center gap-2">
-              <TrendingUp className="w-3 h-3 text-violet-400" /> Weight vs. Savings Efficiency
+              <TrendingUp className="w-3 h-3 text-violet-400" /> Box Cost vs. Volume Reduction
             </h3>
             <div className="h-64">
               {scatterData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`scatter-${scatterData.length}-${dateRange}-${lastRun}`}>
                   <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                     <CartesianGrid stroke="#ffffff05" />
-                    <XAxis type="number" dataKey="dimWeight" name="Weight" unit="kg" stroke="#ffffff20" fontSize={10} domain={['auto', 'auto']} />
-                    <YAxis type="number" dataKey="reduction" name="Reduction" unit="%" stroke="#ffffff20" fontSize={10} domain={['auto', 'auto']} />
+                    <XAxis type="number" dataKey="boxPrice" name="Box Price" unit="₹" stroke="#ffffff20" fontSize={10} domain={['auto', 'auto']} />
+                    <YAxis type="number" dataKey="reduction" name="Vol. Reduced" unit="%" stroke="#ffffff20" fontSize={10} domain={['auto', 'auto']} />
                     <ZAxis type="category" dataKey="name" name="SKU" />
                     <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
                     <Scatter name="SKUs" data={scatterData} fill="#8b5cf6" />
@@ -279,7 +279,7 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
             </h3>
             <div className="h-64">
               {tokenUsage.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`token-usage-${tokenUsage.length}-${dateRange}-${lastRun}`}>
                   <BarChart data={tokenUsage}>
                     <XAxis dataKey="date" stroke="#ffffff20" fontSize={10} />
                     <YAxis stroke="#ffffff20" fontSize={10} domain={['auto', 'auto']} />
@@ -300,13 +300,13 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
           <div className="glass p-8 rounded-[40px] border border-white/5 col-span-1 lg:col-span-2 bg-gradient-to-r from-emerald-500/10 to-transparent min-h-[350px]">
              <div className="flex justify-between items-center mb-8">
                 <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                  <Activity className="w-3 h-3 text-emerald-400" /> Cumulative Revenue Saved (INR)
+                  <Activity className="w-3 h-3 text-emerald-400" /> Cumulative Box & Shipping Savings (INR)
                 </h3>
                 <span className="text-2xl font-black text-white">₹{cumulativeSavings[cumulativeSavings.length-1]?.total.toLocaleString() || '0'}</span>
              </div>
              <div className="h-64">
                 {cumulativeSavings.length >= 2 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100} key={`cumulative-savings-${cumulativeSavings.length}-${dateRange}-${lastRun}`}>
                     <AreaChart data={cumulativeSavings}>
                         <defs>
                           <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
@@ -344,6 +344,66 @@ const AnalyticsClient = memo(function AnalyticsClient({ allOptimizations }: { al
              </div>
           </div>
 
+        </div>
+      )}
+
+      {/* Per-SKU Box Optimization Breakdown */}
+      {filteredData.length > 0 && (
+        <div className="glass p-8 rounded-[40px] border border-white/5 overflow-hidden">
+          <div className="flex justify-between items-center mb-8">
+            <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <Database className="w-4 h-4 text-[#00FFD1]" /> Itemized Box Savings Log
+            </h3>
+            <div className="px-4 py-1 bg-white/5 rounded-full border border-white/10">
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{filteredData.length} Items Audited</span>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm border-separate border-spacing-y-2">
+              <thead>
+                <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                  <th className="px-6 py-2">Product Name</th>
+                  <th className="px-6 py-2">Baseline Box</th>
+                  <th className="px-6 py-2">Baseline Price</th>
+                  <th className="px-6 py-2">Optimized Price</th>
+                  <th className="px-6 py-2">Box Savings</th>
+                  <th className="px-6 py-2">Fit Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredData.slice(0, 20).map((o, idx) => (
+                  <tr key={`${o.sku}-${idx}`} className="group">
+                    <td className="px-6 py-4 bg-white/[0.02] rounded-l-2xl border-y border-l border-white/5 group-hover:bg-white/[0.04] transition-colors">
+                      <div className="flex flex-col">
+                        <span className="text-white font-bold">{o.name}</span>
+                        <span className="text-[10px] text-gray-600 font-mono">{o.sku}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5 group-hover:bg-white/[0.04] transition-colors">
+                      <span className="text-gray-400 text-xs">{o.box}</span>
+                    </td>
+                    <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5 group-hover:bg-white/[0.04] transition-colors">
+                      <span className="text-gray-500 line-through">₹{(o.baseline_cost || 0).toLocaleString()}</span>
+                    </td>
+                    <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5 group-hover:bg-white/[0.04] transition-colors">
+                      <span className="text-[#00FFD1] font-black">₹{(o.optimized_cost || 0).toLocaleString()}</span>
+                    </td>
+                    <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5 group-hover:bg-white/[0.04] transition-colors">
+                      <span className="text-emerald-400 font-bold">+₹{(o.savings || 0).toLocaleString()}</span>
+                    </td>
+                    <td className="px-6 py-4 bg-white/[0.02] rounded-r-2xl border-y border-r border-white/5 group-hover:bg-white/[0.04] transition-colors">
+                      <div className="flex items-center gap-2">
+                        <div className="w-12 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-[#00FFD1]" style={{ width: `${o.score}%` }} />
+                        </div>
+                        <span className="text-[10px] text-gray-400">{Math.round(o.score)}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
