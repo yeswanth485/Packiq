@@ -212,11 +212,26 @@ export async function runMLOptimization(
     const fragility = p.fragility || 'LOW';
     let bestMatch: any = null;
 
-    // Filter boxes that physically fit
+    // Filter boxes that physically fit AND are smaller/cheaper than current box
+    const currentVol = (p.current_box_length && p.current_box_width && p.current_box_height)
+      ? p.current_box_length * p.current_box_width * p.current_box_height
+      : Infinity;
+
+    const currentPrice = p.box_price || Infinity;
+
     const candidates = boxes.filter(box => {
       const orientations = getFittingOrientations(p.length_cm, p.width_cm, p.height_cm, box.length_cm, box.width_cm, box.height_cm);
       const weightFits = p.weight_kg <= (box.weight_limit_kg ?? box.max_weight_kg ?? 30);
-      return orientations.length > 0 && weightFits;
+
+      const boxVol = box.length_cm * box.width_cm * box.height_cm;
+      const boxPrice = box.cost || 0.5;
+
+      // Strict optimization rules: Volume <= current AND Price < current
+      const isSmaller = boxVol <= currentVol;
+      // If we don't have current price, we assume any fitting box is a candidate
+      const isCheaper = currentPrice === Infinity || boxPrice < currentPrice;
+
+      return orientations.length > 0 && weightFits && isSmaller && isCheaper;
     });
 
     if (candidates.length > 0) {

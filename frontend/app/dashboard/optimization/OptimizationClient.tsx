@@ -378,14 +378,53 @@ const OptimizationClient = memo(function OptimizationClient() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-white/[0.03] border border-white/5 rounded-2xl">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Recommended Box</p>
-                  <p className="text-white font-bold">{manualResult.optimizedBox || 'N/A'}</p>
+              <div className="glass overflow-hidden border border-white/5 rounded-2xl">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-white/5 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                    <tr>
+                      <th className="px-4 py-2">Metric</th>
+                      <th className="px-4 py-2 text-gray-400">Original</th>
+                      <th className="px-4 py-2 text-[#00FFD1]">Optimized</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    <tr>
+                      <td className="px-4 py-3 font-bold text-gray-400">Dimensions</td>
+                      <td className="px-4 py-3 text-gray-500">{manualResult.originalBox}</td>
+                      <td className="px-4 py-3 text-white font-bold">{manualResult.optimizedDims?.l}×{manualResult.optimizedDims?.w}×{manualResult.optimizedDims?.h} cm</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 font-bold text-gray-400">Box Price</td>
+                      <td className="px-4 py-3 text-gray-500">₹{manualInput.currentBoxCost || '15'}</td>
+                      <td className="px-4 py-3 text-emerald-400 font-black">₹{manualResult.assigned_box?.cost?.toLocaleString() || '10'}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 font-bold text-gray-400">Shipping</td>
+                      <td className="px-4 py-3 text-gray-500">₹{manualResult.baseline_cost?.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-emerald-400 font-black">₹{manualResult.shipping_cost?.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 font-bold text-gray-400">Void Space</td>
+                      <td className="px-4 py-3 text-gray-500">{manualResult.baseline_void_pct?.toFixed(0)}%</td>
+                      <td className="px-4 py-3 text-emerald-400 font-black">{manualResult.void_pct?.toFixed(0)}%</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 font-bold text-gray-400">Fragility Match</td>
+                      <td className="px-4 py-3 text-gray-500">Standard</td>
+                      <td className="px-4 py-3 text-white font-bold">{manualResult.score_breakdown?.fragility_match_score}%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Estimated Savings</p>
+                  <p className="text-2xl font-black text-emerald-400">₹{manualResult.savings?.toLocaleString()}</p>
                 </div>
-                <div className="p-4 bg-white/[0.03] border border-white/5 rounded-2xl">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Savings</p>
-                  <p className="text-[#00FFD1] font-bold">{fmt(manualResult.savings || 0)}</p>
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">XGBoost Score</p>
+                  <p className="text-2xl font-black text-white">{manualResult.score?.toFixed(0)}</p>
                 </div>
               </div>
 

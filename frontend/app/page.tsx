@@ -50,7 +50,7 @@ export default function LandingPage() {
             </div>
             <div className="flex flex-col">
               <span className="shipzi-logo text-3xl leading-none">Shipzi</span>
-              <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mt-0.5">Sipzi Company</span>
+              <span className="text-[10px] font-black text-[#00FFD1] uppercase tracking-[0.3em] mt-0.5">Terybi</span>
             </div>
           </button>
 

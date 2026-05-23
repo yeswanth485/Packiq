@@ -6,7 +6,7 @@ import {
   Leaf, Wind, TreePine, ShieldCheck, Zap,
   ArrowRight, Award, Trash2, Cpu, Globe
 } from 'lucide-react'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts'
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
 import { CountUpNumber } from '@/components/animations'
 import { useDashboardData } from '@/lib/hooks/useDashboardData'
@@ -30,9 +30,9 @@ const SustainabilityClient = memo(function SustainabilityClient() {
 
   const mergedResults = useMemo(() => {
     const list = [...optResults] as any[]
-    const ids = new Set(list.map(r => r.product_id || (r as any).id))
+    const ids = new Set(list.map(r => r.sku || r.product_id || (r as any).id))
     rawOptimizations.forEach(o => {
-      const oid = (o as any).product_id || (o as any).id
+      const oid = (o as any).sku || (o as any).product_id || (o as any).id
       if (!ids.has(oid)) {
         list.push(o)
       }
@@ -60,8 +60,8 @@ const SustainabilityClient = memo(function SustainabilityClient() {
       return acc + vSaved
     }, 0)
 
-    const carbonReduced = totalVolumeSaved * 0.0006
-    const trees = Math.round(carbonReduced / 22)
+    const carbonReduced = totalVolumeSaved * 0.0012
+    const trees = Number((carbonReduced / 21.77).toFixed(1))
     const cardboardM2 = totalVolumeSaved * 0.00018 // approx surface area based on volume
 
     // Calculate avg eco score
@@ -112,7 +112,7 @@ const SustainabilityClient = memo(function SustainabilityClient() {
 
     const projectedScore = Math.min(100, baseScore)
     const projectedCarbon = Number((stats.carbonReducedKg * carbonMultiplier).toFixed(2))
-    const projectedTrees = Math.round(projectedCarbon / 22)
+    const projectedTrees = Number((projectedCarbon / 21.77).toFixed(1))
 
     return {
       projectedScore,
@@ -120,6 +120,29 @@ const SustainabilityClient = memo(function SustainabilityClient() {
       projectedTrees
     }
   }, [stats, biodegradableTape, recycledMailers, carbonOffsetCouriers])
+
+  // 1. CO2 Savings Bar (Last 7 runs)
+  const co2BarData = useMemo(() => {
+    return mergedResults.slice(-7).map(r => ({
+      name: (r.product_name || 'Item').substring(0, 8),
+      co2: Number(((r.volume_saved_cm3 || (r.savings ? r.savings * 3500 : 0) || 0) * 0.0012).toFixed(3))
+    }))
+  }, [mergedResults])
+
+  // 2. Eco Score Trend Line
+  const ecoTrendData = useMemo(() => {
+    const byDay: Record<string, { total: number, count: number }> = {}
+    mergedResults.forEach(r => {
+      const day = (r.created_at || new Date().toISOString()).slice(0, 10)
+      if (!byDay[day]) byDay[day] = { total: 0, count: 0 }
+      byDay[day].total += (r.sustainability_score || 80)
+      byDay[day].count++
+    })
+    return Object.entries(byDay).sort().map(([date, vals]) => ({
+      date,
+      score: Math.round(vals.total / vals.count)
+    }))
+  }, [mergedResults])
 
   return (
     <div className="max-w-[1200px] w-full mx-auto space-y-8 pb-20 px-4 md:px-0">
@@ -166,7 +189,7 @@ const SustainabilityClient = memo(function SustainabilityClient() {
           </div>
           <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Trees Planted</p>
           <h3 className="text-3xl font-black text-white font-mono flex items-baseline gap-1">
-            <CountUpNumber value={stats.treesEquivalent} />
+            <CountUpNumber value={stats.treesEquivalent} decimals={1} />
             <span className="text-xs text-gray-400">mature trees</span>
           </h3>
         </div>
@@ -371,6 +394,53 @@ const SustainabilityClient = memo(function SustainabilityClient() {
 
         </div>
 
+      </div>
+
+      {/* Sustainability Charts Row */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* CO2 Savings Bar Chart */}
+        <div className="glass p-8 rounded-[40px] border border-white/5 bg-gradient-to-br from-emerald-500/5 to-transparent min-h-[350px]">
+          <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8 flex items-center gap-2">
+            <Wind className="w-4 h-4 text-emerald-400" /> CO₂ Reduction per SKU (kg)
+          </h3>
+          <div className="h-64">
+            {co2BarData.length >= 2 ? (
+              <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                <BarChart data={co2BarData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                  <XAxis dataKey="name" stroke="#ffffff20" fontSize={10} />
+                  <YAxis stroke="#ffffff20" fontSize={10} domain={['auto', 'auto']} />
+                  <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
+                  <Bar dataKey="co2" fill="#10B981" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-600 text-[10px] font-bold uppercase tracking-widest">Awaiting optimization data...</div>
+            )}
+          </div>
+        </div>
+
+        {/* Eco Score Trend Line */}
+        <div className="glass p-8 rounded-[40px] border border-white/5 bg-gradient-to-br from-cyan-500/5 to-transparent min-h-[350px]">
+          <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-cyan-400" /> Average Eco-Impact Trend
+          </h3>
+          <div className="h-64">
+            {ecoTrendData.length >= 2 ? (
+              <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                <LineChart data={ecoTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                  <XAxis dataKey="date" stroke="#ffffff20" fontSize={10} />
+                  <YAxis stroke="#ffffff20" fontSize={10} domain={[0, 100]} />
+                  <Tooltip contentStyle={{ backgroundColor: '#0A0A0F', border: '1px solid #ffffff10', borderRadius: '12px' }} />
+                  <Line type="monotone" dataKey="score" stroke="#06B6D4" strokeWidth={3} dot={{ r: 4, fill: '#06B6D4' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-600 text-[10px] font-bold uppercase tracking-widest">Collecting history...</div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Sustainable Certification Badge Drawer */}
