@@ -37,6 +37,7 @@ export async function POST(req: Request) {
     }
 
     const aiData = await openRouterRes.json()
+    const usage = aiData.usage || { total_tokens: 100 } // fallback
     const resultContent = aiData.choices[0].message.content
     let parsedResult
     try {
@@ -66,7 +67,26 @@ export async function POST(req: Request) {
 
     if (error) throw error
 
-    return NextResponse.json(data)
+    // Deduct tokens if a user session is available in headers
+    const authHeader = req.headers.get('Authorization')
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '')
+      const { data: { user } } = await supabase.auth.getUser(token)
+      if (user) {
+        // Find subscription and deduct
+        const { data: sub } = await supabase.from('subscriptions').select('used_this_month').eq('user_id', user.id).single()
+        if (sub) {
+          await supabase.from('subscriptions').update({
+            used_this_month: (sub.used_this_month || 0) + (usage.total_tokens || 100)
+          }).eq('user_id', user.id)
+        }
+      }
+    }
+
+    return NextResponse.json({
+      ...data,
+      tokensUsed: usage.total_tokens
+    })
   } catch (error: any) {
     console.error('AI Analysis Error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })

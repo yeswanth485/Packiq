@@ -59,8 +59,12 @@ const PLANS = [
   }
 ]
 
+import { useSubscriptionStore } from '@/lib/store/subscriptionStore'
+import { toast } from 'sonner'
+
 export default function SubscriptionPage() {
   const { profileData, isLoading } = useDashboardData()
+  const { plan: storePlan, used: tokensUsed, limit: tokensLimit, fetchBalance } = useSubscriptionStore()
   const [activePlan, setActivePlan] = useState('normal')
   const [isSwitching, setIsSwitching] = useState(false)
   const [activeTab, setActiveTab] = useState('plans')
@@ -68,22 +72,45 @@ export default function SubscriptionPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    if (profileData?.plan) {
-      setActivePlan(profileData.plan.toLowerCase())
+    if (storePlan) {
+      setActivePlan(storePlan.toLowerCase())
     }
-  }, [profileData])
+  }, [storePlan])
 
   const handleSwitchPlan = async (planId: string) => {
     if (planId === activePlan) return
+
+    const confirmUpgrade = window.confirm(`Confirm upgrade to ${planId.toUpperCase()} plan? Your token limit will be updated immediately.`)
+    if (!confirmUpgrade) return
+
     setIsSwitching(true)
     try {
-      const { error } = await supabase.rpc('change_user_plan', { new_plan: planId } as any)
+      const { data: { session } } = await supabase.auth.getSession()
+
+      // Update plan in profiles table
+      const { error } = await (supabase as any)
+        .from('profiles')
+        .update({ plan: planId })
+        .eq('id', (await supabase.auth.getUser()).data.user?.id)
 
       if (error) throw error
+
+      // Update tokens in subscriptions table (reset/upgrade)
+      const newLimit = planId === 'pro' ? 10000 : planId === 'max' ? 1000000 : 1000
+      await (supabase as any)
+        .from('subscriptions')
+        .upsert({
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          plan: planId,
+          monthly_limit: newLimit,
+          used_this_month: 0
+        })
+
+      toast.success(`Successfully upgraded to ${planId} plan!`)
+      if (session) await fetchBalance(session.access_token)
       setActivePlan(planId)
-      window.location.reload()
-    } catch (error) {
-      console.error("Error switching plan:", error)
+    } catch (error: any) {
+      toast.error(`Error: ${error.message}`)
     } finally {
       setIsSwitching(false)
     }
@@ -97,11 +124,9 @@ export default function SubscriptionPage() {
     )
   }
 
-  const tokensUsed = profileData?.tokensUsed || 0
-  const tokensLimit = profileData?.tokensLimit || 1000
   const tokenResetDate = profileData?.tokenResetDate 
     ? new Date(profileData.tokenResetDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : 'Unknown'
+    : new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
   const usagePercent = Math.min(100, Math.round((tokensUsed / tokensLimit) * 100))
   const isNearLimit = usagePercent > 80

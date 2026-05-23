@@ -391,9 +391,16 @@ const OrdersClient = memo(function OrdersClient({ initialOrders, products }: { i
                                    </div>
                                    <div>
                                       <p className="font-black text-gray-500 uppercase tracking-widest mb-2">Package Specification</p>
-                                      <div className="space-y-1">
-                                         <p className="text-gray-300 font-bold">Box: <span className="text-white">{o.optimized_box || 'N/A'}</span></p>
-                                         <p className="text-gray-300 font-bold">Dims: <span className="text-white">{o.optimized_dims?.l}x{o.optimized_dims?.w}x{o.optimized_dims?.h} cm</span></p>
+                                      <div className="space-y-2">
+                                         <div>
+                                            <p className="text-[8px] text-gray-600 font-black uppercase">Original</p>
+                                            <p className="text-gray-400 font-bold leading-tight">{o.baseline_box}</p>
+                                         </div>
+                                         <div>
+                                            <p className="text-[8px] text-[#00FFD1] font-black uppercase">AI Recommended</p>
+                                            <p className="text-white font-bold leading-tight">{o.optimized_box}</p>
+                                            <p className="text-[9px] text-[#00FFD1] font-mono">{o.optimized_dims?.l}×{o.optimized_dims?.w}×{o.optimized_dims?.h} cm</p>
+                                         </div>
                                       </div>
                                    </div>
                                 </div>

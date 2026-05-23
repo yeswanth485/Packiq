@@ -153,7 +153,11 @@ export function scoreCandidate(
   const dimWeightScore = (1 - (chargeableWeight / 50)) * 20; // Favor lower weight, 20 pts max
 
   // 3. Cost Score
-  const savings = baselineCost - newTotalCost;
+  let shippingCostFinal = newTotalCost;
+  if (shippingCostFinal > baselineCost) {
+    shippingCostFinal = baselineCost; // Guard: optimization should never be more expensive
+  }
+  const savings = Math.max(0, baselineCost - shippingCostFinal);
   const costScore = (savings > 0) ? (Math.min(savings / baselineCost, 1) * 20) : 0; // 20 pts max
 
   // 4. Fragility Match Score
@@ -187,7 +191,7 @@ export function scoreCandidate(
       sustainability_score: Math.round(sustainabilityScore),
       dim_weight_score: Math.round(dimWeightScore)
     },
-    shippingCost: newTotalCost,
+    shippingCost: shippingCostFinal,
     baselineCost,
     voidPct,
     baselineVoidPct,
