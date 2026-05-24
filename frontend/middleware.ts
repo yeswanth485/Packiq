@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 3. Handle Authenticated User Routing (database-free session metadata check)
+  // 3. Handle Authenticated User Routing
   if (user) {
     // Skip for API/Static
     if (pathname.startsWith('/api/') || pathname.startsWith('/_next/')) {
@@ -50,29 +50,25 @@ export async function middleware(request: NextRequest) {
 
     // If user exists, ensure onboarding is complete before allowing dashboard access
     try {
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('onboarding_complete')
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('onboarding_completed')
         .eq('id', user.id)
         .maybeSingle()
 
-      // If profile doesn't exist OR onboarding_complete is not true, and trying to access dashboard
-      const onboardingDone = profile?.onboarding_complete === true
+      const onboardingDone = profile?.onboarding_completed === true
 
       if (!onboardingDone && pathname.startsWith('/dashboard') && !pathname.startsWith('/onboarding')) {
-        console.log(`[Middleware] User ${user.id} has not completed onboarding. Redirecting to /onboarding`)
         const url = request.nextUrl.clone()
         url.pathname = '/onboarding'
         return NextResponse.redirect(url)
       }
     } catch (e) {
       console.error('[Middleware] Profile fetch error:', e)
-      // If we can't check profile, but user is authenticated, we might want to be safe
-      // but for now we let it pass to avoid blocking users on DB glitches
     }
 
-    // Redirect to Dashboard if visiting Landing ('/') or Auth pages
-    if (pathname === '/' || pathname.startsWith('/auth')) {
+    // Redirect to Dashboard if visiting Auth pages
+    if (pathname.startsWith('/auth')) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)
@@ -84,14 +80,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico, sitemap.xml, robots.txt (metadata files)
-     * - public assets with typical extensions (png, jpg, jpeg, gif, svg, webp, ico, css, js)
-     */
     '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js)$).*)',
   ],
 }
