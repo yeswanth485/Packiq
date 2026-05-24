@@ -49,6 +49,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // If user exists, ensure onboarding is complete before allowing dashboard access
+    let onboardingDone = false
     try {
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -56,7 +57,7 @@ export async function middleware(request: NextRequest) {
         .eq('id', user.id)
         .maybeSingle()
 
-      const onboardingDone = profile?.onboarding_completed === true
+      onboardingDone = profile?.onboarding_completed === true
 
       if (!onboardingDone && pathname.startsWith('/dashboard') && !pathname.startsWith('/onboarding')) {
         const url = request.nextUrl.clone()
@@ -67,11 +68,21 @@ export async function middleware(request: NextRequest) {
       console.error('[Middleware] Profile fetch error:', e)
     }
 
-    // Redirect to Dashboard if visiting Auth pages
-    if (pathname.startsWith('/auth')) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/dashboard'
-      return NextResponse.redirect(url)
+    // Redirect authenticated users
+    if (onboardingDone) {
+      // Onboarded -> Dashboard (if trying to access landing or auth)
+      if (pathname === '/' || pathname.startsWith('/auth')) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+      }
+    } else {
+      // Not Onboarded -> Onboarding (if trying to access landing, auth, or dashboard)
+      if (pathname === '/' || pathname.startsWith('/auth') || (pathname.startsWith('/dashboard') && !pathname.startsWith('/onboarding'))) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/onboarding'
+        return NextResponse.redirect(url)
+      }
     }
   }
 

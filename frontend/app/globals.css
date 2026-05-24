@@ -128,6 +128,24 @@ input, select, textarea {
   animation: glow-pulse 3s ease-in-out infinite;
 }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes scroll-left {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-scroll-left {
+  animation: scroll-left 40s linear infinite;
+}
+
 /* Shipzi Logo Text */
 .shipzi-logo {
   font-family: var(--font-outfit), sans-serif;
