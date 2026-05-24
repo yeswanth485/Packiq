@@ -10,8 +10,8 @@ import { toast } from 'sonner'
 import Step1Welcome from './Step1Welcome'
 import Step2CompanyDetails from './Step2CompanyDetails'
 import Step3LogoUpload from './Step3LogoUpload'
-import Step4Review from './Step5Review' // Re-mapped as per instructions
-import Step5Success from './Step6Success'
+import Step4Review from './Step4Review'
+import Step5Success from './Step5Success'
 
 const STEPS_COUNT = 5
 
@@ -21,6 +21,25 @@ export default function OnboardingWizard() {
 
   const [step, setStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
+
+  // Redirect if already onboarded
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await (supabase as any)
+          .from('user_profiles')
+          .select('onboarding_completed')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (profile?.onboarding_completed) {
+          router.push('/dashboard')
+        }
+      }
+    }
+    checkOnboarding()
+  }, [supabase, router])
   const [formData, setFormData] = useState({
     companyName: '',
     industry: '',
