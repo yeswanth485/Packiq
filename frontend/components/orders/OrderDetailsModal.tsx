@@ -1,0 +1,129 @@
+'use client'
+
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X, Box, Info, Zap, Leaf, Shield, ArrowRight } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { Badge } from '@/components/ui/Badge'
+
+const Box3DViewer = dynamic(() => import('./Box3DViewer'), {
+  ssr: false,
+  loading: () => <div className="w-full h-[400px] bg-white/5 animate-pulse rounded-3xl" />
+})
+
+export default function OrderDetailsModal({
+  order,
+  onClose
+}: {
+  order: any,
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+      />
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="relative w-full max-w-6xl bg-[#0D1427] border border-white/10 rounded-[40px] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-2"
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 z-10 w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors"
+        >
+          <X className="w-5 h-5 text-zinc-400" />
+        </button>
+
+        {/* 3D Viewer Side */}
+        <div className="p-8 lg:p-12 h-[400px] lg:h-auto">
+          <Box3DViewer
+            productName={order.product_name}
+            originalDims={{ l: order.original_length_cm, w: order.original_width_cm, h: order.original_height_cm }}
+            optimizedDims={{ l: order.optimized_length_cm, w: order.optimized_width_cm, h: order.optimized_height_cm }}
+          />
+        </div>
+
+        {/* Info Side */}
+        <div className="p-8 lg:p-12 lg:border-l border-white/5 space-y-8 overflow-y-auto max-h-[80vh] lg:max-h-none">
+          <div className="space-y-4">
+            <Badge variant="blue">Order Optimization Profile</Badge>
+            <h2 className="text-4xl font-bold font-space-grotesk text-white">{order.product_name}</h2>
+            <div className="flex gap-4">
+               <Badge variant={order.fragility === 'high' ? 'red' : order.fragility === 'medium' ? 'yellow' : 'green'}>
+                  Fragility: {order.fragility}
+               </Badge>
+               <Badge variant="outline">SKU: {order.sku || 'N/A'}</Badge>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div className="bg-white/5 rounded-3xl p-6 space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Original Volume</p>
+              <p className="text-2xl font-bold text-white">
+                {(order.original_length_cm * order.original_width_cm * order.original_height_cm / 1000).toFixed(2)}L
+              </p>
+              <p className="text-xs text-zinc-600">{order.original_length_cm}x{order.original_width_cm}x{order.original_height_cm} cm</p>
+            </div>
+            <div className="bg-blue-500/5 border border-blue-500/20 rounded-3xl p-6 space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">Optimized Volume</p>
+              <p className="text-2xl font-bold text-white">
+                {(order.optimized_length_cm * order.optimized_width_cm * order.optimized_height_cm / 1000).toFixed(2)}L
+              </p>
+              <p className="text-xs text-blue-400/50">{order.optimized_length_cm}x{order.optimized_width_cm}x{order.optimized_height_cm} cm</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+             <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                <div className="flex items-center gap-3">
+                   <div className="p-2 bg-emerald-500/10 rounded-lg">
+                      <Zap className="w-4 h-4 text-emerald-500" />
+                   </div>
+                   <span className="text-sm font-bold text-zinc-300">Space Utilization</span>
+                </div>
+                <span className="text-lg font-black text-white">{Math.round(order.space_utilization_percent)}%</span>
+             </div>
+
+             <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                <div className="flex items-center gap-3">
+                   <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <Leaf className="w-4 h-4 text-blue-400" />
+                   </div>
+                   <span className="text-sm font-bold text-zinc-300">CO2 Reduction</span>
+                </div>
+                <span className="text-lg font-black text-white">{order.co2_saved_kg.toFixed(3)} kg</span>
+             </div>
+
+             <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                <div className="flex items-center gap-3">
+                   <div className="p-2 bg-purple-500/10 rounded-lg">
+                      <Shield className="w-4 h-4 text-purple-400" />
+                   </div>
+                   <span className="text-sm font-bold text-zinc-300">Optimization Score</span>
+                </div>
+                <span className="text-lg font-black text-white">{order.optimization_score}/100</span>
+             </div>
+          </div>
+
+          <div className="p-6 bg-gradient-to-br from-blue-600 to-blue-500 rounded-3xl flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/70">Total Savings</p>
+              <p className="text-3xl font-black text-white">₹{order.savings_inr.toFixed(2)}</p>
+            </div>
+            <div className="text-right">
+               <p className="text-lg font-bold text-white">{Math.round(order.savings_percent)}% saved</p>
+               <p className="text-xs text-white/50">per shipment</p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  )
+}

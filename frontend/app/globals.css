@@ -5,6 +5,7 @@
   --font-syne: 'Syne', sans-serif;
   --font-mono: 'Space Mono', monospace;
   --font-outfit: 'Outfit', sans-serif;
+  --font-space-grotesk: var(--font-space-grotesk), sans-serif;
   --bg-dark: #0A0A0F;
   --accent-teal: #00FFD1;
   --brand-blue: #185FA5;
@@ -73,7 +74,7 @@ body {
 
 /* Typography Overrides */
 h1, h2, h3, h4, h5 {
-  font-family: var(--font-syne);
+  font-family: var(--font-space-grotesk);
   letter-spacing: -0.02em;
 }
 
