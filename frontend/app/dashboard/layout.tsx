@@ -11,23 +11,25 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/auth/login')
   }
 
-  let { data: profile } = await (supabase.from('profiles') as any)
+  let { data: profile } = await supabase
+    .from('user_profiles')
     .select('*')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!profile) {
     // Create default profile if missing to prevent errors
-    await (supabase.from('profiles') as any).insert({
+    await (supabase.from('user_profiles') as any).insert({
       id: user.id,
-      email: user.email,
-      onboarding_complete: true
+      full_name: user.email || '',
+      onboarding_completed: false
     })
     
-    const { data: newProfile } = await (supabase.from('profiles') as any)
+    const { data: newProfile } = await supabase
+      .from('user_profiles')
       .select('*')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
       
     profile = newProfile
   }

@@ -21,10 +21,10 @@ export function useAuth() {
           setUser(session.user)
           
           const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
+            .from('user_profiles')
             .select('*')
             .eq('id', session.user.id)
-            .single()
+            .maybeSingle()
             
           if (!profileError && mounted) {
             setProfile(profileData)
@@ -45,7 +45,7 @@ export function useAuth() {
         
         if (session?.user) {
           setUser(session.user)
-          const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
+          const { data } = await supabase.from('user_profiles').select('*').eq('id', session.user.id).maybeSingle()
           setProfile(data)
         } else {
           setUser(null)
