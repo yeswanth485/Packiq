@@ -28,7 +28,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useSubscriptionStore } from '@/lib/store/subscriptionStore'
 
 const navItems = [
-  { href: '/dashboard',             label: 'Overview',          icon: LayoutDashboard },
+  { href: '/dashboard',             label: 'Dashboard',         icon: LayoutDashboard },
   { href: '/dashboard/optimize',    label: 'Optimize',          icon: Zap },
   { href: '/dashboard/orders',      label: 'Results',           icon: ShoppingCart },
   { href: '/dashboard/box-catalog', label: 'Box Catalog',       icon: Box },

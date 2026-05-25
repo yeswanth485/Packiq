@@ -241,12 +241,10 @@ export async function runMLOptimization(
       const boxVol = box.length_cm * box.width_cm * box.height_cm;
       const boxPrice = box.cost || 0.5;
 
-      // Strict optimization rules: Volume <= current AND Price < current
+      // Strict optimization rules: Volume <= current (if current vol is known)
       const isSmaller = boxVol <= currentVol;
-      // If we don't have current price, we assume any fitting box is a candidate
-      const isCheaper = currentPrice === Infinity || boxPrice < currentPrice;
 
-      return orientations.length > 0 && weightFits && isSmaller && isCheaper;
+      return orientations.length > 0 && weightFits && isSmaller;
     });
 
     if (candidates.length > 0) {

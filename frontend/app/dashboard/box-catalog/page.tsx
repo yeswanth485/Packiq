@@ -50,21 +50,48 @@ export default function BoxCatalogPage() {
     const maxDim = Math.max(l, w, h)
     const scale = 100 / maxDim
 
+    const faceClass = "absolute inset-0 border border-[#8b4513]/40 shadow-inner flex items-center justify-center overflow-hidden"
+    const cardboardBg = {
+      backgroundImage: `
+        linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(0,0,0,0.1)),
+        repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px)
+      `,
+      backgroundColor: '#cd853f'
+    }
+    
+    // Tape line on top/bottom
+    const tape = <div className="absolute w-full h-4 bg-[#e6c280]/80 shadow-sm mix-blend-multiply" />
+
     return (
-      <div className="relative w-32 h-32 flex items-center justify-center perspective-[800px]">
+      <div className="relative w-32 h-32 flex items-center justify-center perspective-[1000px] group">
         <motion.div 
           className="relative preserve-3d"
-          animate={{ rotateY: [0, 360] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+          animate={{ rotateY: [0, -360] }}
+          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
           style={{ width: w * scale, height: h * scale }}
         >
-          <div className="absolute inset-0 bg-[#cd853f]/80 border border-[#8b4513] shadow-inner" style={{ transform: `translateZ(${l * scale / 2}px)` }} />
-          <div className="absolute inset-0 bg-[#cd853f]/90 border border-[#8b4513] shadow-inner" style={{ transform: `rotateY(180deg) translateZ(${l * scale / 2}px)` }} />
-          <div className="absolute inset-0 bg-[#cd853f]/70 border border-[#8b4513] shadow-inner" style={{ transform: `rotateY(90deg) translateZ(${w * scale / 2}px)`, width: l * scale }} />
-          <div className="absolute inset-0 bg-[#cd853f]/70 border border-[#8b4513] shadow-inner" style={{ transform: `rotateY(-90deg) translateZ(${w * scale / 2}px)`, width: l * scale }} />
-          <div className="absolute inset-0 bg-[#cd853f] border border-[#8b4513] shadow-inner" style={{ transform: `rotateX(90deg) translateZ(${h * scale / 2}px)`, height: l * scale }} />
-          <div className="absolute inset-0 bg-[#cd853f]/60 border border-[#8b4513] shadow-inner" style={{ transform: `rotateX(-90deg) translateZ(${h * scale / 2}px)`, height: l * scale }} />
+          {/* Front */}
+          <div className={`${faceClass} brightness-100`} style={{ ...cardboardBg, transform: `translateZ(${l * scale / 2}px)` }}>
+             <div className="absolute inset-0 bg-gradient-to-tr from-black/20 to-transparent pointer-events-none" />
+          </div>
+          {/* Back */}
+          <div className={`${faceClass} brightness-90`} style={{ ...cardboardBg, transform: `rotateY(180deg) translateZ(${l * scale / 2}px)` }} />
+          {/* Right */}
+          <div className={`${faceClass} brightness-75`} style={{ ...cardboardBg, transform: `rotateY(90deg) translateZ(${w * scale / 2}px)`, width: l * scale }} />
+          {/* Left */}
+          <div className={`${faceClass} brightness-90`} style={{ ...cardboardBg, transform: `rotateY(-90deg) translateZ(${w * scale / 2}px)`, width: l * scale }} />
+          {/* Top */}
+          <div className={`${faceClass} brightness-110`} style={{ ...cardboardBg, transform: `rotateX(90deg) translateZ(${h * scale / 2}px)`, height: l * scale }}>
+            {tape}
+          </div>
+          {/* Bottom */}
+          <div className={`${faceClass} brightness-50`} style={{ ...cardboardBg, transform: `rotateX(-90deg) translateZ(${h * scale / 2}px)`, height: l * scale }}>
+            {tape}
+          </div>
         </motion.div>
+        
+        {/* Floor Shadow */}
+        <div className="absolute -bottom-8 w-24 h-8 bg-[#00FFD1]/10 blur-xl rounded-[100%] scale-x-150 scale-y-50 group-hover:scale-110 transition-transform" />
       </div>
     )
   }

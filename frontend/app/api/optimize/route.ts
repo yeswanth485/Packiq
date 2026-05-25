@@ -87,17 +87,22 @@ export async function POST(request: NextRequest) {
 
     // ── 2. Get Box Catalog ────────────────────────────────────────
     const { data: dbBoxes } = await supabase.from('box_catalog').select('*')
-    const boxCatalog = (dbBoxes && dbBoxes.length > 0) ? dbBoxes.map(b => ({
-      id: b.id,
-      name: b.name,
-      sku: b.sku,
-      length_cm: Number(b.length_cm),
-      width_cm: Number(b.width_cm),
-      height_cm: Number(b.height_cm),
-      weight_limit_kg: Number(b.weight_limit_kg || 30),
-      cost: Number(b.cost || 0.5),
-      eco_certified: b.eco_certified || false
-    })) : DEFAULT_BOXES
+    let customBoxes: any[] = []
+    if (dbBoxes && dbBoxes.length > 0) {
+      customBoxes = dbBoxes.map(b => ({
+        id: b.id,
+        name: b.name,
+        sku: b.sku,
+        length_cm: Number(b.length_cm),
+        width_cm: Number(b.width_cm),
+        height_cm: Number(b.height_cm),
+        weight_limit_kg: Number(b.weight_limit_kg || 30),
+        cost: Number(b.cost || 0.5),
+        eco_certified: b.eco_certified || false
+      }))
+    }
+    
+    const boxCatalog = [...DEFAULT_BOXES, ...customBoxes]
 
     // ── 3. Run optimization ───────────────────────────────────────
     const mlResult = await runMLOptimization(products, boxCatalog)

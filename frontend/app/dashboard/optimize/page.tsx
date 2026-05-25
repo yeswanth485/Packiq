@@ -89,6 +89,11 @@ export default function OptimizePage() {
         'quantity', 'Quantity', 'qty', 'Qty', 'QTY', 'count', 'Count'
       ) || '1')
 
+      // Current Box Dimensions (Optional)
+      const current_box_l = parseFloat(pick(row, 'current_box_l', 'current_box_length', 'box_l', 'BoxL', 'BoxLength', 'box_length', 'CurrentBoxLength'))
+      const current_box_w = parseFloat(pick(row, 'current_box_w', 'current_box_width', 'box_w', 'BoxW', 'BoxWidth', 'box_width', 'CurrentBoxWidth'))
+      const current_box_h = parseFloat(pick(row, 'current_box_h', 'current_box_height', 'box_h', 'BoxH', 'BoxHeight', 'box_height', 'CurrentBoxHeight'))
+
       if (!productName) newErrors.push(`Row ${index + 1}: Missing product name`)
       if (isNaN(length) || length <= 0) newErrors.push(`Row ${index + 1}: Invalid length`)
       if (isNaN(width) || width <= 0) newErrors.push(`Row ${index + 1}: Invalid width`)
@@ -103,7 +108,10 @@ export default function OptimizePage() {
         original_height_cm: height,
         original_weight_kg: isNaN(weight) ? 0.5 : weight,
         fragility: ['low', 'medium', 'high'].includes(fragility) ? fragility : 'low',
-        quantity: isNaN(quantity) ? 1 : quantity
+        quantity: isNaN(quantity) ? 1 : quantity,
+        current_box_length: isNaN(current_box_l) ? undefined : current_box_l,
+        current_box_width: isNaN(current_box_w) ? undefined : current_box_w,
+        current_box_height: isNaN(current_box_h) ? undefined : current_box_h,
       }
     })
 
@@ -173,11 +181,11 @@ export default function OptimizePage() {
 
   const downloadTemplate = () => {
     const csv = Papa.unparse([
-      { product_name: 'Wireless Mouse', length_cm: 12.5, width_cm: 8.2, height_cm: 4.5, weight_kg: 0.15, fragility: 'low', quantity: 1 },
-      { product_name: 'Ceramic Vase', length_cm: 20, width_cm: 20, height_cm: 35, weight_kg: 1.8, fragility: 'high', quantity: 1 },
-      { product_name: 'Running Shoes', length_cm: 35, width_cm: 22, height_cm: 14, weight_kg: 0.8, fragility: 'low', quantity: 1 },
-      { product_name: 'Laptop Stand', length_cm: 40, width_cm: 30, height_cm: 8, weight_kg: 2.5, fragility: 'medium', quantity: 1 },
-      { product_name: 'Glass Photo Frame', length_cm: 28, width_cm: 22, height_cm: 3, weight_kg: 0.6, fragility: 'high', quantity: 2 },
+      { product_name: 'Wireless Mouse', length_cm: 12.5, width_cm: 8.2, height_cm: 4.5, weight_kg: 0.15, fragility: 'low', quantity: 1, box_l: 20, box_w: 15, box_h: 10 },
+      { product_name: 'Ceramic Vase', length_cm: 20, width_cm: 20, height_cm: 35, weight_kg: 1.8, fragility: 'high', quantity: 1, box_l: 30, box_w: 30, box_h: 40 },
+      { product_name: 'Running Shoes', length_cm: 35, width_cm: 22, height_cm: 14, weight_kg: 0.8, fragility: 'low', quantity: 1, box_l: 40, box_w: 25, box_h: 15 },
+      { product_name: 'Laptop Stand', length_cm: 40, width_cm: 30, height_cm: 8, weight_kg: 2.5, fragility: 'medium', quantity: 1, box_l: 45, box_w: 35, box_h: 10 },
+      { product_name: 'Glass Photo Frame', length_cm: 28, width_cm: 22, height_cm: 3, weight_kg: 0.6, fragility: 'high', quantity: 2, box_l: 30, box_w: 25, box_h: 5 },
     ])
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
