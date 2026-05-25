@@ -36,7 +36,7 @@ export function useInspectionFeed(lineId?: string) {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'inspections' },
-        (payload) => {
+        (payload: any) => {
           if (!lineId || payload.new.line_id === lineId) {
             setInspections((prev) => [payload.new, ...prev].slice(0, 20))
           }

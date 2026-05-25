@@ -124,13 +124,13 @@ CREATE TABLE IF NOT EXISTS box_catalog (
   user_id         UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   name            TEXT NOT NULL,
   sku             TEXT,
-  length_cm       DECIMAL NOT NULL DEFAULT 0,
-  width_cm        DECIMAL NOT NULL DEFAULT 0,
-  height_cm       DECIMAL NOT NULL DEFAULT 0,
-  max_weight_kg   DECIMAL DEFAULT 30,
-  weight_limit_kg DECIMAL DEFAULT 30,
-  cost_usd        DECIMAL DEFAULT 0,
-  cost            DECIMAL DEFAULT 0,
+  length_cm       DECIMAL NOT NULL DEFAULT 0 CHECK (length_cm > 0),  -- 🔴 BUG #5 FIX: Validate > 0
+  width_cm        DECIMAL NOT NULL DEFAULT 0 CHECK (width_cm > 0),   -- 🔴 BUG #5 FIX: Validate > 0
+  height_cm       DECIMAL NOT NULL DEFAULT 0 CHECK (height_cm > 0),  -- 🔴 BUG #5 FIX: Validate > 0
+  max_weight_kg   DECIMAL DEFAULT 30 CHECK (max_weight_kg > 0),      -- 🔴 BUG #5 FIX: Validate > 0
+  weight_limit_kg DECIMAL DEFAULT 30 CHECK (weight_limit_kg > 0),    -- 🔴 BUG #5 FIX: Validate > 0
+  cost_usd        DECIMAL DEFAULT 0 CHECK (cost_usd >= 0),           -- Allow 0, but not negative
+  cost            DECIMAL DEFAULT 0 CHECK (cost >= 0),               -- Allow 0, but not negative
   material        TEXT DEFAULT 'Corrugated',
   eco_certified   BOOLEAN DEFAULT FALSE,
   double_wall     BOOLEAN DEFAULT FALSE,
@@ -143,6 +143,23 @@ BEGIN
   BEGIN ALTER TABLE box_catalog ADD COLUMN cost DECIMAL DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE box_catalog ADD COLUMN eco_certified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE box_catalog ADD COLUMN double_wall BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  -- 🔴 BUG #5 FIX: Add constraints to existing table (idempotent via conditional)
+  BEGIN
+    ALTER TABLE box_catalog ADD CONSTRAINT box_length_positive CHECK (length_cm > 0);
+  EXCEPTION WHEN duplicate_table THEN NULL;
+  END;
+  BEGIN
+    ALTER TABLE box_catalog ADD CONSTRAINT box_width_positive CHECK (width_cm > 0);
+  EXCEPTION WHEN duplicate_table THEN NULL;
+  END;
+  BEGIN
+    ALTER TABLE box_catalog ADD CONSTRAINT box_height_positive CHECK (height_cm > 0);
+  EXCEPTION WHEN duplicate_table THEN NULL;
+  END;
+  BEGIN
+    ALTER TABLE box_catalog ADD CONSTRAINT box_weight_positive CHECK (max_weight_kg > 0);
+  EXCEPTION WHEN duplicate_table THEN NULL;
+  END;
 END $$;
 
 ALTER TABLE box_catalog ENABLE ROW LEVEL SECURITY;
@@ -312,6 +329,30 @@ CREATE POLICY "shipments_own" ON shipments FOR ALL USING (auth.uid() = user_id) 
 
 CREATE INDEX IF NOT EXISTS idx_shipments_user ON shipments(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_shipments_tracking ON shipments(tracking_id);
+
+-- 🔴 BUG #9 FIX: Add missing indexes for performance optimization
+-- Optimization sessions indexes
+CREATE INDEX IF NOT EXISTS idx_opt_sessions_user ON optimization_sessions(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_opt_sessions_status ON optimization_sessions(user_id, status);
+
+-- Optimization results indexes
+CREATE INDEX IF NOT EXISTS idx_opt_results_user ON optimization_results(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_opt_results_session ON optimization_results(session_id);
+CREATE INDEX IF NOT EXISTS idx_opt_results_sku ON optimization_results(user_id, sku);
+
+-- Products indexes
+CREATE INDEX IF NOT EXISTS idx_products_user ON products(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_products_user_sku ON products(user_id, sku);
+
+-- Box catalog indexes
+CREATE INDEX IF NOT EXISTS idx_box_catalog_user ON box_catalog(user_id);
+
+-- Orders status filter index
+CREATE INDEX IF NOT EXISTS idx_orders_user_status ON orders(user_id, status);
+
+-- User profiles indexes
+CREATE INDEX IF NOT EXISTS idx_user_profiles_plan ON user_profiles(plan);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_stripe_customer ON user_profiles(stripe_customer_id);
 
 
 -- ═══════════════════════════════════════════════════════════════════════════════

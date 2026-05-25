@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import Papa from 'papaparse'
 import { runMLOptimization } from '@/lib/optimization/mlOptimizer'
+import { checkRateLimit, getRateLimitStatus } from '@/lib/utils/rateLimit' // 🔴 BUG #7 FIX
 
 export const maxDuration = 60
 
@@ -107,7 +108,104 @@ export async function POST(request: NextRequest) {
     if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     if (!products.length) return NextResponse.json({ error: 'No products to optimize' }, { status: 400 })
 
-    console.log(`[optimize] Starting: ${products.length} products, user: ${userId}`)
+    // 🔴 BUG #7 FIX: ADD RATE LIMITING TO PREVENT ABUSE
+    const rateLimitKey = `optimize:${userId}`
+    const isAllowed = checkRateLimit(rateLimitKey, 30, 60000) // 30 requests per minute per user
+    const rateStatus = getRateLimitStatus(rateLimitKey, 30, 60000)
+
+    if (!isAllowed) {
+      console.warn(`[optimize] Rate limit exceeded for user: ${userId}`)
+      return NextResponse.json(
+        {
+          error: 'Too many requests. Please wait before trying again.',
+          retryAfter: Math.ceil(rateStatus.resetIn / 1000),
+          rateLimit: {
+            limit: rateStatus.limit,
+            current: rateStatus.current,
+            resetIn: rateStatus.resetIn
+          }
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.ceil(rateStatus.resetIn / 1000))
+          }
+        }
+      )
+    }
+
+    // 🔴 BUG #1 FIX: ADD QUOTA CHECK BEFORE OPTIMIZATION
+    console.log(`[optimize] Checking quota for user: ${userId}`)
+    const { data: subscription, error: subError } = await supabase
+      .from('subscriptions')
+      .select('monthly_limit, used_this_month')
+      .eq('user_id', userId)
+      .single()
+
+    if (subError || !subscription) {
+      console.warn(`[optimize] No subscription found for user ${userId}`, subError?.message)
+      // Create default subscription if missing
+      await supabase
+        .from('subscriptions')
+        .insert({
+          user_id: userId,
+          plan: 'starter',
+          monthly_limit: 500,
+          used_this_month: 0
+        })
+        .single()
+    }
+
+    const sub = subscription || { monthly_limit: 500, used_this_month: 0 }
+    const remaining = (sub.monthly_limit || 500) - (sub.used_this_month || 0)
+    const productsToOptimize = products.length
+
+    if (remaining <= 0) {
+      console.warn(`[optimize] Quota exceeded for user ${userId}. Limit: ${sub.monthly_limit}, Used: ${sub.used_this_month}`)
+      return NextResponse.json(
+        { 
+          error: 'Optimization quota exceeded',
+          message: `Your monthly limit of ${sub.monthly_limit} optimizations has been reached. Upgrade your plan to continue.`,
+          used: sub.used_this_month,
+          limit: sub.monthly_limit
+        },
+        { status: 429 }
+      )
+    }
+
+    if (productsToOptimize > remaining) {
+      console.warn(`[optimize] Insufficient quota for user ${userId}. Need: ${productsToOptimize}, Available: ${remaining}`)
+      return NextResponse.json(
+        {
+          error: 'Insufficient quota',
+          message: `You have ${remaining} optimizations remaining but are trying to optimize ${productsToOptimize} products.`,
+          used: sub.used_this_month,
+          limit: sub.monthly_limit,
+          remaining
+        },
+        { status: 429 }
+      )
+    }
+
+    console.log(`[optimize] Starting: ${products.length} products, user: ${userId}, quota: ${remaining}/${sub.monthly_limit} remaining`)
+
+    // 🔴 BUG #2 FIX: Create fragility lookup map from parsed product data
+    const fragilityMap: Record<string, { fragility: string; fragility_score: number }> = {}
+    for (const product of products) {
+      if (product.sku) {
+        const fragility = (product.fragility || 'LOW').toUpperCase()
+        const score = (() => {
+          switch (fragility) {
+            case 'CRITICAL': return 9
+            case 'HIGH': return 7
+            case 'MEDIUM': return 5
+            case 'LOW': return 1
+            default: return 1
+          }
+        })()
+        fragilityMap[product.sku] = { fragility, fragility_score: score }
+      }
+    }
 
     // ── 2. Get Box Catalog ────────────────────────────────────────
     const { data: dbBoxes } = await supabase.from('box_catalog').select('*')
@@ -149,33 +247,36 @@ export async function POST(request: NextRequest) {
     if (sessionErr) console.error('[optimize] session insert error:', sessionErr.message)
 
     // ── 5. Insert optimization_results in chunks ──────────────────
-    const allResultsToInsert = mlResult.results.map(r => ({
-      session_id: sessionId,
-      user_id: userId,
-      sku: r.sku,
-      product_name: r.product_name,
-      optimized: r.recommended_box_name !== 'No box found',
-      reason_code: r.recommended_box_name !== 'No box found' ? 'SUCCESS' : 'NO_FIT',
-      reason: r.recommended_box_name !== 'No box found' ? 'Box fits requirements' : 'No suitable box found',
-      explanation: '',
-      recommendation: r.recommended_box_name !== 'No box found' ? 'Use recommended box.' : 'Consider custom packaging.',
-      fragility: 'LOW',
-      fragility_score: 0,
-      why_chosen: 'Optimal fit and price',
-      baseline_box: r.old_box_name,
-      optimized_box: r.recommended_box_name,
-      baseline_cost: r.old_box_price,
-      shipping_cost: r.new_box_price,
-      savings: r.savings_per_unit,
-      savings_percent: r.old_box_price > 0 ? (r.savings_per_unit / r.old_box_price) * 100 : 0,
-      volume_util: r.fit_score,
-      void_pct: 100 - r.fit_score,
-      baseline_void_pct: 0,
-      weight: r.weight_kg,
-      dimensions: { l: r.original_dims.l, w: r.original_dims.w, h: r.original_dims.h },
-      optimized_dims: { l: r.new_box_dims.l, w: r.new_box_dims.w, h: r.new_box_dims.h },
-      created_at: new Date().toISOString()
-    }))
+    const allResultsToInsert = mlResult.results.map(r => {
+      const fragilityData = fragilityMap[r.sku] || { fragility: 'LOW', fragility_score: 1 }
+      return {
+        session_id: sessionId,
+        user_id: userId,
+        sku: r.sku,
+        product_name: r.product_name,
+        optimized: r.recommended_box_name !== 'No box found',
+        reason_code: r.recommended_box_name !== 'No box found' ? 'SUCCESS' : 'NO_FIT',
+        reason: r.recommended_box_name !== 'No box found' ? 'Box fits requirements' : 'No suitable box found',
+        explanation: '',
+        recommendation: r.recommended_box_name !== 'No box found' ? 'Use recommended box.' : 'Consider custom packaging.',
+        fragility: fragilityData.fragility,  // 🔴 BUG #2 FIX: Use actual fragility from result
+        fragility_score: fragilityData.fragility_score,  // 🔴 BUG #2 FIX: Use calculated score
+        why_chosen: 'Optimal fit and price',
+        baseline_box: r.old_box_name,
+        optimized_box: r.recommended_box_name,
+        baseline_cost: r.old_box_price,
+        shipping_cost: r.new_box_price,
+        savings: r.savings_per_unit,
+        savings_percent: r.old_box_price > 0 ? (r.savings_per_unit / r.old_box_price) * 100 : 0,
+        volume_util: r.fit_score,
+        void_pct: 100 - r.fit_score,
+        baseline_void_pct: 0,
+        weight: r.weight_kg,
+        dimensions: { l: r.original_dims.l, w: r.original_dims.w, h: r.original_dims.h },
+        optimized_dims: { l: r.new_box_dims.l, w: r.new_box_dims.w, h: r.new_box_dims.h },
+        created_at: new Date().toISOString()
+      }
+    })
 
     for (let i = 0; i < allResultsToInsert.length; i += 50) {
       const chunk = allResultsToInsert.slice(i, i + 50)
