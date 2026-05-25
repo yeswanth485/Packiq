@@ -7,7 +7,7 @@ import Papa from 'papaparse'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Download, Table as TableIcon, Plus } from 'lucide-react'
 import { toast } from 'sonner'
-import { optimizeProduct } from '@/lib/optimization/engine'
+
 import { useOptimizationStore } from '@/lib/store/optimizationStore'
 import { Badge } from '@/components/ui/Badge'
 
@@ -44,74 +44,35 @@ export default function OptimizePage() {
     })
   }
 
-  // Helper: find a value from a row by trying many possible column name variants
-  const pick = (row: any, ...keys: string[]): any => {
-    for (const k of keys) {
-      if (row[k] !== undefined && row[k] !== null && row[k] !== '') return row[k]
-    }
-    return undefined
-  }
+
 
   const validateData = (data: any[]) => {
     const newErrors: string[] = []
     const validatedData = data.map((row, index) => {
-      const productName = pick(row,
-        'product_name', 'ProductName', 'Product Name', 'product', 'Product',
-        'name', 'Name', 'item', 'Item', 'item_name', 'ItemName', 'sku', 'SKU',
-        'description', 'Description', 'title', 'Title'
-      )
-      const length = parseFloat(pick(row,
-        'length_cm', 'Length_cm', 'Length', 'length', 'l', 'L',
-        'product_length', 'ProductLength', 'len', 'Len',
-        'length_CM', 'LENGTH', 'Length (cm)', 'length(cm)'
-      ))
-      const width = parseFloat(pick(row,
-        'width_cm', 'Width_cm', 'Width', 'width', 'w', 'W',
-        'product_width', 'ProductWidth', 'wid', 'Wid',
-        'width_CM', 'WIDTH', 'Width (cm)', 'width(cm)', 'breadth', 'Breadth'
-      ))
-      const height = parseFloat(pick(row,
-        'height_cm', 'Height_cm', 'Height', 'height', 'h', 'H',
-        'product_height', 'ProductHeight', 'hei', 'Hei',
-        'height_CM', 'HEIGHT', 'Height (cm)', 'height(cm)', 'depth', 'Depth'
-      ))
-      const weight = parseFloat(pick(row,
-        'weight_kg', 'Weight_kg', 'Weight', 'weight', 'wt', 'Wt',
-        'product_weight', 'ProductWeight', 'mass', 'Mass',
-        'weight_KG', 'WEIGHT', 'Weight (kg)', 'weight(kg)'
-      ) ?? '0.5') // Default weight if not provided
-      const rawFragility = pick(row,
-        'fragility', 'Fragility', 'FRAGILITY', 'fragile', 'Fragile',
-        'risk', 'Risk', 'risk_level', 'RiskLevel'
-      )
-      const fragility = rawFragility ? String(rawFragility).toLowerCase() : 'low'
-      const quantity = parseInt(pick(row,
-        'quantity', 'Quantity', 'qty', 'Qty', 'QTY', 'count', 'Count'
-      ) || '1')
+      const sku = row.sku
+      const productName = row.product_name
+      const length = parseFloat(row.length_cm)
+      const width = parseFloat(row.width_cm)
+      const height = parseFloat(row.height_cm)
+      const weight = parseFloat(row.weight_kg)
+      const quantity = parseInt(row.quantity) || 1
 
-      // Current Box Dimensions (Optional)
-      const current_box_l = parseFloat(pick(row, 'current_box_l', 'current_box_length', 'box_l', 'BoxL', 'BoxLength', 'box_length', 'CurrentBoxLength'))
-      const current_box_w = parseFloat(pick(row, 'current_box_w', 'current_box_width', 'box_w', 'BoxW', 'BoxWidth', 'box_width', 'CurrentBoxWidth'))
-      const current_box_h = parseFloat(pick(row, 'current_box_h', 'current_box_height', 'box_h', 'BoxH', 'BoxHeight', 'box_height', 'CurrentBoxHeight'))
-
-      if (!productName) newErrors.push(`Row ${index + 1}: Missing product name`)
-      if (isNaN(length) || length <= 0) newErrors.push(`Row ${index + 1}: Invalid length`)
-      if (isNaN(width) || width <= 0) newErrors.push(`Row ${index + 1}: Invalid width`)
-      if (isNaN(height) || height <= 0) newErrors.push(`Row ${index + 1}: Invalid height`)
-      // Weight is optional — defaults to 0.5 if missing, only error if explicitly invalid
-      if (weight < 0) newErrors.push(`Row ${index + 1}: Invalid weight`)
+      if (!sku) newErrors.push(`Row ${index + 1}: Missing sku`)
+      if (!productName) newErrors.push(`Row ${index + 1}: Missing product_name`)
+      if (isNaN(length) || length <= 0) newErrors.push(`Row ${index + 1}: Invalid length_cm`)
+      if (isNaN(width) || width <= 0) newErrors.push(`Row ${index + 1}: Invalid width_cm`)
+      if (isNaN(height) || height <= 0) newErrors.push(`Row ${index + 1}: Invalid height_cm`)
+      if (isNaN(weight) || weight <= 0) newErrors.push(`Row ${index + 1}: Invalid weight_kg`)
+      if (quantity <= 0) newErrors.push(`Row ${index + 1}: Invalid quantity`)
 
       return {
-        product_name: productName || `Product ${index + 1}`,
-        original_length_cm: length,
-        original_width_cm: width,
-        original_height_cm: height,
-        original_weight_kg: isNaN(weight) ? 0.5 : weight,
-        fragility: ['low', 'medium', 'high'].includes(fragility) ? fragility : 'low',
-        quantity: isNaN(quantity) ? 1 : quantity,
-        current_box_length: isNaN(current_box_l) ? undefined : current_box_l,
-        current_box_width: isNaN(current_box_w) ? undefined : current_box_w,
-        current_box_height: isNaN(current_box_h) ? undefined : current_box_h,
+        sku,
+        product_name: productName,
+        length_cm: length,
+        width_cm: width,
+        height_cm: height,
+        weight_kg: weight,
+        quantity
       }
     })
 
@@ -181,17 +142,17 @@ export default function OptimizePage() {
 
   const downloadTemplate = () => {
     const csv = Papa.unparse([
-      { product_name: 'Wireless Mouse', length_cm: 12.5, width_cm: 8.2, height_cm: 4.5, weight_kg: 0.15, fragility: 'low', quantity: 1, box_l: 20, box_w: 15, box_h: 10 },
-      { product_name: 'Ceramic Vase', length_cm: 20, width_cm: 20, height_cm: 35, weight_kg: 1.8, fragility: 'high', quantity: 1, box_l: 30, box_w: 30, box_h: 40 },
-      { product_name: 'Running Shoes', length_cm: 35, width_cm: 22, height_cm: 14, weight_kg: 0.8, fragility: 'low', quantity: 1, box_l: 40, box_w: 25, box_h: 15 },
-      { product_name: 'Laptop Stand', length_cm: 40, width_cm: 30, height_cm: 8, weight_kg: 2.5, fragility: 'medium', quantity: 1, box_l: 45, box_w: 35, box_h: 10 },
-      { product_name: 'Glass Photo Frame', length_cm: 28, width_cm: 22, height_cm: 3, weight_kg: 0.6, fragility: 'high', quantity: 2, box_l: 30, box_w: 25, box_h: 5 },
+      { sku: 'SKU-001', product_name: 'Wireless Mouse', length_cm: 12.5, width_cm: 8.2, height_cm: 4.5, weight_kg: 0.15, quantity: 1 },
+      { sku: 'SKU-002', product_name: 'Ceramic Vase', length_cm: 20, width_cm: 20, height_cm: 35, weight_kg: 1.8, quantity: 1 },
+      { sku: 'SKU-003', product_name: 'Running Shoes', length_cm: 35, width_cm: 22, height_cm: 14, weight_kg: 0.8, quantity: 1 },
+      { sku: 'SKU-004', product_name: 'Laptop Stand', length_cm: 40, width_cm: 30, height_cm: 8, weight_kg: 2.5, quantity: 1 },
+      { sku: 'SKU-005', product_name: 'Glass Photo Frame', length_cm: 28, width_cm: 22, height_cm: 3, weight_kg: 0.6, quantity: 2 },
     ])
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'shipzi_template.csv'
+    a.download = 'packiq_template.csv'
     a.click()
   }
 
@@ -229,7 +190,7 @@ export default function OptimizePage() {
                 <p className="text-zinc-500">Support for large catalogs (up to 10,000 SKUs)</p>
                 <div className="mt-4 pt-4 border-t border-white/5">
                   <p className="text-xs text-zinc-400 font-mono mb-1">Required Columns:</p>
-                  <p className="text-[10px] text-zinc-500 font-mono bg-black/20 p-2 rounded-lg border border-white/5 inline-block">product_name, length_cm, width_cm, height_cm, weight_kg, fragility, quantity</p>
+                  <p className="text-[10px] text-zinc-500 font-mono bg-black/20 p-2 rounded-lg border border-white/5 inline-block">sku, product_name, length_cm, width_cm, height_cm, weight_kg, quantity</p>
                 </div>
               </div>
             </div>

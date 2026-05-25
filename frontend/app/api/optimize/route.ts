@@ -11,13 +11,37 @@ const getSupabase = () => createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// ━━━ 2. DEFAULT BOX CATALOGUE ━━━
+// ━━━ 2. DEFAULT BOX CATALOGUE (matches BoxSpec) ━━━
 const DEFAULT_BOXES = [
-  { id: 'box-xs', name: 'Eco-Lite Mailer XS', sku: 'BOX-XS', length_cm: 15, width_cm: 10, height_cm: 5, weight_limit_kg: 2, cost: 0.15, eco_certified: true },
-  { id: 'box-s',  name: 'Standard Box S',    sku: 'BOX-S',  length_cm: 20, width_cm: 15, height_cm: 10, weight_limit_kg: 5, cost: 0.35, eco_certified: true },
-  { id: 'box-m',  name: 'Fulfillment Box M', sku: 'BOX-M',  length_cm: 30, width_cm: 25, height_cm: 15, weight_limit_kg: 10, cost: 0.65, eco_certified: true },
-  { id: 'box-l',  name: 'Heavy Duty Box L',  sku: 'BOX-L',  length_cm: 45, width_cm: 35, height_cm: 25, weight_limit_kg: 20, cost: 1.20, eco_certified: true },
-  { id: 'box-xl', name: 'Enterprise Box XL', sku: 'BOX-XL', length_cm: 60, width_cm: 50, height_cm: 40, weight_limit_kg: 35, cost: 2.50, eco_certified: true },
+  // FedEx
+  { name: 'FedEx Small Box',       carrier: 'FedEx',   L: 31.0, W: 27.7, H:  3.8, maxWeightKg:  5, priceEstimateINR: 120 },
+  { name: 'FedEx Medium Box',      carrier: 'FedEx',   L: 33.6, W: 29.2, H:  6.0, maxWeightKg: 10, priceEstimateINR: 200 },
+  { name: 'FedEx Large Box',       carrier: 'FedEx',   L: 44.4, W: 31.1, H:  7.6, maxWeightKg: 15, priceEstimateINR: 280 },
+  { name: 'FedEx Extra Large',     carrier: 'FedEx',   L: 30.1, W: 27.9, H: 27.3, maxWeightKg: 20, priceEstimateINR: 360 },
+  // UPS
+  { name: 'UPS Express Box Small', carrier: 'UPS',     L: 33.0, W: 28.0, H:  5.0, maxWeightKg:  5, priceEstimateINR: 130 },
+  { name: 'UPS Express Box Medium',carrier: 'UPS',     L: 40.0, W: 28.0, H:  7.6, maxWeightKg: 10, priceEstimateINR: 225 },
+  { name: 'UPS Express Box Large', carrier: 'UPS',     L: 45.7, W: 33.0, H:  7.6, maxWeightKg: 15, priceEstimateINR: 315 },
+  { name: 'UPS 10kg Box',          carrier: 'UPS',     L: 41.9, W: 33.6, H: 27.3, maxWeightKg: 10, priceEstimateINR: 400 },
+  { name: 'UPS 25kg Box',          carrier: 'UPS',     L: 50.1, W: 45.1, H: 33.6, maxWeightKg: 25, priceEstimateINR: 640 },
+  // USPS
+  { name: 'USPS Priority Small',   carrier: 'USPS',    L: 21.9, W: 13.6, H:  4.0, maxWeightKg:  3, priceEstimateINR:  95 },
+  { name: 'USPS Priority Medium 1',carrier: 'USPS',    L: 27.9, W: 21.6, H: 14.0, maxWeightKg:  9, priceEstimateINR: 170 },
+  { name: 'USPS Priority Large',   carrier: 'USPS',    L: 30.4, W: 30.4, H: 14.0, maxWeightKg: 15, priceEstimateINR: 240 },
+  // DHL
+  { name: 'DHL Express Box 2',     carrier: 'DHL',     L: 33.0, W: 28.0, H:  5.0, maxWeightKg:  4, priceEstimateINR: 145 },
+  { name: 'DHL Express Box 4',     carrier: 'DHL',     L: 33.0, W: 29.2, H: 24.1, maxWeightKg: 10, priceEstimateINR: 260 },
+  { name: 'DHL Express Box 6',     carrier: 'DHL',     L: 47.0, W: 30.4, H: 24.1, maxWeightKg: 18, priceEstimateINR: 385 },
+  { name: 'DHL Express Box 8',     carrier: 'DHL',     L: 57.1, W: 43.1, H: 34.9, maxWeightKg: 30, priceEstimateINR: 655 },
+  // Generic
+  { name: 'Generic A1',            carrier: 'Generic', L: 15.0, W: 10.0, H:  5.0, maxWeightKg:  2, priceEstimateINR:  40 },
+  { name: 'Generic A2',            carrier: 'Generic', L: 20.0, W: 15.0, H: 10.0, maxWeightKg:  4, priceEstimateINR:  65 },
+  { name: 'Generic A3',            carrier: 'Generic', L: 25.0, W: 20.0, H: 15.0, maxWeightKg:  8, priceEstimateINR:  95 },
+  { name: 'Generic B1',            carrier: 'Generic', L: 30.0, W: 20.0, H: 15.0, maxWeightKg: 12, priceEstimateINR: 120 },
+  { name: 'Generic B2',            carrier: 'Generic', L: 35.0, W: 25.0, H: 20.0, maxWeightKg: 16, priceEstimateINR: 160 },
+  { name: 'Generic C1',            carrier: 'Generic', L: 40.0, W: 30.0, H: 25.0, maxWeightKg: 22, priceEstimateINR: 225 },
+  { name: 'Generic C2',            carrier: 'Generic', L: 50.0, W: 40.0, H: 30.0, maxWeightKg: 35, priceEstimateINR: 360 },
+  { name: 'Generic D1',            carrier: 'Generic', L: 60.0, W: 50.0, H: 40.0, maxWeightKg: 50, priceEstimateINR: 545 },
 ]
 
 export async function POST(request: NextRequest) {
@@ -90,15 +114,13 @@ export async function POST(request: NextRequest) {
     let customBoxes: any[] = []
     if (dbBoxes && dbBoxes.length > 0) {
       customBoxes = dbBoxes.map(b => ({
-        id: b.id,
-        name: b.name,
-        sku: b.sku,
-        length_cm: Number(b.length_cm),
-        width_cm: Number(b.width_cm),
-        height_cm: Number(b.height_cm),
-        weight_limit_kg: Number(b.weight_limit_kg || 30),
-        cost: Number(b.cost || 0.5),
-        eco_certified: b.eco_certified || false
+        name: b.name || 'Custom Box',
+        carrier: 'Custom',
+        L: Number(b.length_cm),
+        W: Number(b.width_cm),
+        H: Number(b.height_cm),
+        maxWeightKg: Number(b.weight_limit_kg || 30),
+        priceEstimateINR: Number(b.cost || 50),
       }))
     }
     
@@ -115,9 +137,9 @@ export async function POST(request: NextRequest) {
         file_name: fileName,
         total_processed: mlResult.total_processed,
         total_optimized: mlResult.total_optimized,
-        total_not_optimized: mlResult.total_not_optimized,
+        total_not_optimized: mlResult.total_processed - mlResult.total_optimized,
         total_savings: mlResult.total_savings,
-        success_rate: mlResult.success_rate,
+        success_rate: mlResult.total_processed > 0 ? (mlResult.total_optimized / mlResult.total_processed) * 100 : 0,
         created_at: new Date().toISOString()
       })
       .select('id')
@@ -132,26 +154,26 @@ export async function POST(request: NextRequest) {
       user_id: userId,
       sku: r.sku,
       product_name: r.product_name,
-      optimized: r.optimized,
-      reason_code: r.optimized ? 'SUCCESS' : 'NO_FIT',
-      reason: r.recommendation_reason || r.failure_reason,
-      explanation: r.recommendation_reason,
-      recommendation: r.optimized ? 'Use recommended box.' : 'Consider custom packaging.',
-      fragility: r.fragility,
-      fragility_score: r.score_breakdown.fragility_match_score,
-      why_chosen: r.recommendation_reason,
-      baseline_box: r.original_box_dims ? `${r.original_box_dims.l}x${r.original_box_dims.w}x${r.original_box_dims.h}` : `${r.dimensions.l}x${r.dimensions.w}x${r.dimensions.h}`,
-      optimized_box: r.assigned_box?.name || null,
-      baseline_cost: r.baseline_cost,
-      shipping_cost: r.shipping_cost,
-      savings: r.savings,
-      savings_percent: r.baseline_cost > 0 ? (r.savings / r.baseline_cost) * 100 : 0,
-      volume_util: r.volume_utilization,
-      void_pct: r.void_pct,
-      baseline_void_pct: r.baseline_void_pct,
-      weight: r.weight,
-      dimensions: r.dimensions,
-      optimized_dims: r.assigned_box ? { l: r.assigned_box.length_cm, w: r.assigned_box.width_cm, h: r.assigned_box.height_cm } : null,
+      optimized: r.recommended_box_name !== 'No box found',
+      reason_code: r.recommended_box_name !== 'No box found' ? 'SUCCESS' : 'NO_FIT',
+      reason: r.recommended_box_name !== 'No box found' ? 'Box fits requirements' : 'No suitable box found',
+      explanation: '',
+      recommendation: r.recommended_box_name !== 'No box found' ? 'Use recommended box.' : 'Consider custom packaging.',
+      fragility: 'LOW',
+      fragility_score: 0,
+      why_chosen: 'Optimal fit and price',
+      baseline_box: r.old_box_name,
+      optimized_box: r.recommended_box_name,
+      baseline_cost: r.old_box_price,
+      shipping_cost: r.new_box_price,
+      savings: r.savings_per_unit,
+      savings_percent: r.old_box_price > 0 ? (r.savings_per_unit / r.old_box_price) * 100 : 0,
+      volume_util: r.fit_score,
+      void_pct: 100 - r.fit_score,
+      baseline_void_pct: 0,
+      weight: r.weight_kg,
+      dimensions: { l: r.original_dims.l, w: r.original_dims.w, h: r.original_dims.h },
+      optimized_dims: { l: r.new_box_dims.l, w: r.new_box_dims.w, h: r.new_box_dims.h },
       created_at: new Date().toISOString()
     }))
 
@@ -161,70 +183,17 @@ export async function POST(request: NextRequest) {
       if (error) console.error(`[optimize] results chunk ${i} error:`, error.message)
     }
 
-    // ── 6. Insert orders for optimized products ───────────────────
-    const optimizedItems = mlResult.results.filter(r => r.optimized)
-    const orderPromises = optimizedItems.map(product => {
-      return supabase.from('orders').insert({
-        user_id: userId,
-        session_id: sessionId,
-        product_snapshot: {
-          sku: product.sku,
-          product_name: product.product_name,
-          weight_kg: product.weight,
-          length_cm: product.dimensions.l,
-          width_cm: product.dimensions.w,
-          height_cm: product.dimensions.h,
-          fragility: product.fragility
-        },
-        optimized_box: product.assigned_box?.name,
-        baseline_box: product.original_box_dims ? `${product.original_box_dims.l}x${product.original_box_dims.w}x${product.original_box_dims.h}` : `${product.dimensions.l}x${product.dimensions.w}x${product.dimensions.h}`,
-        optimized_dims: product.assigned_box ? { l: product.assigned_box.length_cm, w: product.assigned_box.width_cm, h: product.assigned_box.height_cm } : null,
-        product_dims: product.dimensions,
-        savings: product.savings,
-        total_cost: product.shipping_cost,
-        baseline_cost: product.baseline_cost,
-        risk_level: product.fragility === 'HIGH' || product.fragility === 'CRITICAL' ? 'HIGH' : 'LOW',
-        fragility: product.fragility,
-        weight: product.weight,
-        status: 'Ready to Ship',
-        created_at: new Date().toISOString()
-      })
-    })
-
-    const orderResults = await Promise.allSettled(orderPromises)
-    const orderSuccesses = orderResults.filter(res => res.status === 'fulfilled' && !res.value.error).length
-
-    // ── 7. Return success ─────────────────────────────────────────
+    // ── 6. Return success ─────────────────────────────────────────
     return NextResponse.json({
       success: true,
       ok: true,
       session_id: sessionId,
       total_processed: mlResult.total_processed,
       total_optimized: mlResult.total_optimized,
-      total_not_optimized: mlResult.total_not_optimized,
+      total_not_optimized: mlResult.total_processed - mlResult.total_optimized,
       total_savings: mlResult.total_savings,
-      success_rate: mlResult.success_rate,
-      order_inserts: {
-        success: orderSuccesses,
-        failed: optimizedItems.length - orderSuccesses,
-      },
-      results: mlResult.results.map(r => ({
-        ...r,
-        // Map to frontend expected names
-        productName: r.product_name,
-        volumeUtil: r.volume_utilization,
-        voidPct: r.void_pct,
-        baselineVoidPct: r.baseline_void_pct,
-        baselineBoxCost: r.baseline_box_cost,
-        optimizedBoxCost: r.optimized_box_cost,
-        optimizedBox: r.assigned_box?.name,
-        originalBox: r.original_box_dims ? `${r.original_box_dims.l}x${r.original_box_dims.w}x${r.original_box_dims.h}` : 'Standard',
-        optimizedDims: r.assigned_box ? { l: r.assigned_box.length_cm, w: r.assigned_box.width_cm, h: r.assigned_box.height_cm } : null,
-        lengthCm: r.dimensions.l,
-        widthCm: r.dimensions.w,
-        heightCm: r.dimensions.h,
-        reason: r.recommendation_reason
-      }))
+      success_rate: mlResult.total_processed > 0 ? (mlResult.total_optimized / mlResult.total_processed) * 100 : 0,
+      results: mlResult.results
     })
 
   } catch (error: unknown) {
@@ -242,17 +211,12 @@ function parseCSV(text: string): any[] {
   })
 
   return (parsed.data as any[]).map(row => ({
-    product_id: String(row.sku || row.SKU || row.product_id || ''),
-    product_name: String(row.product_name || row.name || row.Product || ''),
-    weight_kg: Number(row.weight_kg || row.weight || 0.5),
-    length_cm: Number(row.length_cm || row.l || row.length || 0),
-    width_cm: Number(row.width_cm || row.w || row.width || 0),
-    height_cm: Number(row.height_cm || row.h || row.height || 0),
-    fragility: String(row.fragility || 'LOW').toUpperCase(),
-    box_price: row.box_price ? Number(row.box_price) : undefined,
-    current_box_length: row.current_box_length ? Number(row.current_box_length) : undefined,
-    current_box_width: row.current_box_width ? Number(row.current_box_width) : undefined,
-    current_box_height: row.current_box_height ? Number(row.current_box_height) : undefined,
-    ...row
+    sku: String(row.sku || ''),
+    product_name: String(row.product_name || ''),
+    weight_kg: Number(row.weight_kg || 0.5),
+    length_cm: Number(row.length_cm || 0),
+    width_cm: Number(row.width_cm || 0),
+    height_cm: Number(row.height_cm || 0),
+    quantity: Number(row.quantity || 1)
   }))
 }

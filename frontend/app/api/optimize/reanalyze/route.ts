@@ -83,22 +83,18 @@ export async function POST(req: Request) {
       const ml = await runMLOptimization(productInput as any, boxes as any)
       const assignment = ml.results && ml.results[0]
 
-      const breakdown = assignment?.score_breakdown || null
-      const finalScore = assignment?.score || 0
+      const finalScore = assignment?.fit_score || 0
 
       const updatePayload: any = {
         ml_score: finalScore,
-        score_breakdown: breakdown,
-        new_box_name: assignment?.assigned_box?.name || null,
-        new_box_dims: assignment?.assigned_box ? `${assignment.assigned_box.length_cm}x${assignment.assigned_box.width_cm}x${assignment.assigned_box.height_cm}` : null,
-        new_box_length_cm: assignment?.assigned_box?.length_cm || null,
-        new_box_width_cm: assignment?.assigned_box?.width_cm || null,
-        new_box_height_cm: assignment?.assigned_box?.height_cm || null,
-        savings_amount: assignment?.savings || 0,
-        volume_utilization: assignment?.volume_utilization || null,
-        is_optimized: assignment?.optimized || false,
-        recommendation_reason: assignment?.recommendation_reason || null,
-        failure_reason: assignment?.failure_reason || null,
+        new_box_name: assignment?.recommended_box_name || null,
+        new_box_dims: assignment?.new_box_dims ? `${assignment.new_box_dims.l}x${assignment.new_box_dims.w}x${assignment.new_box_dims.h}` : null,
+        new_box_length_cm: assignment?.new_box_dims?.l || null,
+        new_box_width_cm: assignment?.new_box_dims?.w || null,
+        new_box_height_cm: assignment?.new_box_dims?.h || null,
+        savings_amount: assignment?.savings_per_unit || 0,
+        volume_utilization: finalScore,
+        is_optimized: assignment?.recommended_box_name !== 'No box found',
       }
 
       await admin
@@ -114,13 +110,12 @@ export async function POST(req: Request) {
 
       if (ordersForResult && ordersForResult.length > 0) {
         for (const o of ordersForResult) {
-          const boxSnap = assignment?.assigned_box ? {
-            id: assignment.assigned_box.id,
-            name: assignment.assigned_box.name,
-            length_cm: assignment.assigned_box.length_cm,
-            width_cm: assignment.assigned_box.width_cm,
-            height_cm: assignment.assigned_box.height_cm,
-            cost: assignment.assigned_box.cost
+          const boxSnap = assignment?.recommended_box_name !== 'No box found' ? {
+            name: assignment?.recommended_box_name,
+            length_cm: assignment?.new_box_dims?.l,
+            width_cm: assignment?.new_box_dims?.w,
+            height_cm: assignment?.new_box_dims?.h,
+            cost: assignment?.new_box_price
           } : o.box_snapshot || null
 
           await admin

@@ -12,10 +12,10 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/Skeleton'
 
-const SavingsLineChart = dynamic(() => import('@/components/charts/SavingsLineChart'), { ssr: false, loading: () => <Skeleton className="h-[400px] w-full" /> })
-const CostBarChart = dynamic(() => import('@/components/charts/CostBarChart'), { ssr: false, loading: () => <Skeleton className="h-[400px] w-full" /> })
-const FragilityDonut = dynamic(() => import('@/components/charts/FragilityDonut'), { ssr: false, loading: () => <Skeleton className="h-[400px] w-full" /> })
-const UtilizationGauge = dynamic(() => import('@/components/charts/UtilizationGauge'), { ssr: false, loading: () => <Skeleton className="h-[400px] w-full" /> })
+const TotalSavedBarChart = dynamic(() => import('@/components/charts/TotalSavedBarChart'), { ssr: false, loading: () => <Skeleton className="h-[400px] w-full" /> })
+const VoidPercentageLineChart = dynamic(() => import('@/components/charts/VoidPercentageLineChart'), { ssr: false, loading: () => <Skeleton className="h-[400px] w-full" /> })
+const CarrierDistributionDonut = dynamic(() => import('@/components/charts/CarrierDistributionDonut'), { ssr: false, loading: () => <Skeleton className="h-[400px] w-full" /> })
+const SuccessRateAreaChart = dynamic(() => import('@/components/charts/SuccessRateAreaChart'), { ssr: false, loading: () => <Skeleton className="h-[400px] w-full" /> })
 
 export default function DashboardClient() {
   const { runs, stats, isLoading } = useOptimizationRuns()
@@ -26,7 +26,7 @@ export default function DashboardClient() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data } = await supabase.from('orders').select('fragility, baseline_cost, total_cost, savings, created_at').eq('user_id', user.id).limit(100)
+        const { data } = await supabase.from('orders').select('fragility, baseline_cost, total_cost, savings, optimized_box, created_at').eq('user_id', user.id).limit(500)
         if (data) setOrdersData(data)
       }
     }
@@ -85,33 +85,33 @@ export default function DashboardClient() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <KPICard
               title="Total SKUs Optimized"
-              value={latestRun.total_items || 0}
+              value={latestRun?.total_items || 0}
               icon={Package}
               trend={calculateTrend('total_items')}
               delay={0}
             />
             <KPICard
               title="Latest Run Savings"
-              value={latestRun.estimated_savings || 0}
+              value={latestRun?.total_savings || 0}
               unit="₹"
               icon={TrendingUp}
-              trend={calculateTrend('estimated_savings')}
+              trend={calculateTrend('total_savings')}
               delay={0.1}
             />
             <KPICard
-              title="Avg Space Utilization"
-              value={latestRun.optimization_rate || 0}
+              title="Success Rate"
+              value={latestRun?.success_rate || 0}
               unit="%"
               icon={Zap}
-              trend={calculateTrend('optimization_rate')}
+              trend={calculateTrend('success_rate')}
               delay={0.2}
             />
             <KPICard
               title="CO2 Reduction"
-              value={Math.round((latestRun.estimated_savings || 0) * 0.1)}
+              value={Math.round((latestRun?.total_savings || 0) * 0.1)}
               unit="kg"
               icon={Leaf}
-              trend={calculateTrend('estimated_savings')}
+              trend={calculateTrend('total_savings')}
               delay={0.3}
             />
           </div>
@@ -119,41 +119,41 @@ export default function DashboardClient() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="bg-white/[0.03] border border-white/10 p-10 rounded-[40px] space-y-8">
               <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-bold font-space-grotesk text-white tracking-tight">Savings Over Time</h3>
-                <Badge variant="blue">Last 10 Runs</Badge>
+                <h3 className="text-2xl font-bold font-space-grotesk text-white tracking-tight">Total Saved</h3>
+                <Badge variant="blue">Per Session</Badge>
               </div>
               <div className="h-[350px]">
-                <SavingsLineChart data={runs.slice(0, 10).reverse()} />
+                <TotalSavedBarChart data={runs && runs.length > 0 ? [...runs].reverse() : []} />
               </div>
             </div>
 
             <div className="bg-white/[0.03] border border-white/10 p-10 rounded-[40px] space-y-8">
               <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-bold font-space-grotesk text-white tracking-tight">Fragility Breakdown</h3>
-                <Badge variant="blue">Latest Run</Badge>
+                <h3 className="text-2xl font-bold font-space-grotesk text-white tracking-tight">Void Percentage</h3>
+                <Badge variant="blue">Over Time</Badge>
               </div>
               <div className="h-[350px]">
-                <FragilityDonut data={ordersData} />
+                <VoidPercentageLineChart data={runs && runs.length > 0 ? [...runs].reverse() : []} />
               </div>
             </div>
 
             <div className="bg-white/[0.03] border border-white/10 p-10 rounded-[40px] space-y-8">
               <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-bold font-space-grotesk text-white tracking-tight">Cost Impact Analysis</h3>
-                <Badge variant="blue">Original vs Optimized</Badge>
+                <h3 className="text-2xl font-bold font-space-grotesk text-white tracking-tight">Carrier Distribution</h3>
+                <Badge variant="blue">Latest Orders</Badge>
               </div>
               <div className="h-[350px]">
-                <CostBarChart data={ordersData} />
+                <CarrierDistributionDonut data={ordersData} />
               </div>
             </div>
 
             <div className="bg-white/[0.03] border border-white/10 p-10 rounded-[40px] space-y-8">
               <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-bold font-space-grotesk text-white tracking-tight">Space Efficiency</h3>
-                <Badge variant="blue">Global Average</Badge>
+                <h3 className="text-2xl font-bold font-space-grotesk text-white tracking-tight">Optimization Success</h3>
+                <Badge variant="blue">Over Time</Badge>
               </div>
-              <div className="h-[350px] flex items-center justify-center">
-                <UtilizationGauge value={latestRun.optimization_rate || 0} />
+              <div className="h-[350px]">
+                <SuccessRateAreaChart data={runs && runs.length > 0 ? [...runs].reverse() : []} />
               </div>
             </div>
           </div>

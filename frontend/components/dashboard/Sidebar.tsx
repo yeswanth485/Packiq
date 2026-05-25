@@ -69,12 +69,22 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: any) {
       {/* Logo & Toggle */}
       <div className="flex items-center justify-between p-4 border-b border-white/5 h-[72px]">
         <Link href="/" className={`flex items-center gap-3 overflow-hidden ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>
-          <div className="w-8 h-8 rounded-lg bg-[#00FFD1] flex items-center justify-center shrink-0">
-            <Box className="w-5 h-5 text-[#0A0A0F]" />
+          <div className="w-10 h-10 rounded-full overflow-hidden bg-white/5 flex items-center justify-center shrink-0 border border-white/10">
+            {profile?.company?.logo_url ? (
+              <img src={profile.company.logo_url} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-sm font-bold text-blue-400">
+                {profile?.company?.company_name?.slice(0, 2).toUpperCase() || 'SZ'}
+              </span>
+            )}
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-white text-xl font-syne tracking-tight whitespace-nowrap leading-none">PackIQ</span>
-            <span className="text-[8px] font-black text-[#00FFD1] uppercase tracking-[0.3em] mt-0.5">Terybi</span>
+            <span className="font-bold text-white text-base font-syne tracking-tight whitespace-nowrap leading-none truncate max-w-[130px]">
+              {profile?.company?.company_name || 'My Company'}
+            </span>
+            <span className="text-[8px] font-black text-blue-400 uppercase tracking-[0.2em] mt-1">
+              PackIQ Workspace
+            </span>
           </div>
         </Link>
         <button 

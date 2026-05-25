@@ -88,89 +88,65 @@ export default function OrdersTable({ data }: OrdersTableProps = {}) {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white/5 border-b border-white/5">
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">#</th>
                 <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('product_name')}>
-                  Product Name <ArrowUpDown className="w-3 h-3 inline ml-1" />
+                  Product <ArrowUpDown className="w-3 h-3 inline ml-1" />
                 </th>
                 <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Original Dims</th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Optimized Box</th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('original_box_price_inr')}>
-                  Orig. Price <ArrowUpDown className="w-3 h-3 inline ml-1" />
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('weight')}>
+                  Weight <ArrowUpDown className="w-3 h-3 inline ml-1" />
                 </th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('optimized_box_price_inr')}>
-                  Opt. Price <ArrowUpDown className="w-3 h-3 inline ml-1" />
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Old Box</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('baseline_cost')}>
+                  Old Price <ArrowUpDown className="w-3 h-3 inline ml-1" />
                 </th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('savings_inr')}>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">New Box</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Carrier</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">New Dims</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('shipping_cost')}>
+                  New Price <ArrowUpDown className="w-3 h-3 inline ml-1" />
+                </th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('volume_util')}>
+                  Fit Score <ArrowUpDown className="w-3 h-3 inline ml-1" />
+                </th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('savings')}>
                   Savings <ArrowUpDown className="w-3 h-3 inline ml-1" />
                 </th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('fragility_score')}>
-                  Fragility <ArrowUpDown className="w-3 h-3 inline ml-1" />
-                </th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('risk_score')}>
-                  Risk <ArrowUpDown className="w-3 h-3 inline ml-1" />
-                </th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('space_utilization_percent')}>
-                  Space Used <ArrowUpDown className="w-3 h-3 inline ml-1" />
-                </th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">3D View</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {paginated.map((row: any, i) => (
-                <tr key={row.id} className="group hover:bg-white/[0.02] transition-colors">
-                  <td className="px-6 py-4 text-xs font-bold text-zinc-600">{(currentPage - 1) * pageSize + i + 1}</td>
+              {paginated.map((row: any, i) => {
+                const dimsStr = row.dimensions ? `${row.dimensions.l}x${row.dimensions.w}x${row.dimensions.h}` : '-'
+                const optDimsStr = row.optimized_dims ? `${row.optimized_dims.l}x${row.optimized_dims.w}x${row.optimized_dims.h}` : '-'
+                
+                return (
+                <tr key={row.id || i} className="group hover:bg-white/[0.02] transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="text-white font-bold">{row.product_name}</span>
-                      <span className="text-[10px] text-zinc-600 font-black uppercase tracking-tighter">SKU: {row.sku || 'SZ-1024'}</span>
+                      <span className="text-white font-bold">{row.product_name || row.productName}</span>
+                      <span className="text-[10px] text-zinc-600 font-black uppercase tracking-tighter">SKU: {row.sku || 'N/A'}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-zinc-400 text-sm">{row.original_length_cm}x{row.original_width_cm}x{row.original_height_cm}</td>
+                  <td className="px-6 py-4 text-zinc-400 text-sm">{dimsStr}</td>
+                  <td className="px-6 py-4 text-zinc-400 text-sm">{row.weight || row.weightKg || row.weight_kg || 0} kg</td>
+                  <td className="px-6 py-4 text-zinc-400 text-sm">{row.baseline_box || row.originalBox || '-'}</td>
+                  <td className="px-6 py-4 text-zinc-400 text-sm font-bold">₹{(row.baseline_cost || row.old_box_price || 0).toFixed(2)}</td>
+                  <td className="px-6 py-4 text-blue-400 text-sm font-bold">{row.optimized_box || row.optimizedBox || row.recommended_box_name || '-'}</td>
+                  <td className="px-6 py-4 text-zinc-400 text-sm">{row.carrier || row.recommended_carrier || '-'}</td>
+                  <td className="px-6 py-4 text-zinc-400 text-sm">{optDimsStr}</td>
+                  <td className="px-6 py-4 text-white text-sm font-bold">₹{(row.shipping_cost || row.new_box_price || 0).toFixed(2)}</td>
                   <td className="px-6 py-4">
-                     <div className="flex flex-col">
-                        <span className="text-blue-400 text-sm font-bold">{row.optimized_box_name}</span>
-                        <span className="text-[10px] text-blue-400/50 font-black tracking-tighter">{row.optimized_length_cm}x{row.optimized_width_cm}x{row.optimized_height_cm}</span>
-                     </div>
+                    <Badge variant={(row.volume_util || row.fit_score || 0) >= 80 ? 'green' : (row.volume_util || row.fit_score || 0) >= 50 ? 'yellow' : 'red'}>
+                      {row.volume_util || row.fit_score || 0}%
+                    </Badge>
                   </td>
-                  <td className="px-6 py-4 text-zinc-400 text-sm font-bold">₹{row.original_box_price_inr.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-white text-sm font-bold">₹{row.optimized_box_price_inr.toFixed(2)}</td>
                   <td className="px-6 py-4">
                     <Badge variant="green">
-                      ₹{row.savings_inr.toFixed(2)} ({Math.round(row.savings_percent)}%)
+                      ₹{(row.savings || row.savings_per_unit || 0).toFixed(2)}
                     </Badge>
-                  </td>
-                  <td className="px-6 py-4">
-                    <Badge variant={row.fragility_score >= 70 ? 'red' : row.fragility_score >= 40 ? 'yellow' : 'green'}>
-                      {row.fragility_score}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4">
-                    <Badge variant={row.risk_score?.includes('High') ? 'red' : row.risk_score?.includes('Medium') ? 'yellow' : 'green'}>
-                      {row.risk_score || (row.fragility === 'high' ? 'High Risk' : row.fragility === 'medium' ? 'Medium Risk' : 'Low Risk')}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4 text-white text-sm font-black">{Math.round(row.space_utilization_percent)}%</td>
-                  <td className="px-6 py-4">
-                    <button
-                      onClick={() => setSelectedOrder(row)}
-                      className="p-2 bg-white/5 hover:bg-blue-500/20 text-zinc-400 hover:text-blue-400 rounded-xl transition-all"
-                    >
-                      <Eye className="w-5 h-5" />
-                    </button>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
-            <tfoot>
-               <tr className="bg-white/5 font-bold">
-                  <td colSpan={6} className="px-6 py-5 text-zinc-400 uppercase tracking-widest text-[10px]">TOTALS</td>
-                  <td className="px-6 py-5 text-emerald-400">₹{totals.savings.toLocaleString()}</td>
-                  <td></td>
-                  <td></td>
-                  <td className="px-6 py-5 text-white">{Math.round(totals.avgUtilization)}% AVG</td>
-                  <td></td>
-               </tr>
-            </tfoot>
           </table>
         </div>
       </div>
