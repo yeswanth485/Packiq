@@ -11,11 +11,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/auth/login')
   }
 
-  let { data: profile } = await supabase
+  let { data: profileData } = await supabase
     .from('user_profiles')
     .select('*, companies(logo_url, company_name)')
     .eq('id', user.id)
     .maybeSingle()
+
+  let profile: any = profileData
 
   if (!profile) {
     // Create default profile if missing to prevent errors
@@ -29,7 +31,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   // Fallback: if the join didn't populate companies, fetch directly
-  if (profile && !(profile as any).companies) {
+  if (profile && !profile.companies) {
     const { data: company } = await (supabase as any)
       .from('companies')
       .select('logo_url, company_name')
