@@ -29,7 +29,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   // Fallback: if the join didn't populate companies, fetch directly
-  if (profile && !profile.companies) {
+  if (profile && !(profile as any).companies) {
     const { data: company } = await (supabase as any)
       .from('companies')
       .select('logo_url, company_name')
