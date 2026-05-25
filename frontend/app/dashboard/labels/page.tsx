@@ -5,6 +5,19 @@ import { createClient } from '@/lib/supabase/client'
 import { Tag, Plus, Trash2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 
+const STANDARD_LABELS = [
+  { id: 'lbl-1', name: 'Fragile - Handle With Care', price: 2.50, width_cm: 10, length_cm: 7, image_url: null, color: '#EF4444', icon: '⚠️', isStandard: true },
+  { id: 'lbl-2', name: 'This Side Up', price: 1.80, width_cm: 8, length_cm: 8, image_url: null, color: '#3B82F6', icon: '⬆️', isStandard: true },
+  { id: 'lbl-3', name: 'Do Not Stack', price: 2.00, width_cm: 10, length_cm: 7, image_url: null, color: '#F59E0B', icon: '🚫', isStandard: true },
+  { id: 'lbl-4', name: 'Keep Dry', price: 1.50, width_cm: 8, length_cm: 6, image_url: null, color: '#06B6D4', icon: '💧', isStandard: true },
+  { id: 'lbl-5', name: 'Recyclable', price: 1.20, width_cm: 6, length_cm: 6, image_url: null, color: '#10B981', icon: '♻️', isStandard: true },
+  { id: 'lbl-6', name: 'Heavy Package', price: 2.80, width_cm: 12, length_cm: 8, image_url: null, color: '#8B5CF6', icon: '🏋️', isStandard: true },
+  { id: 'lbl-7', name: 'Express Shipping', price: 3.50, width_cm: 15, length_cm: 5, image_url: null, color: '#EC4899', icon: '⚡', isStandard: true },
+  { id: 'lbl-8', name: 'Return Label', price: 4.00, width_cm: 15, length_cm: 10, image_url: null, color: '#6366F1', icon: '↩️', isStandard: true },
+  { id: 'lbl-9', name: 'Barcode / SKU', price: 0.80, width_cm: 10, length_cm: 3, image_url: null, color: '#78716C', icon: '📊', isStandard: true },
+  { id: 'lbl-10', name: 'Shipped via PackIQ', price: 1.00, width_cm: 12, length_cm: 4, image_url: null, color: '#00FFD1', icon: '📦', isStandard: true },
+]
+
 export default function LabelsPage() {
   const supabase = createClient() as any
   const [labels, setLabels] = useState<any[]>([])
@@ -18,8 +31,10 @@ export default function LabelsPage() {
       if (error) {
         toast.error('Failed to fetch labels')
       } else {
-        setLabels(data || [])
+        setLabels([...STANDARD_LABELS, ...(data || [])])
       }
+    } else {
+      setLabels(STANDARD_LABELS)
     }
     setLoading(false)
   }, [supabase])
@@ -96,27 +111,34 @@ export default function LabelsPage() {
           <p className="text-zinc-500">Upload your first label to attach it to boxes.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {labels.map((label) => (
             <div key={label.id} className="bg-white/[0.03] border border-white/10 rounded-[32px] p-4 hover:border-indigo-500/30 transition-all group overflow-hidden flex flex-col">
-              <div className="relative h-40 bg-white/5 rounded-2xl mb-4 overflow-hidden flex items-center justify-center">
+              <div className="relative h-40 rounded-2xl mb-4 overflow-hidden flex items-center justify-center" style={{ backgroundColor: label.color ? `${label.color}15` : 'rgba(255,255,255,0.05)' }}>
                 {label.image_url ? (
                   <img src={label.image_url} alt={label.name} className="max-w-full max-h-full object-contain" />
+                ) : label.icon ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-5xl">{label.icon}</span>
+                    {label.isStandard && <span className="px-2 py-0.5 bg-white/10 text-[9px] font-black uppercase tracking-widest rounded text-zinc-400">Standard</span>}
+                  </div>
                 ) : (
                   <Tag className="w-10 h-10 text-zinc-600" />
                 )}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="p-1.5 bg-red-500/20 rounded-lg hover:bg-red-500/40 text-red-400 transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                {!label.isStandard && (
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className="p-1.5 bg-red-500/20 rounded-lg hover:bg-red-500/40 text-red-400 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-white tracking-tight truncate">{label.name}</h3>
-                <p className="text-xs text-zinc-500">{label.width_cm}x{label.length_cm} cm</p>
+                <h3 className="text-sm font-bold text-white tracking-tight truncate">{label.name}</h3>
+                <p className="text-xs text-zinc-500">{label.width_cm}×{label.length_cm} cm</p>
               </div>
-              <div className="mt-4 bg-white/5 p-3 rounded-2xl flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Cost per label</span>
+              <div className="mt-3 bg-white/5 p-3 rounded-2xl flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Cost</span>
                 <span className="text-sm font-bold text-emerald-400">₹{label.price}</span>
               </div>
             </div>

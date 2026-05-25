@@ -6,6 +6,15 @@ import { motion } from 'framer-motion'
 import { Box, Plus, Trash2, Edit } from 'lucide-react'
 import { toast } from 'sonner'
 
+const STANDARD_BOXES = [
+  { id: 'std-1', name: 'Micro Box', length_cm: 10, width_cm: 10, height_cm: 10, cost: 8, weight_limit_kg: 2, material: 'Corrugated', isStandard: true },
+  { id: 'std-2', name: 'Mini Box S', length_cm: 15, width_cm: 15, height_cm: 15, cost: 12, weight_limit_kg: 5, material: 'Corrugated', isStandard: true },
+  { id: 'std-3', name: 'Small Box', length_cm: 25, width_cm: 20, height_cm: 15, cost: 18, weight_limit_kg: 10, material: 'Corrugated', isStandard: true },
+  { id: 'std-4', name: 'Medium Box', length_cm: 35, width_cm: 30, height_cm: 25, cost: 35, weight_limit_kg: 15, material: 'Double Wall', isStandard: true },
+  { id: 'std-5', name: 'Large Box', length_cm: 50, width_cm: 40, height_cm: 35, cost: 65, weight_limit_kg: 25, material: 'Double Wall', isStandard: true },
+  { id: 'std-6', name: 'Jumbo Box XL', length_cm: 80, width_cm: 60, height_cm: 60, cost: 145, weight_limit_kg: 40, material: 'Heavy Duty', isStandard: true }
+]
+
 export default function BoxCatalogPage() {
   const supabase = createClient() as any
   const [boxes, setBoxes] = useState<any[]>([])
@@ -19,8 +28,10 @@ export default function BoxCatalogPage() {
       if (error) {
         toast.error('Failed to fetch boxes')
       } else {
-        setBoxes(data || [])
+        setBoxes([...STANDARD_BOXES, ...(data || [])])
       }
+    } else {
+      setBoxes(STANDARD_BOXES)
     }
     setLoading(false)
   }, [supabase])
@@ -87,17 +98,22 @@ export default function BoxCatalogPage() {
             <div key={box.id} className="bg-white/[0.03] border border-white/10 rounded-[32px] p-6 hover:border-[#00FFD1]/30 transition-all group overflow-hidden">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-xl font-bold text-white tracking-tight">{box.name}</h3>
+                  <h3 className="text-xl font-bold text-white tracking-tight">
+                    {box.name}
+                    {box.isStandard && <span className="ml-2 px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-[10px] font-bold uppercase">Standard</span>}
+                  </h3>
                   <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{box.material || 'Corrugated'}</p>
                 </div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="p-2 bg-white/5 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-colors">
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button className="p-2 bg-white/5 rounded-xl hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                {!box.isStandard && (
+                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className="p-2 bg-white/5 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-colors">
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button className="p-2 bg-white/5 rounded-xl hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-center mb-6 h-40">

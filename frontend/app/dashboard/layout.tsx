@@ -28,6 +28,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
     profile = newProfile
   }
 
+  // Fallback: if the join didn't populate companies, fetch directly
+  if (profile && !profile.companies) {
+    const { data: company } = await (supabase as any)
+      .from('companies')
+      .select('logo_url, company_name')
+      .eq('owner_user_id', user.id)
+      .maybeSingle()
+
+    if (company) {
+      profile = { ...profile, companies: company }
+    }
+  }
+
   return (
     <DashboardProvider>
       <DashboardLayoutClient profile={profile}>
