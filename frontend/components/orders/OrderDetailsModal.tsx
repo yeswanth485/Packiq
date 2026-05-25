@@ -19,7 +19,7 @@ export default function OrderDetailsModal({
   order: any,
   onClose: () => void
 }) {
-  const supabase = createClient()
+  const supabase = createClient() as any
   const [labels, setLabels] = useState<any[]>([])
   const [selectedLabel, setSelectedLabel] = useState<any | null>(null)
 

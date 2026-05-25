@@ -1,20 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Tag, Plus, Trash2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function LabelsPage() {
-  const supabase = createClient()
+  const supabase = createClient() as any
   const [labels, setLabels] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchLabels()
-  }, [])
-
-  const fetchLabels = async () => {
+  const fetchLabels = useCallback(async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
@@ -26,7 +22,11 @@ export default function LabelsPage() {
       }
     }
     setLoading(false)
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    fetchLabels()
+  }, [fetchLabels])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

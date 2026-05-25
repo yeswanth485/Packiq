@@ -1,21 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'
 import { Box, Plus, Trash2, Edit } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function BoxCatalogPage() {
-  const supabase = createClient()
+  const supabase = createClient() as any
   const [boxes, setBoxes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchBoxes()
-  }, [])
-
-  const fetchBoxes = async () => {
+  const fetchBoxes = useCallback(async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
@@ -27,7 +23,11 @@ export default function BoxCatalogPage() {
       }
     }
     setLoading(false)
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    fetchBoxes()
+  }, [fetchBoxes])
 
   // Very simplified 3D box renderer using CSS transforms
   const render3DBox = (box: any) => {
