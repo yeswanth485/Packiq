@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Loader2, Mail, Lock, ArrowRight, CheckCircle2, Eye, EyeOff, Box, Zap, Brain, ShieldCheck, Boxes, Building } from 'lucide-react'
+import { Loader2, Mail, Lock, CheckCircle2, Eye, EyeOff, Box, Boxes } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -13,9 +13,9 @@ const inter = Inter({ subsets: ['latin'] })
 const syne = Syne({ subsets: ['latin'] })
 
 const FEATURES = [
-  { icon: Zap, text: "Save up to 32% on DIM weight", color: "#00FFD1" },
+  { icon: Box, text: "Save up to 32% on DIM weight", color: "#00FFD1" },
   { icon: Boxes, text: "AI FFD Spatial Optimization", color: "#4361EE" },
-  { icon: ShieldCheck, text: "Automated Box Selection", color: "#22c55e" }
+  { icon: Box, text: "Automated Box Selection", color: "#22c55e" }
 ]
 
 const FloatingElements = () => {
@@ -82,36 +82,25 @@ export default function LoginPage() {
       })
       if (error) throw error
 
+      if (!data.user) throw new Error('Authentication failed')
+
       // Check onboarding status
-      let { data: profile } = await supabase
+      const { data: profile } = await supabase
         .from('user_profiles')
         .select('onboarding_completed')
         .eq('id', data.user.id)
         .maybeSingle()
 
-      // If profile is missing, create it
-      if (!profile) {
-        const { data: newProfile, error: createError } = await (supabase
-          .from('user_profiles') as any)
-          .insert({
-            id: data.user.id,
-            full_name: data.user.email || '',
-            onboarding_completed: false
-          })
-          .select()
-          .single()
-        profile = newProfile
-      }
-
       setIsSuccess(true)
       await new Promise(r => setTimeout(r, 800))
 
-      if (profile && !(profile as any).onboarding_completed) {
-        router.push('/onboarding')
-      } else {
+      if (profile?.onboarding_completed) {
         router.push('/dashboard')
+      } else {
+        router.push('/onboarding')
       }
     } catch (err: any) {
+      console.error('[Login] Error:', err)
       let msg = err.message
       if (msg.includes('Email not confirmed')) {
         msg = 'Please check your inbox and verify your email address to log in.'
@@ -131,7 +120,7 @@ export default function LoginPage() {
     setError(null)
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
       })
       if (error) throw error
       setResetSent(true)
@@ -146,7 +135,8 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      console.log('[Login] Initiating Google login...')
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
@@ -154,6 +144,7 @@ export default function LoginPage() {
       })
       if (error) throw error
     } catch (err: any) {
+      console.error('[Login] Google login error:', err)
       toast.error(err.message)
     }
   }
@@ -214,7 +205,6 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-8">
-            {/* Google Sign In AT THE TOP */}
             <button
               type="button"
               onClick={handleGoogleLogin}
@@ -278,8 +268,6 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
-
-
 
               <button
                 type="submit" disabled={loading || isSuccess}
