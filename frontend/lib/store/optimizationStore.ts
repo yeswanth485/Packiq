@@ -39,6 +39,7 @@ export interface OptimizationResult {
   optimized_length_cm: number
   optimized_width_cm: number
   optimized_height_cm: number
+  optimized_box_name: string
   original_box_price_inr: number
   optimized_box_price_inr: number
   savings_inr: number

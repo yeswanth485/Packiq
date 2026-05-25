@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check } from 'lucide-react'
+import Link from 'next/link'
 
 const PLANS = [
   {
@@ -89,13 +90,16 @@ export default function Pricing() {
                   ))}
                 </div>
 
-                <button className={`w-full py-4 rounded-2xl font-bold transition-all ${
-                  plan.recommended
-                    ? 'bg-white text-blue-600 hover:scale-[1.02]'
-                    : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'
-                }`}>
+                <Link
+                  href="/auth/signup"
+                  className={`w-full py-4 rounded-2xl font-bold transition-all text-center block ${
+                    plan.recommended
+                      ? 'bg-white text-blue-600 hover:scale-[1.02]'
+                      : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'
+                  }`}
+                >
                   Get Started
-                </button>
+                </Link>
               </div>
             </motion.div>
           ))}

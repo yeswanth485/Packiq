@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { Rocket, ChevronRight, Play, Shield, Zap, Globe } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 
 export default function Hero() {
   return (
@@ -59,13 +60,19 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.4 }}
             className="flex flex-wrap gap-6"
           >
-            <button className="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-10 py-5 rounded-2xl font-bold shadow-[0_0_40px_rgba(37,99,235,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3">
+            <Link
+              href="/auth/signup"
+              className="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-10 py-5 rounded-2xl font-bold shadow-[0_0_40px_rgba(37,99,235,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+            >
               Start Free Trial
               <ChevronRight className="w-5 h-5" />
-            </button>
-            <button className="px-10 py-5 rounded-2xl font-bold border border-white/10 text-white hover:bg-white/5 transition-all flex items-center gap-3">
+            </Link>
+            <Link
+              href="#how-it-works"
+              className="px-10 py-5 rounded-2xl font-bold border border-white/10 text-white hover:bg-white/5 transition-all flex items-center gap-3"
+            >
               See How It Works
-            </button>
+            </Link>
           </motion.div>
 
           <motion.div
