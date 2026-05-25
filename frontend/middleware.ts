@@ -59,7 +59,15 @@ export async function middleware(request: NextRequest) {
 
       onboardingDone = profile?.onboarding_completed === true
 
-      if (!onboardingDone && pathname.startsWith('/dashboard') && !pathname.startsWith('/onboarding')) {
+      // If they are on onboarding and already done, move them to dashboard
+      if (onboardingDone && pathname.startsWith('/onboarding')) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+      }
+
+      // If they are NOT done and trying to access dashboard, send to onboarding
+      if (!onboardingDone && pathname.startsWith('/dashboard')) {
         const url = request.nextUrl.clone()
         url.pathname = '/onboarding'
         return NextResponse.redirect(url)
@@ -68,22 +76,16 @@ export async function middleware(request: NextRequest) {
       console.error('[Middleware] Profile fetch error:', e)
     }
 
-    // Redirect authenticated users
-    if (onboardingDone) {
-      // Onboarded -> Dashboard (if trying to access landing or auth)
-      if (pathname === '/' || pathname.startsWith('/auth')) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/dashboard'
-        return NextResponse.redirect(url)
-      }
-    } else {
-      // Not Onboarded -> Onboarding (if trying to access landing, auth, or dashboard)
-      if (pathname === '/' || pathname.startsWith('/auth') || (pathname.startsWith('/dashboard') && !pathname.startsWith('/onboarding'))) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/onboarding'
-        return NextResponse.redirect(url)
-      }
+    // Redirect authenticated users away from auth pages
+    if (pathname.startsWith('/auth')) {
+      const url = request.nextUrl.clone()
+      url.pathname = onboardingDone ? '/dashboard' : '/onboarding'
+      return NextResponse.redirect(url)
     }
+
+    // NOTE: We allow authenticated users to see the landing page ('/')
+    // if they explicitly navigate there, or we can redirect them.
+    // The user requested that the landing page show first.
   }
 
   return supabaseResponse
