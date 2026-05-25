@@ -1,18 +1,20 @@
 'use client'
 
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, PerspectiveCamera, Grid, Environment, Float, Text, Box as ThreeBox, Edges } from '@react-three/drei'
+import { OrbitControls, PerspectiveCamera, Grid, Environment, Float, Text, Box as ThreeBox, Edges, Image as DreiImage } from '@react-three/drei'
 import { Suspense } from 'react'
 
+// ...
 interface BoxProps {
   dimensions: { l: number; w: number; h: number }
   color: string
   opacity?: number
   wireframe?: boolean
   label?: string
+  labelUrl?: string
 }
 
-function BoxModel({ dimensions, color, opacity = 1, wireframe = false, label }: BoxProps) {
+function BoxModel({ dimensions, color, opacity = 1, wireframe = false, label, labelUrl }: BoxProps) {
   // Scale factor to keep visualization manageable
   const scale = 0.05
   const l = dimensions.l * scale
@@ -33,6 +35,16 @@ function BoxModel({ dimensions, color, opacity = 1, wireframe = false, label }: 
         {!wireframe && <Edges color={color} threshold={15} />}
       </ThreeBox>
 
+      {labelUrl && (
+        <DreiImage
+          url={labelUrl}
+          position={[0, h / 2 + 0.01, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          scale={[Math.min(l, w) * 0.8, Math.min(l, w) * 0.8]}
+          transparent
+        />
+      )}
+
       {label && (
         <Text
           position={[0, h / 2 + 0.2, 0]}
@@ -52,11 +64,13 @@ function BoxModel({ dimensions, color, opacity = 1, wireframe = false, label }: 
 export default function Box3DViewer({
   optimizedDims,
   originalDims,
-  productName
+  productName,
+  labelUrl
 }: {
   optimizedDims: { l: number; w: number; h: number },
   originalDims: { l: number; w: number; h: number },
-  productName: string
+  productName: string,
+  labelUrl?: string
 }) {
   return (
     <div className="w-full h-full min-h-[400px] bg-[#0A0F1E] rounded-3xl overflow-hidden relative border border-white/5">

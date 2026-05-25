@@ -103,7 +103,12 @@ export default function OrdersTable({ data }: OrdersTableProps = {}) {
                 <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('savings_inr')}>
                   Savings <ArrowUpDown className="w-3 h-3 inline ml-1" />
                 </th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Fragility</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('fragility_score')}>
+                  Fragility <ArrowUpDown className="w-3 h-3 inline ml-1" />
+                </th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('risk_score')}>
+                  Risk <ArrowUpDown className="w-3 h-3 inline ml-1" />
+                </th>
                 <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer" onClick={() => handleSort('space_utilization_percent')}>
                   Space Used <ArrowUpDown className="w-3 h-3 inline ml-1" />
                 </th>
@@ -135,8 +140,13 @@ export default function OrdersTable({ data }: OrdersTableProps = {}) {
                     </Badge>
                   </td>
                   <td className="px-6 py-4">
-                    <Badge variant={row.fragility === 'high' ? 'red' : row.fragility === 'medium' ? 'yellow' : 'green'}>
-                      {row.fragility}
+                    <Badge variant={row.fragility_score >= 70 ? 'red' : row.fragility_score >= 40 ? 'yellow' : 'green'}>
+                      {row.fragility_score}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4">
+                    <Badge variant={row.risk_score?.includes('High') ? 'red' : row.risk_score?.includes('Medium') ? 'yellow' : 'green'}>
+                      {row.risk_score || (row.fragility === 'high' ? 'High Risk' : row.fragility === 'medium' ? 'Medium Risk' : 'Low Risk')}
                     </Badge>
                   </td>
                   <td className="px-6 py-4 text-white text-sm font-black">{Math.round(row.space_utilization_percent)}%</td>
@@ -155,6 +165,7 @@ export default function OrdersTable({ data }: OrdersTableProps = {}) {
                <tr className="bg-white/5 font-bold">
                   <td colSpan={6} className="px-6 py-5 text-zinc-400 uppercase tracking-widest text-[10px]">TOTALS</td>
                   <td className="px-6 py-5 text-emerald-400">₹{totals.savings.toLocaleString()}</td>
+                  <td></td>
                   <td></td>
                   <td className="px-6 py-5 text-white">{Math.round(totals.avgUtilization)}% AVG</td>
                   <td></td>

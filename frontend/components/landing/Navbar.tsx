@@ -4,9 +4,12 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
+import { useAuth } from '@/hooks/useAuth'
+import { Loader2 } from 'lucide-react'
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
+  const { user, profile, loading } = useAuth()
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20)
@@ -46,15 +49,30 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-6">
-          <Link href="/auth/login" className="text-sm font-bold text-zinc-400 hover:text-white transition-colors">
-            Sign In
-          </Link>
-          <Link
-            href="/auth/signup"
-            className="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:scale-105 active:scale-95 transition-all"
-          >
-            Get Started
-          </Link>
+          {loading ? (
+            <div className="w-24 h-10 flex items-center justify-center">
+              <Loader2 className="w-5 h-5 text-white animate-spin" />
+            </div>
+          ) : user ? (
+            <Link
+              href={profile?.onboarding_completed ? "/dashboard" : "/onboarding"}
+              className="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:scale-105 active:scale-95 transition-all"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link href="/auth/login" className="text-sm font-bold text-zinc-400 hover:text-white transition-colors">
+                Sign In
+              </Link>
+              <Link
+                href="/auth/signup"
+                className="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:scale-105 active:scale-95 transition-all"
+              >
+                Get Started
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </nav>

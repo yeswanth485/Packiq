@@ -166,7 +166,8 @@ export default function OptimizePage() {
         savings_pct: r.savings_percent,
         savings_amount: r.savings_inr,
         fragility_score: r.fragility_score,
-        fragility_level: r.fragility
+        fragility_level: r.fragility,
+        risk_score: r.risk_score
       }))
 
       const { error: resultsError } = await (supabase as any)

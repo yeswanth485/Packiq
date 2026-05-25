@@ -31,7 +31,8 @@ const navItems = [
   { href: '/dashboard',             label: 'Overview',          icon: LayoutDashboard },
   { href: '/dashboard/optimize',    label: 'Optimize',          icon: Zap },
   { href: '/dashboard/orders',      label: 'Results',           icon: ShoppingCart },
-  { href: '/dashboard/3d',          label: '3D View',           icon: Box },
+  { href: '/dashboard/box-catalog', label: 'Box Catalog',       icon: Box },
+  { href: '/dashboard/labels',      label: 'Labels',            icon: Tag },
   { href: '/dashboard/analytics',   label: 'Analytics',         icon: TrendingUp },
   { href: '/dashboard/sustainability', label: 'Sustainability', icon: Leaf },
   { href: '/dashboard/settings',    label: 'Settings',          icon: Settings },
@@ -159,12 +160,16 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: any) {
 
             {/* Profile */}
             <div className="flex items-center gap-3 bg-white/[0.02] p-3 rounded-2xl border border-white/5">
-              <div className="w-8 h-8 rounded-full bg-[#00FFD1]/20 border border-[#00FFD1]/30 flex items-center justify-center shrink-0">
-                 <User className="w-4 h-4 text-[#00FFD1]" />
+              <div className="w-8 h-8 rounded-full bg-[#00FFD1]/20 border border-[#00FFD1]/30 flex items-center justify-center shrink-0 overflow-hidden">
+                 {profile?.companies?.logo_url ? (
+                   <img src={profile.companies.logo_url} alt="Company Logo" className="w-full h-full object-cover" />
+                 ) : (
+                   <User className="w-4 h-4 text-[#00FFD1]" />
+                 )}
               </div>
               <div className="flex flex-col whitespace-nowrap overflow-hidden">
                 <span className="text-[11px] font-bold text-white truncate">{profile?.full_name || 'Admin'}</span>
-                <span className="text-[9px] text-gray-500 uppercase tracking-widest truncate">{profile?.company || 'Enterprise'}</span>
+                <span className="text-[9px] text-gray-500 uppercase tracking-widest truncate">{profile?.companies?.company_name || profile?.company_name || 'Enterprise'}</span>
               </div>
             </div>
           </div>

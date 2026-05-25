@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Box, Info, Zap, Leaf, Shield, ArrowRight } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { Badge } from '@/components/ui/Badge'
+import { createClient } from '@/lib/supabase/client'
 
 const Box3DViewer = dynamic(() => import('./Box3DViewer'), {
   ssr: false,
@@ -18,6 +19,16 @@ export default function OrderDetailsModal({
   order: any,
   onClose: () => void
 }) {
+  const supabase = createClient()
+  const [labels, setLabels] = useState<any[]>([])
+  const [selectedLabel, setSelectedLabel] = useState<any | null>(null)
+
+  // Fetch labels
+  useState(() => {
+    supabase.from('packaging_labels').select('*').then(({ data }) => {
+      if (data) setLabels(data)
+    })
+  })
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <motion.div
@@ -42,12 +53,25 @@ export default function OrderDetailsModal({
         </button>
 
         {/* 3D Viewer Side */}
-        <div className="p-8 lg:p-12 h-[400px] lg:h-auto">
+        <div className="p-8 lg:p-12 h-[400px] lg:h-auto flex flex-col relative">
           <Box3DViewer
             productName={order.product_name}
             originalDims={{ l: order.original_length_cm, w: order.original_width_cm, h: order.original_height_cm }}
             optimizedDims={{ l: order.optimized_length_cm, w: order.optimized_width_cm, h: order.optimized_height_cm }}
+            labelUrl={selectedLabel?.image_url}
           />
+          <div className="absolute top-12 right-12 z-10 w-48 pointer-events-auto">
+             <select 
+               className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none backdrop-blur-md"
+               onChange={(e) => setSelectedLabel(labels.find(l => l.id === e.target.value) || null)}
+               value={selectedLabel?.id || ''}
+             >
+                <option value="">No Label</option>
+                {labels.map(l => (
+                   <option key={l.id} value={l.id}>{l.name} (+₹{l.price})</option>
+                ))}
+             </select>
+          </div>
         </div>
 
         {/* Info Side */}
@@ -115,7 +139,7 @@ export default function OrderDetailsModal({
           <div className="p-6 bg-gradient-to-br from-blue-600 to-blue-500 rounded-3xl flex items-center justify-between">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-white/70">Total Savings</p>
-              <p className="text-3xl font-black text-white">₹{order.savings_inr.toFixed(2)}</p>
+              <p className="text-3xl font-black text-white">₹{(order.savings_inr - (selectedLabel?.price || 0)).toFixed(2)}</p>
             </div>
             <div className="text-right">
                <p className="text-lg font-bold text-white">{Math.round(order.savings_percent)}% saved</p>

@@ -68,6 +68,12 @@ export function generateOptimizationScore(utilization: number): number {
   return 50 + Math.floor(Math.random() * 20)
 }
 
+export function generateRiskScore(fragilityScore: number): string {
+  if (fragilityScore >= 70) return 'High Risk'
+  if (fragilityScore >= 40) return 'Medium Risk'
+  return 'Low Risk'
+}
+
 export function optimizeProduct(product: any, customBoxes?: any[]) {
   const optimizedBox = findOptimalBox(product, customBoxes)
   
@@ -83,6 +89,8 @@ export function optimizeProduct(product: any, customBoxes?: any[]) {
   const originalBoxVol = product.original_length_cm * product.original_width_cm * product.original_height_cm // Simplification: using product dims as original box
   const co2Saved = calcCO2Saved(originalBoxVol * 1.5, boxVol) // Assuming original box was 50% larger than product
 
+  const fragilityScore = generateFragilityScore(product.product_name, product.fragility)
+
   return {
     ...product,
     optimized_length_cm: optimizedBox.l,
@@ -94,8 +102,10 @@ export function optimizeProduct(product: any, customBoxes?: any[]) {
     savings_inr,
     savings_percent,
     space_utilization_percent: spaceUtilization,
-    fragility_score: generateFragilityScore(product.product_name, product.fragility),
+    fragility_score: fragilityScore,
+    risk_score: generateRiskScore(fragilityScore),
     optimization_score: generateOptimizationScore(spaceUtilization),
     co2_saved_kg: co2Saved
   }
 }
+
