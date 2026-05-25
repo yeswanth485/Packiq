@@ -114,7 +114,7 @@ export default function OnboardingWizard() {
           website: formData.website,
           logo_url: logoUrl,
           updated_at: new Date().toISOString()
-        })
+        }, { onConflict: 'owner_user_id' })
         .select()
         .single()
 
@@ -123,12 +123,12 @@ export default function OnboardingWizard() {
       // 3. Update User Profile
       const { error: profileError } = await (supabase as any)
         .from('user_profiles')
-        .upsert({
-          id: user.id,
+        .update({
           company_id: company.id,
-          full_name: user.email,
-          onboarding_completed: true
+          onboarding_completed: true,
+          updated_at: new Date().toISOString()
         })
+        .eq('id', user.id)
 
       if (profileError) throw profileError
 
