@@ -134,8 +134,12 @@ export default function OnboardingWizard() {
 
       // 4. Success State
       setStep(5)
+
+      // Force a refresh to ensure middleware sees the updated profile
+      router.refresh()
+
       setTimeout(() => {
-        router.push('/dashboard')
+        window.location.href = '/dashboard'
       }, 2500)
 
     } catch (error: any) {
