@@ -133,7 +133,7 @@ export default function SignupPage() {
       }
 
       toast.success('Account created! Let us set up your workspace.')
-      router.push('/onboarding')
+      window.location.href = '/onboarding'
     } catch (err: any) {
       setServerError(err.message)
       toast.error(err.message)

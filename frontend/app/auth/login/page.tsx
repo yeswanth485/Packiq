@@ -94,10 +94,11 @@ export default function LoginPage() {
       setIsSuccess(true)
       await new Promise(r => setTimeout(r, 800))
 
+      // Use window.location for hard redirect to ensure middleware picks up the session
       if ((profile as any)?.onboarding_completed) {
-        router.push('/dashboard')
+        window.location.href = '/dashboard'
       } else {
-        router.push('/onboarding')
+        window.location.href = '/onboarding'
       }
     } catch (err: any) {
       console.error('[Login] Error:', err)

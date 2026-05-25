@@ -322,6 +322,7 @@ CREATE INDEX IF NOT EXISTS idx_shipments_tracking ON shipments(tracking_id);
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
+  -- Insert into user_profiles
   INSERT INTO public.user_profiles (id, full_name, email, onboarding_completed)
   VALUES (
     NEW.id,
@@ -331,13 +332,12 @@ BEGIN
   )
   ON CONFLICT (id) DO NOTHING;
 
-  -- Assuming subscriptions table exists as defined in database/database.sql
-  -- If it doesn't, this might need adjustment
+  -- Insert into subscriptions
   INSERT INTO public.subscriptions (
     user_id, plan, monthly_limit, used_this_month,
     billing_period_start, billing_period_end
   )
-  VALUES (NEW.id, 'starter', 500, 0, NOW(), NOW() + INTERVAL '1 month')
+  VALUES (NEW.id, 'starter', 1000, 0, NOW(), NOW() + INTERVAL '1 month')
   ON CONFLICT (user_id) DO NOTHING;
 
   RETURN NEW;
