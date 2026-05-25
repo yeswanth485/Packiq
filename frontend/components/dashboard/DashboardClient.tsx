@@ -1,5 +1,8 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
+
 import { useOptimizationRuns } from '@/lib/hooks/useOptimizationRuns'
 import CompanyHeader from './CompanyHeader'
 import KPICard from './KPICard'
@@ -16,6 +19,19 @@ const UtilizationGauge = dynamic(() => import('@/components/charts/UtilizationGa
 
 export default function DashboardClient() {
   const { runs, stats, isLoading } = useOptimizationRuns()
+  const [ordersData, setOrdersData] = useState<any[]>([])
+
+  useEffect(() => {
+    async function fetchOrders() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data } = await supabase.from('orders').select('fragility, baseline_cost, total_cost, savings, created_at').eq('user_id', user.id).limit(100)
+        if (data) setOrdersData(data)
+      }
+    }
+    fetchOrders()
+  }, [])
 
   if (isLoading) {
     return (
@@ -117,7 +133,7 @@ export default function DashboardClient() {
                 <Badge variant="blue">Latest Run</Badge>
               </div>
               <div className="h-[350px]">
-                <FragilityDonut data={[]} /> {/* Requires optimization_results fetch for full data */}
+                <FragilityDonut data={ordersData} />
               </div>
             </div>
 
@@ -127,7 +143,7 @@ export default function DashboardClient() {
                 <Badge variant="blue">Original vs Optimized</Badge>
               </div>
               <div className="h-[350px]">
-                <CostBarChart data={runs.slice(0, 5).reverse()} />
+                <CostBarChart data={ordersData} />
               </div>
             </div>
 

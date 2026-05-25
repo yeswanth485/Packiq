@@ -66,6 +66,12 @@ export default function OnboardingWizard() {
         return
       }
     }
+    if (step === 3) {
+      if (!formData.logoFile && !formData.logoPreview) {
+        toast.error('Please upload a company logo to continue')
+        return
+      }
+    }
     setStep(prev => Math.min(prev + 1, STEPS_COUNT))
   }
 

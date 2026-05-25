@@ -88,95 +88,34 @@ export default function OptimizePage() {
     setIsOptimizing(true)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not authenticated')
 
-      const { data: company } = await (supabase as any)
-        .from('companies')
-        .select('id')
-        .eq('owner_user_id', user.id)
-        .single()
+      setProgress(20)
+      setProgressText('Uploading data to XGBoost engine...')
 
-      // Fetch custom box catalog
-      const { data: customBoxes } = await (supabase as any)
-        .from('box_catalog')
-        .select('*')
-        .eq('user_id', user.id)
-
-      // 1. Parsing (10%)
-      setProgress(10)
-      setProgressText('Initializing engine...')
-      await new Promise(r => setTimeout(r, 800))
-
-      // 2. Running FFD (40%)
-      setProgress(40)
-      setProgressText('Running FFD algorithm...')
-      const results = parsedData.map(p => optimizeProduct(p, customBoxes || []))
-      await new Promise(r => setTimeout(r, 1200))
-
-      // 3. Calculating savings (70%)
-      setProgress(70)
-      setProgressText('Calculating savings & CO2 impact...')
-      const totalSavings = results.reduce((acc, r) => acc + r.savings_inr, 0)
-      const avgUtilization = results.reduce((acc, r) => acc + r.space_utilization_percent, 0) / results.length
-      const totalCo2 = results.reduce((acc, r) => acc + r.co2_saved_kg, 0)
-      await new Promise(r => setTimeout(r, 1000))
-
-      // 4. Saving to DB (90%)
-      setProgress(90)
-      setProgressText('Saving results to database...')
-
-      const { data: session, error: sessionError } = await (supabase as any)
-        .from('optimization_sessions')
-        .insert({
-          user_id: user.id,
-          file_name: file?.name || 'Manual Upload',
-          file_size_bytes: file?.size || 0,
-          total_items: results.length,
-          optimized_items: results.length,
-          unoptimized_items: 0,
-          optimization_rate: 100,
-          estimated_savings: totalSavings,
-          status: 'completed',
-          completed_at: new Date().toISOString()
+      // Call the backend API route
+      const response = await fetch('/api/optimize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          products: parsedData,
+          fileName: file?.name || 'Manual Upload'
         })
-        .select()
-        .single()
+      })
 
-      if (sessionError) throw sessionError
+      setProgress(60)
+      setProgressText('Running XGBoost & Database Insertion...')
 
-      const dbResults = results.map(r => ({
-        session_id: session.id,
-        user_id: user.id,
-        sku: r.product_name.replace(/\\s+/g, '-').toLowerCase() + '-' + Math.floor(Math.random()*1000),
-        product_name: r.product_name,
-        length_cm: r.original_length_cm,
-        width_cm: r.original_width_cm,
-        height_cm: r.original_height_cm,
-        weight_kg: r.original_weight_kg,
-        quantity: r.quantity,
-        is_optimized: true,
-        old_box_cost: r.original_box_price_inr,
-        new_box_name: r.optimized_box_name,
-        new_box_cost: r.optimized_box_price_inr,
-        new_box_length_cm: r.optimized_length_cm,
-        new_box_width_cm: r.optimized_width_cm,
-        new_box_height_cm: r.optimized_height_cm,
-        volume_utilization: r.space_utilization_percent,
-        savings_pct: r.savings_percent,
-        savings_amount: r.savings_inr,
-        fragility_score: r.fragility_score,
-        fragility_level: r.fragility,
-        risk_score: r.risk_score
-      }))
+      const responseData = await response.json()
 
-      const { error: resultsError } = await (supabase as any)
-        .from('optimization_results')
-        .insert(dbResults)
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Optimization failed')
+      }
 
-      if (resultsError) throw resultsError
-
-      // 5. Complete (100%)
       setProgress(100)
       setProgressText('Optimization Complete!')
 

@@ -3,17 +3,18 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
 export default function CostBarChart({ data }: { data: any[] }) {
-  const chartData = data.map(run => {
-    const results = run.results_json || []
-    const original = results.reduce((acc: number, r: any) => acc + (r.original_box_price_inr || 0), 0)
-    const optimized = results.reduce((acc: number, r: any) => acc + (r.optimized_box_price_inr || 0), 0)
-
-    return {
-      name: new Date(run.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      original,
-      optimized
+  // Aggregate orders by date
+  const aggregatedData = (data || []).reduce((acc: any, order: any) => {
+    const dateStr = new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    if (!acc[dateStr]) {
+      acc[dateStr] = { name: dateStr, original: 0, optimized: 0 }
     }
-  })
+    acc[dateStr].original += (order.baseline_cost || 0)
+    acc[dateStr].optimized += (order.total_cost || 0)
+    return acc
+  }, {})
+
+  const chartData = Object.values(aggregatedData)
 
   return (
     <ResponsiveContainer width="100%" height="100%">
