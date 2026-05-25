@@ -83,25 +83,30 @@ export default function LoginPage() {
       if (error) throw error
 
       // Check onboarding status
-      let { data: profile } = await (supabase.from('profiles') as any)
-        .select('onboarding_complete, company')
+      let { data: profile } = await supabase
+        .from('user_profiles')
+        .select('onboarding_completed')
         .eq('id', data.user.id)
-        .single()
+        .maybeSingle()
 
-      // If profile is missing (trigger failure), create it
+      // If profile is missing, create it
       if (!profile) {
-        const { data: newProfile, error: createError } = await (supabase.from('profiles') as any).insert({
-          id: data.user.id,
-          email: data.user.email,
-          onboarding_complete: true
-        }).select().single()
+        const { data: newProfile, error: createError } = await (supabase
+          .from('user_profiles') as any)
+          .insert({
+            id: data.user.id,
+            full_name: data.user.email || '',
+            onboarding_completed: false
+          })
+          .select()
+          .single()
         profile = newProfile
       }
 
       setIsSuccess(true)
       await new Promise(r => setTimeout(r, 800))
 
-      if (profile && !profile.onboarding_complete) {
+      if (profile && !(profile as any).onboarding_completed) {
         router.push('/onboarding')
       } else {
         router.push('/dashboard')

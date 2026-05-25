@@ -17,10 +17,12 @@ DROP FUNCTION IF EXISTS get_line_summary(TEXT, TIMESTAMPTZ, TIMESTAMPTZ);
 -- 1. PROFILES — Core user profile (linked to Supabase Auth via auth.users.id)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-CREATE TABLE IF NOT EXISTS profiles (
+CREATE TABLE IF NOT EXISTS user_profiles (
   id                    UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email                 TEXT,
   full_name             TEXT,
+  company_id            UUID,
+  role                  TEXT DEFAULT 'owner',
   company_name          TEXT,
   industry              TEXT,
   company_size          TEXT,
@@ -39,8 +41,10 @@ CREATE TABLE IF NOT EXISTS profiles (
   sustainability_mode   BOOLEAN DEFAULT FALSE,
   plan                  TEXT DEFAULT 'starter',
   stripe_customer_id    TEXT,
+  stripe_subscription_id TEXT,
+  optimizations_limit   INTEGER,
   notification_prefs    JSONB DEFAULT '{}',
-  onboarding_complete  BOOLEAN DEFAULT FALSE,
+  onboarding_completed  BOOLEAN DEFAULT FALSE,
   created_at            TIMESTAMPTZ DEFAULT NOW(),
   updated_at            TIMESTAMPTZ DEFAULT NOW()
 );
@@ -49,38 +53,41 @@ CREATE TABLE IF NOT EXISTS profiles (
 DO $$
 BEGIN
   -- Each block tries to add a column; if it already exists the exception is caught and ignored.
-  BEGIN ALTER TABLE profiles ADD COLUMN full_name TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN company_name TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN industry TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN company_size TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN mobile TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN gst_number TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN website_url TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN company_website TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN unit_system TEXT DEFAULT 'metric'; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN monthly_volume INTEGER DEFAULT 1000; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN primary_carriers TEXT[] DEFAULT '{}'; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN fulfillment_type TEXT DEFAULT 'In-House'; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN warehouses_count INTEGER DEFAULT 1; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN size_units TEXT DEFAULT 'cm'; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN materials TEXT[] DEFAULT '{}'; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN optimization_goal TEXT DEFAULT 'void'; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN sustainability_mode BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN plan TEXT DEFAULT 'starter'; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN stripe_customer_id TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN notification_prefs JSONB DEFAULT '{}'; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN onboarding_complete BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  BEGIN ALTER TABLE profiles ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN full_name TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN company_name TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN industry TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN company_size TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN mobile TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN gst_number TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN website_url TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN company_website TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN unit_system TEXT DEFAULT 'metric'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN monthly_volume INTEGER DEFAULT 1000; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN primary_carriers TEXT[] DEFAULT '{}'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN fulfillment_type TEXT DEFAULT 'In-House'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN warehouses_count INTEGER DEFAULT 1; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN size_units TEXT DEFAULT 'cm'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN materials TEXT[] DEFAULT '{}'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN optimization_goal TEXT DEFAULT 'void'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN sustainability_mode BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN plan TEXT DEFAULT 'starter'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN stripe_customer_id TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN stripe_subscription_id TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN optimizations_limit INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN notification_prefs JSONB DEFAULT '{}'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN onboarding_completed BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+  BEGIN ALTER TABLE user_profiles ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
 END $$;
 
 -- RLS
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
-DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
-DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
-DROP POLICY IF EXISTS "profiles_own" ON profiles;
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON user_profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
+DROP POLICY IF EXISTS "profiles_own" ON user_profiles;
+DROP POLICY IF EXISTS "Users manage own profile" ON user_profiles;
 
-CREATE POLICY "profiles_own" ON profiles FOR ALL USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users manage own profile" ON user_profiles FOR ALL USING (auth.uid() = id);
 
 
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -290,7 +297,7 @@ CREATE INDEX IF NOT EXISTS idx_shipments_tracking ON shipments(tracking_id);
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, email, onboarding_complete)
+  INSERT INTO public.user_profiles (id, full_name, email, onboarding_completed)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),

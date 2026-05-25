@@ -50,28 +50,29 @@ export function useDashboardData() {
         if (!user) return
 
         // 1. Fetch Profile Preferences
-        const { data: profile } = await (supabase as any)
-          .from('profiles')
+        const { data: profile } = await supabase
+          .from('user_profiles')
           .select('*')
           .eq('id', user.id)
-          .single()
+          .maybeSingle()
 
         if (profile && mounted) {
+          const p = profile as any
           setProfileData({
-            company: profile.company_name || profile.company || '',
-            industry: profile.industry || '',
-            companySize: profile.company_size || '',
-            monthlyVolume: profile.monthly_volume || 1000,
-            primaryCarriers: profile.primary_carriers || [],
-            fulfillmentType: profile.fulfillment_type || 'In-House',
-            warehousesCount: profile.warehouses_count || 1,
-            sizeUnits: profile.unit_system || 'metric',
-            optimizationGoal: profile.optimization_goal || 'void',
-            sustainabilityMode: profile.sustainability_mode || false,
-            plan: profile.plan || 'starter',
-            tokensLimit: profile.token_limit || 500,
-            tokensUsed: profile.monthly_opt_count || 0,
-            tokenResetDate: profile.monthly_opt_reset || new Date(Date.now() + 30*24*60*60*1000).toISOString(),
+            company: p.company_name || p.company || '',
+            industry: p.industry || '',
+            companySize: p.company_size || '',
+            monthlyVolume: p.monthly_volume || 1000,
+            primaryCarriers: p.primary_carriers || [],
+            fulfillmentType: p.fulfillment_type || 'In-House',
+            warehousesCount: p.warehouses_count || 1,
+            sizeUnits: p.unit_system || 'metric',
+            optimizationGoal: p.optimization_goal || 'void',
+            sustainabilityMode: p.sustainability_mode || false,
+            plan: p.plan || 'starter',
+            tokensLimit: p.token_limit || 500,
+            tokensUsed: p.monthly_opt_count || 0,
+            tokenResetDate: p.monthly_opt_reset || new Date(Date.now() + 30*24*60*60*1000).toISOString(),
           })
         }
 
