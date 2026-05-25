@@ -94,7 +94,7 @@ export default function LoginPage() {
       setIsSuccess(true)
       await new Promise(r => setTimeout(r, 800))
 
-      if (profile?.onboarding_completed) {
+      if ((profile as any)?.onboarding_completed) {
         router.push('/dashboard')
       } else {
         router.push('/onboarding')

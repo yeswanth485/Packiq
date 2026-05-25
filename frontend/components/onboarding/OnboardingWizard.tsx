@@ -33,7 +33,7 @@ export default function OnboardingWizard() {
           .eq('id', user.id)
           .maybeSingle()
 
-        if (profile?.onboarding_completed) {
+        if ((profile as any)?.onboarding_completed) {
           router.push('/dashboard')
         }
       }
