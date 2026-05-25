@@ -119,10 +119,10 @@ export default function OptimizePage() {
       setProgress(100)
       setProgressText('Optimization Complete!')
 
-      setCurrentRun(session)
-      setResults(dbResults as any)
+      setCurrentRun({ id: responseData.session_id } as any)
+      setResults(responseData.results)
 
-      toast.success('Successfully optimized ' + results.length + ' products')
+      toast.success('Successfully optimized ' + responseData.total_optimized + ' products')
 
       setTimeout(() => {
         setIsOptimizing(false)
