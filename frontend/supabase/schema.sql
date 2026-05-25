@@ -17,11 +17,36 @@ DROP FUNCTION IF EXISTS get_line_summary(TEXT, TIMESTAMPTZ, TIMESTAMPTZ);
 -- 1. PROFILES — Core user profile (linked to Supabase Auth via auth.users.id)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 0B. COMPANIES — Company information
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS companies (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_user_id     UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+  company_name      TEXT NOT NULL,
+  industry          TEXT,
+  address           TEXT,
+  phone             TEXT,
+  website           TEXT,
+  logo_url          TEXT,
+  created_at        TIMESTAMPTZ DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users manage own company" ON companies;
+CREATE POLICY "Users manage own company" ON companies FOR ALL USING (owner_user_id = auth.uid());
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 1. PROFILES — Core user profile (linked to Supabase Auth via auth.users.id)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
 CREATE TABLE IF NOT EXISTS user_profiles (
   id                    UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email                 TEXT,
   full_name             TEXT,
-  company_id            UUID,
+  company_id            UUID REFERENCES companies(id) ON DELETE SET NULL,
   role                  TEXT DEFAULT 'owner',
   company_name          TEXT,
   industry              TEXT,
@@ -380,6 +405,32 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 11. STORAGE — Setup buckets
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+-- Ensure the bucket exists
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('company-assets', 'company-assets', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage Policies
+DROP POLICY IF EXISTS "Public logo read" ON storage.objects;
+CREATE POLICY "Public logo read" ON storage.objects
+  FOR SELECT USING (bucket_id = 'company-assets');
+
+DROP POLICY IF EXISTS "Auth logo upload" ON storage.objects;
+CREATE POLICY "Auth logo upload" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'company-assets' AND auth.uid() IS NOT NULL
+  );
+
+DROP POLICY IF EXISTS "Auth logo delete" ON storage.objects;
+CREATE POLICY "Auth logo delete" ON storage.objects
+  FOR DELETE USING (
+    bucket_id = 'company-assets' AND auth.uid() IS NOT NULL
+  );
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- DONE! All tables, policies, and functions are now created.
