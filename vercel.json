@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "app/api/optimize/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}

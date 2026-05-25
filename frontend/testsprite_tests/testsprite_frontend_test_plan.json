@@ -1,0 +1,1097 @@
+[
+  {
+    "id": "TC001",
+    "title": "Access dashboard after logging in",
+    "description": "Verifies a user can sign in with valid credentials and reach the dashboard successfully.",
+    "category": "User Authentication",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the dashboard"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Sign up and start onboarding",
+    "description": "Verifies a new user can register and is taken to onboarding to begin initial setup.",
+    "category": "User Authentication",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/signup"
+      },
+      {
+        "type": "action",
+        "description": "Fill a new email address into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid password into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid name into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the signup form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on onboarding"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Complete onboarding and reach dashboard",
+    "description": "Verifies an authenticated user can complete required onboarding fields and is routed to the dashboard on completion.",
+    "category": "Onboarding",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /onboarding"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid company name into the company name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill valid basic profile details into the required fields"
+      },
+      {
+        "type": "action",
+        "description": "Complete the required onboarding steps"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the dashboard"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Run an optimization from manually entered products and view 3D recommendation",
+    "description": "User can enter product rows manually, run an optimization, and see a recommended box result with a 3D wireframe preview.",
+    "category": "AI Optimization",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the optimization module"
+      },
+      {
+        "type": "action",
+        "description": "Add a product row manually"
+      },
+      {
+        "type": "action",
+        "description": "Fill valid product details into the row fields"
+      },
+      {
+        "type": "action",
+        "description": "Run the optimization"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an optimization result is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a 3D box wireframe preview is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Run an optimization from CSV upload and view 3D recommendation",
+    "description": "User can switch to CSV mode, provide a valid CSV, run an optimization, and see a recommended box result with a 3D wireframe preview.",
+    "category": "AI Optimization",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the optimization module"
+      },
+      {
+        "type": "action",
+        "description": "Toggle to CSV upload mode"
+      },
+      {
+        "type": "action",
+        "description": "Upload a valid CSV file into the CSV upload area"
+      },
+      {
+        "type": "action",
+        "description": "Run the optimization"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an optimization result is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a 3D box wireframe preview is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Search by tracking number and open shipment timeline",
+    "description": "User can search by tracking number, open a matching shipment, and see the full timeline of status updates.",
+    "category": "Live Tracking",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the tracking module"
+      },
+      {
+        "type": "action",
+        "description": "Fill a tracking number from a visible shipment card into the search field"
+      },
+      {
+        "type": "action",
+        "description": "Click the matching shipment card from the filtered results"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a shipment detail view is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a shipment timeline with multiple events is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC007",
+    "title": "Add a new catalog item and see it in the catalog list",
+    "description": "User can add a new item through the Add Item modal and the created item appears in the catalog.",
+    "category": "Catalog Manager",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the catalog module"
+      },
+      {
+        "type": "action",
+        "description": "Open the Add Item modal"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Auto Test Item 001\" into the item name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill valid dimensions into the item dimension fields"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid material option"
+      },
+      {
+        "type": "action",
+        "description": "Submit the Add Item form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new catalog item \"Auto Test Item 001\" is displayed in the catalog"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC008",
+    "title": "View KPI metrics and recent history on dashboard",
+    "description": "Verifies the dashboard overview renders KPI metric cards and a recent optimization history section for an authenticated user.",
+    "category": "Dashboard Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify KPI metric cards are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify recent optimization history is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC009",
+    "title": "View current plan and usage overview",
+    "description": "Verifies that an authenticated user can access the subscription page and see the current plan status and usage information displayed.",
+    "category": "Subscription Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation item for subscription management"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the current plan summary is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify usage information is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC010",
+    "title": "View shipment tracking cards in the tracking grid",
+    "description": "User can access Live Tracking and see a grid of shipment cards with carrier and status information.",
+    "category": "Live Tracking",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the tracking module"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify shipment cards are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify each shipment card shows carrier and status information"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC011",
+    "title": "View settings categories and profile fields",
+    "description": "Verifies that an authenticated user can open settings, see the category navigation, and see the profile panel with name and email fields.",
+    "category": "Settings Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation item for settings"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the settings category navigation is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the profile panel shows name and email fields"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC012",
+    "title": "View catalog items in the catalog grid",
+    "description": "User can open the catalog and see items displayed with name, dimensions, and material information.",
+    "category": "Catalog Manager",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the catalog module"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify catalog items are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify each item shows name, dimensions, and material information"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC013",
+    "title": "Show CSV validation error for missing or malformed required columns",
+    "description": "User sees a CSV validation error when uploading an invalid CSV in CSV mode and no results are shown.",
+    "category": "AI Optimization",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the optimization module"
+      },
+      {
+        "type": "action",
+        "description": "Toggle to CSV upload mode"
+      },
+      {
+        "type": "action",
+        "description": "Upload an invalid CSV file into the CSV upload area"
+      },
+      {
+        "type": "action",
+        "description": "Run the optimization"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a CSV validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no optimization results are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC014",
+    "title": "Toggle annual billing and see pricing update",
+    "description": "Verifies that a user can toggle Annual billing on the subscription page and the displayed plan pricing updates accordingly.",
+    "category": "Subscription Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation item for subscription management"
+      },
+      {
+        "type": "action",
+        "description": "Toggle billing to Annual"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify plan pricing reflects annual billing"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC015",
+    "title": "Filter shipments to only In Transit",
+    "description": "User can filter Live Tracking to In Transit and only shipments matching that status remain visible.",
+    "category": "Live Tracking",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the tracking module"
+      },
+      {
+        "type": "action",
+        "description": "Select the In Transit status filter"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify only In Transit shipment cards are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC016",
+    "title": "Save profile changes after unsaved warning",
+    "description": "Verifies that changing the full name shows an unsaved changes warning and saving persists the change with a saved confirmation shown.",
+    "category": "Settings Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation item for settings"
+      },
+      {
+        "type": "action",
+        "description": "Fill Test User Updated into the full name field"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the unsaved changes warning to appear"
+      },
+      {
+        "type": "action",
+        "description": "Save changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a saved confirmation is visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC017",
+    "title": "Search the catalog and see filtered results",
+    "description": "User can search the catalog using a term from an existing item and see results filtered to matching items.",
+    "category": "Catalog Manager",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the catalog module"
+      },
+      {
+        "type": "action",
+        "description": "Copy a distinctive word or number from a visible catalog item name"
+      },
+      {
+        "type": "action",
+        "description": "Fill the copied term into the catalog search field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the catalog list is filtered to matching items"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC018",
+    "title": "Start upgrade plan flow from subscription page",
+    "description": "Verifies that a user can initiate the plan upgrade flow and is taken to an upgrade UI state within the app.",
+    "category": "Subscription Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation item for subscription management"
+      },
+      {
+        "type": "action",
+        "description": "Click the upgrade plan action"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an upgrade plan interface is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC019",
+    "title": "Switch between grid and list views in the catalog",
+    "description": "User can toggle the catalog between grid and list layouts and the layout updates accordingly.",
+    "category": "Catalog Manager",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation link to open the catalog module"
+      },
+      {
+        "type": "action",
+        "description": "Switch the catalog to list view"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify catalog items are displayed in a list layout"
+      },
+      {
+        "type": "action",
+        "description": "Switch the catalog to grid view"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify catalog items are displayed in a grid layout"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC020",
+    "title": "Toggle a notification preference",
+    "description": "Verifies that a user can switch to the notifications settings panel and toggle a notification preference with the toggle state updating.",
+    "category": "Settings Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation item for settings"
+      },
+      {
+        "type": "action",
+        "description": "Click the notifications category"
+      },
+      {
+        "type": "action",
+        "description": "Toggle a notification setting"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the notification toggle state changes"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC021",
+    "title": "Require exact confirmation text for danger zone action",
+    "description": "Verifies that a destructive action cannot proceed unless the exact confirmation text is provided in the danger zone confirmation field.",
+    "category": "Settings Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation item for settings"
+      },
+      {
+        "type": "action",
+        "description": "Click the danger zone category"
+      },
+      {
+        "type": "action",
+        "description": "Fill an incorrect confirmation text into the confirmation field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the destructive action confirmation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the destructive action does not proceed"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC022",
+    "title": "View billing history section",
+    "description": "Verifies that a user can scroll to the billing history area and see the billing history table displayed.",
+    "category": "Subscription Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation item for subscription management"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the billing history section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify billing history entries are displayed"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC023",
+    "title": "Switch settings categories without losing navigation",
+    "description": "Verifies that a user can switch between multiple settings categories and the corresponding panel content updates each time.",
+    "category": "Settings Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation item for settings"
+      },
+      {
+        "type": "action",
+        "description": "Click the appearance category"
+      },
+      {
+        "type": "action",
+        "description": "Click the security category"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the security settings panel is displayed"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC024",
+    "title": "Proceed with danger zone action after correct confirmation text",
+    "description": "Verifies that providing the exact confirmation text allows the user to proceed to the next destructive action confirmation state.",
+    "category": "Settings Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation item for settings"
+      },
+      {
+        "type": "action",
+        "description": "Click the danger zone category"
+      },
+      {
+        "type": "action",
+        "description": "Fill the required account confirmation text into the confirmation field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the destructive action confirmation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a final destructive action review or confirmation state is displayed"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC025",
+    "title": "Show error for wrong password",
+    "description": "Verifies an authentication error is shown when a user submits valid email with an incorrect password.",
+    "category": "User Authentication",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill an incorrect password into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an authentication error message is visible"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC026",
+    "title": "Open invoice download flow from billing history",
+    "description": "Verifies that a user can trigger an invoice download from billing history and the UI indicates the download action was initiated.",
+    "category": "Subscription Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation item for subscription management"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the billing history section"
+      },
+      {
+        "type": "action",
+        "description": "Click a download invoice action for a billing history row"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the UI indicates the invoice download action was initiated"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC027",
+    "title": "Handle empty billing history state",
+    "description": "Verifies that when no billing history is available, the subscription page shows an appropriate empty state in the billing history section.",
+    "category": "Subscription Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation item for subscription management"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the billing history section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an empty state message is visible for billing history"
+      }
+    ],
+    "priority": "Low"
+  }
+]

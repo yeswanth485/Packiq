@@ -1,0 +1,62 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+
+const ProductSchema = z.object({
+  name: z.string().min(1),
+  sku: z.string().optional().nullable(),
+  weight_kg: z.number().positive().optional().nullable(),
+  length_cm: z.number().positive().optional().nullable(),
+  width_cm: z.number().positive().optional().nullable(),
+  height_cm: z.number().positive().optional().nullable(),
+  fragile: z.boolean().optional().default(false),
+  fragility_level: z.string().optional().nullable(),
+  category: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+})
+
+export async function GET() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data, error } = await (supabase.from('products') as any)
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ products: data })
+}
+
+export async function POST(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const body = await request.json()
+  const parsed = ProductSchema.safeParse(body)
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+
+  const { data, error } = await (supabase.from('products') as any)
+    .insert({ ...parsed.data, user_id: user.id } as any)
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ product: data }, { status: 201 })
+}
+
+export async function DELETE(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+
+  const { error } = await (supabase.from('products') as any).delete().eq('id', id).eq('user_id', user.id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
+}

@@ -1,0 +1,148 @@
+'use client'
+
+import { useOptimizationRuns } from '@/lib/hooks/useOptimizationRuns'
+import CompanyHeader from './CompanyHeader'
+import KPICard from './KPICard'
+import { Package, TrendingUp, Zap, Leaf, Plus } from 'lucide-react'
+import { Badge } from '@/components/ui/Badge'
+import Link from 'next/link'
+import dynamic from 'next/dynamic'
+import { Skeleton } from '@/components/ui/Skeleton'
+
+const SavingsLineChart = dynamic(() => import('@/components/charts/SavingsLineChart'), { ssr: false, loading: () => <Skeleton className="h-[400px] w-full" /> })
+const CostBarChart = dynamic(() => import('@/components/charts/CostBarChart'), { ssr: false, loading: () => <Skeleton className="h-[400px] w-full" /> })
+const FragilityDonut = dynamic(() => import('@/components/charts/FragilityDonut'), { ssr: false, loading: () => <Skeleton className="h-[400px] w-full" /> })
+const UtilizationGauge = dynamic(() => import('@/components/charts/UtilizationGauge'), { ssr: false, loading: () => <Skeleton className="h-[400px] w-full" /> })
+
+export default function DashboardClient() {
+  const { runs, stats, isLoading } = useOptimizationRuns()
+
+  if (isLoading) {
+    return (
+      <div className="p-8 space-y-12">
+        <div className="h-24 w-full bg-white/5 animate-pulse rounded-3xl" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-white/5 animate-pulse rounded-3xl" />)}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="h-[400px] bg-white/5 animate-pulse rounded-[40px]" />
+          <div className="h-[400px] bg-white/5 animate-pulse rounded-[40px]" />
+        </div>
+      </div>
+    )
+  }
+
+  const latestRun = (runs as any)?.[0]
+  const previousRun = (runs as any)?.[1]
+
+  const calculateTrend = (key: string) => {
+    if (!latestRun || !previousRun || !previousRun[key]) return 0
+    const diff = latestRun[key] - previousRun[key]
+    return Math.round((diff / previousRun[key]) * 100)
+  }
+
+  return (
+    <div className="p-8 pb-24 space-y-12 max-w-[1600px] mx-auto">
+      <CompanyHeader />
+
+      {!runs || runs.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-32 space-y-8 bg-white/[0.02] border border-white/5 rounded-[40px] border-dashed">
+          <div className="w-24 h-24 bg-blue-500/10 rounded-[32px] flex items-center justify-center">
+            <Package className="w-12 h-12 text-blue-400 opacity-50" />
+          </div>
+          <div className="text-center space-y-2">
+            <h3 className="text-3xl font-bold font-space-grotesk text-white">No optimization data yet</h3>
+            <p className="text-zinc-500 max-w-md mx-auto">
+              Upload your first product catalog CSV to start generating intelligence and saving costs.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/optimize"
+            className="group bg-blue-600 hover:bg-blue-500 text-white px-10 py-4 rounded-2xl font-bold transition-all shadow-[0_0_30px_rgba(37,99,235,0.3)] flex items-center gap-3"
+          >
+            <Plus className="w-5 h-5" />
+            Upload First CSV
+          </Link>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <KPICard
+              title="Total SKUs Optimized"
+              value={latestRun.total_items || 0}
+              icon={Package}
+              trend={calculateTrend('total_items')}
+              delay={0}
+            />
+            <KPICard
+              title="Latest Run Savings"
+              value={latestRun.estimated_savings || 0}
+              unit="₹"
+              icon={TrendingUp}
+              trend={calculateTrend('estimated_savings')}
+              delay={0.1}
+            />
+            <KPICard
+              title="Avg Space Utilization"
+              value={latestRun.optimization_rate || 0}
+              unit="%"
+              icon={Zap}
+              trend={calculateTrend('optimization_rate')}
+              delay={0.2}
+            />
+            <KPICard
+              title="CO2 Reduction"
+              value={Math.round((latestRun.estimated_savings || 0) * 0.1)}
+              unit="kg"
+              icon={Leaf}
+              trend={calculateTrend('estimated_savings')}
+              delay={0.3}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-white/[0.03] border border-white/10 p-10 rounded-[40px] space-y-8">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold font-space-grotesk text-white tracking-tight">Savings Over Time</h3>
+                <Badge variant="blue">Last 10 Runs</Badge>
+              </div>
+              <div className="h-[350px]">
+                <SavingsLineChart data={runs.slice(0, 10).reverse()} />
+              </div>
+            </div>
+
+            <div className="bg-white/[0.03] border border-white/10 p-10 rounded-[40px] space-y-8">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold font-space-grotesk text-white tracking-tight">Fragility Breakdown</h3>
+                <Badge variant="blue">Latest Run</Badge>
+              </div>
+              <div className="h-[350px]">
+                <FragilityDonut data={[]} /> {/* Requires optimization_results fetch for full data */}
+              </div>
+            </div>
+
+            <div className="bg-white/[0.03] border border-white/10 p-10 rounded-[40px] space-y-8">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold font-space-grotesk text-white tracking-tight">Cost Impact Analysis</h3>
+                <Badge variant="blue">Original vs Optimized</Badge>
+              </div>
+              <div className="h-[350px]">
+                <CostBarChart data={runs.slice(0, 5).reverse()} />
+              </div>
+            </div>
+
+            <div className="bg-white/[0.03] border border-white/10 p-10 rounded-[40px] space-y-8">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold font-space-grotesk text-white tracking-tight">Space Efficiency</h3>
+                <Badge variant="blue">Global Average</Badge>
+              </div>
+              <div className="h-[350px] flex items-center justify-center">
+                <UtilizationGauge value={latestRun.optimization_rate || 0} />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
