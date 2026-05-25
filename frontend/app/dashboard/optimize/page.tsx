@@ -179,8 +179,8 @@ export default function OptimizePage() {
       setProgress(100)
       setProgressText('Optimization Complete!')
 
-      setCurrentRun(run)
-      setResults(resultsWithRunId as any)
+      setCurrentRun(session)
+      setResults(dbResults as any)
 
       toast.success('Successfully optimized ' + results.length + ' products')
 

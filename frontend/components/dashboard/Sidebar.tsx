@@ -51,6 +51,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: any) {
        }
     }
     init()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleLogout() {
