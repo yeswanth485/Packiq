@@ -8,7 +8,13 @@ export async function GET(request: Request) {
   const error_description = searchParams.get('error_description')
   const next = searchParams.get('next')
 
-  console.log('[Auth Callback] Request received:', { code: code ? 'YES' : 'NO', next, error })
+  console.log('[Auth Callback] Request received:', {
+    url: request.url,
+    code: code ? 'YES' : 'NO',
+    next,
+    error,
+    origin
+  })
 
   if (error) {
     console.error('[Auth Callback] Error param received:', error, error_description)

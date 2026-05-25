@@ -6,9 +6,12 @@ export async function middleware(request: NextRequest) {
     request,
   })
 
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    key,
     {
       cookies: {
         getAll() {
@@ -57,7 +60,7 @@ export async function middleware(request: NextRequest) {
         .eq('id', user.id)
         .maybeSingle()
 
-      onboardingDone = profile?.onboarding_completed === true
+      onboardingDone = (profile as any)?.onboarding_completed === true
 
       // If they are on onboarding and already done, move them to dashboard
       if (onboardingDone && pathname.startsWith('/onboarding')) {
@@ -82,10 +85,6 @@ export async function middleware(request: NextRequest) {
       url.pathname = onboardingDone ? '/dashboard' : '/onboarding'
       return NextResponse.redirect(url)
     }
-
-    // NOTE: We allow authenticated users to see the landing page ('/')
-    // if they explicitly navigate there, or we can redirect them.
-    // The user requested that the landing page show first.
   }
 
   return supabaseResponse
