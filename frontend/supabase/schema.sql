@@ -143,23 +143,7 @@ BEGIN
   BEGIN ALTER TABLE box_catalog ADD COLUMN cost DECIMAL DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE box_catalog ADD COLUMN eco_certified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
   BEGIN ALTER TABLE box_catalog ADD COLUMN double_wall BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
-  -- 🔴 BUG #5 FIX: Add constraints to existing table (idempotent via conditional)
-  BEGIN
-    ALTER TABLE box_catalog ADD CONSTRAINT box_length_positive CHECK (length_cm > 0);
-  EXCEPTION WHEN duplicate_table THEN NULL;
-  END;
-  BEGIN
-    ALTER TABLE box_catalog ADD CONSTRAINT box_width_positive CHECK (width_cm > 0);
-  EXCEPTION WHEN duplicate_table THEN NULL;
-  END;
-  BEGIN
-    ALTER TABLE box_catalog ADD CONSTRAINT box_height_positive CHECK (height_cm > 0);
-  EXCEPTION WHEN duplicate_table THEN NULL;
-  END;
-  BEGIN
-    ALTER TABLE box_catalog ADD CONSTRAINT box_weight_positive CHECK (max_weight_kg > 0);
-  EXCEPTION WHEN duplicate_table THEN NULL;
-  END;
+  -- 🔴 BUG #5 FIX: Constraints are already defined in CREATE TABLE above, no need to re-add
 END $$;
 
 ALTER TABLE box_catalog ENABLE ROW LEVEL SECURITY;
