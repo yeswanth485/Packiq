@@ -25,7 +25,7 @@ export default function OrderDetailsModal({
 
   // Fetch labels
   useState(() => {
-    supabase.from('packaging_labels').select('*').then(({ data }) => {
+    supabase.from('packaging_labels').select('*').then(({ data }: any) => {
       if (data) setLabels(data)
     })
   })
