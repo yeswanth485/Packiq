@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
     if (sessionErr) console.error('[optimize] session insert error:', sessionErr.message)
 
     // ── 5. Insert optimization_results in chunks ──────────────────
-    const allResultsToInsert = mlResult.results.map(r => {
+    const allResultsToInsert = mlResult.results.map((r: any) => {
       const fragilityData = fragilityMap[r.sku] || { fragility: 'LOW', fragility_score: 1 }
       return {
         session_id: sessionId,
