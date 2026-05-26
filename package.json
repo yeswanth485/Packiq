@@ -1,5 +1,9 @@
 {
   "dependencies": {
     "react-qr-code": "^2.0.21"
+  },
+  "devDependencies": {
+    "@types/css-modules": "^1.0.5",
+    "typescript": "^6.0.3"
   }
 }
