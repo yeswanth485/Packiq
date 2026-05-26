@@ -29,12 +29,12 @@ export default function OnboardingWizard() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('onboarding_completed')
+          .from('profiles')
+          .select('onboarding_complete')
           .eq('id', user.id)
           .maybeSingle()
 
-        if ((profile as any)?.onboarding_completed) {
+        if ((profile as any)?.onboarding_complete) {
           router.push('/dashboard')
         }
       }
@@ -108,11 +108,11 @@ export default function OnboardingWizard() {
 
       // Upsert User Profile
       const { error: profileError } = await (supabase as any)
-        .from('user_profiles')
+        .from('profiles')
         .upsert({
           id: user.id,
           company_id: company.id,
-          onboarding_completed: true,
+          onboarding_complete: true,
           updated_at: new Date().toISOString()
         }, { onConflict: 'id' })
 

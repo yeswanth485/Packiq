@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     if (!PLANS[plan]) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
 
     const { data: profile } = await supabase
-      .from('user_profiles')
+      .from('profiles')
       .select('stripe_customer_id, email')
       .eq('id', user.id)
       .maybeSingle()
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
         metadata: { supabase_user_id: user.id },
       })
       customerId = customer.id
-      await (supabase.from('user_profiles') as any).update({ stripe_customer_id: customerId }).eq('id', user.id)
+      await (supabase.from('profiles') as any).update({ stripe_customer_id: customerId }).eq('id', user.id)
     }
 
     const session = await stripe.checkout.sessions.create({

@@ -55,7 +55,7 @@ export default function Navbar() {
             </div>
           ) : user ? (
             <Link
-              href={profile?.onboarding_completed ? "/dashboard" : "/onboarding"}
+              href={profile?.onboarding_complete ? "/dashboard" : "/onboarding"}
               className="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:scale-105 active:scale-95 transition-all"
             >
               Dashboard

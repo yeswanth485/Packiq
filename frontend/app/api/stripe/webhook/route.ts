@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
       if (userId && plan) {
         const limit = plan === 'enterprise' ? -1 : 500
-        const { error } = await (supabase.from('user_profiles') as any).update({
+        const { error } = await (supabase.from('profiles') as any).update({
           plan,
           stripe_subscription_id: session.subscription as string,
           optimizations_limit: limit,
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       const sub = event.data.object as any
       const customerId = sub.customer as string
 
-      const { error } = await (supabase.from('user_profiles') as any).update({
+      const { error } = await (supabase.from('profiles') as any).update({
         plan: 'free',
         stripe_subscription_id: null,
         optimizations_limit: 10,

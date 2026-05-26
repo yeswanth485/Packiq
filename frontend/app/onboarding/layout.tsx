@@ -9,12 +9,12 @@ export default async function OnboardingLayout({ children }: { children: React.R
     redirect('/auth/login')
   }
 
-  const { data: profile } = await supabase.from('user_profiles')
-    .select('onboarding_completed')
+  const { data: profile } = await supabase.from('profiles')
+    .select('onboarding_complete')
     .eq('id', user.id)
     .maybeSingle()
 
-  if ((profile as any)?.onboarding_completed) {
+  if ((profile as any)?.onboarding_complete) {
     redirect('/dashboard')
   }
 

@@ -55,21 +55,21 @@ export async function middleware(request: NextRequest) {
     let onboardingDone = false
     try {
       const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('onboarding_completed')
+         .from('profiles')
+         .select('onboarding_complete')
         .eq('id', user.id)
         .maybeSingle()
 
-      onboardingDone = (profile as any)?.onboarding_completed === true
+      onboardingDone = (profile as any)?.onboarding_complete === true
 
-      // If they are on onboarding and already done, move them to dashboard
+      // If user is on onboarding and already done, move to dashboard
       if (onboardingDone && pathname.startsWith('/onboarding')) {
         const url = request.nextUrl.clone()
         url.pathname = '/dashboard'
         return NextResponse.redirect(url)
       }
 
-      // If they are NOT done and trying to access dashboard, send to onboarding
+      // If user is NOT done and trying to access dashboard, send to onboarding
       if (!onboardingDone && pathname.startsWith('/dashboard')) {
         const url = request.nextUrl.clone()
         url.pathname = '/onboarding'

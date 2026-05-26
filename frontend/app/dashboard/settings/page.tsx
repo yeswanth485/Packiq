@@ -20,7 +20,7 @@ export default function SettingsPage() {
       if (!user) return
 
       const { data: profileData } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single()
@@ -43,7 +43,7 @@ export default function SettingsPage() {
     e.preventDefault()
     setSaving(true)
     try {
-      const { error: profileError } = await (supabase.from('user_profiles') as any)
+      const { error: profileError } = await (supabase.from('profiles') as any)
         .update({
           full_name: profile.full_name,
         })

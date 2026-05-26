@@ -12,7 +12,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   const { data: profileData } = await supabase
-    .from('user_profiles')
+    .from('profiles')
     .select('*, companies(logo_url, company_name)')
     .eq('id', user.id)
     .maybeSingle()
@@ -21,10 +21,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!profile) {
     // Create default profile if missing to prevent errors
-    const { data: newProfile } = await (supabase.from('user_profiles') as any).insert({
+    const { data: newProfile } = await (supabase.from('profiles') as any).insert({
       id: user.id,
       full_name: user.email || '',
-      onboarding_completed: false
+      onboarding_complete: false
     }).select().single()
     
     profile = newProfile

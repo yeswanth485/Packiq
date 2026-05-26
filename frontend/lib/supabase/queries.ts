@@ -38,7 +38,7 @@ export async function getOptimizationResults(runId: string) {
 export async function getUserProfile(userId: string) {
   const supabase = createClient()
   const { data, error } = await supabase
-    .from('user_profiles')
+    .from('profiles')
     .select('*, companies(*)')
     .eq('id', userId)
     .maybeSingle()

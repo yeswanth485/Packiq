@@ -122,13 +122,13 @@ export default function SignupPage() {
 
       if (data.user) {
         // Create profile explicitly
-        await (supabase.from('user_profiles') as any).insert({
+        await (supabase.from('profiles') as any).insert({
           id: data.user.id,
           full_name: formData.fullName,
           company_name: formData.companyName,
           industry: formData.industry,
           mobile: formData.phone,
-          onboarding_completed: false
+          onboarding_complete: false
         })
       }
 

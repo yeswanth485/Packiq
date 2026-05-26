@@ -16,7 +16,7 @@ export interface Profile {
   company: string | null
   company_domain: string | null
   employee_count: number | null
-  onboarding_completed: boolean
+  onboarding_complete: boolean
   plan: Plan
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
@@ -104,7 +104,7 @@ export interface Order {
 export type Database = {
   public: {
     Tables: {
-      user_profiles: { Row: Profile; Insert: Partial<Profile>; Update: Partial<Profile> }
+      profiles: { Row: Profile; Insert: Partial<Profile>; Update: Partial<Profile> }
       products: { Row: Product; Insert: Partial<Product>; Update: Partial<Product> }
       box_catalog: { Row: BoxCatalog; Insert: Partial<BoxCatalog>; Update: Partial<BoxCatalog> }
       optimizations: { Row: Optimization; Insert: Partial<Optimization>; Update: Partial<Optimization> }

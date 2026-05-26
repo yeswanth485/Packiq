@@ -32,22 +32,22 @@ export async function GET(request: Request) {
       if (user) {
         console.log('[Auth Callback] User found:', user.id)
         let { data: profile } = await supabase
-          .from('user_profiles')
-          .select('onboarding_completed')
+          .from('profiles')
+          .select('onboarding_complete')
           .eq('id', user.id)
           .maybeSingle()
 
         if (!profile) {
           console.log('[Auth Callback] Profile missing, creating one')
-          await (supabase.from('user_profiles') as any).insert({
-            id: user.id,
-            full_name: user.user_metadata?.full_name || user.email || '',
-            onboarding_completed: false
-          }).select().single()
-          profile = { onboarding_completed: false } as any
+await (supabase.from('profiles') as any).insert({
+  id: user.id,
+  full_name: user.user_metadata?.full_name || user.email || '',
+  onboarding_complete: false
+}).select().single()
+profile = { onboarding_complete: false } as any
         }
 
-        if ((profile as any)?.onboarding_completed) {
+        if ((profile as any)?.onboarding_complete) {
           console.log('[Auth Callback] Onboarding complete, redirecting to dashboard')
           return NextResponse.redirect(`${origin}${next || '/dashboard'}`)
         }

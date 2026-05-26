@@ -86,8 +86,8 @@ export default function LoginPage() {
 
       // Check onboarding status
       const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('onboarding_completed')
+        .from('profiles')
+        .select('onboarding_complete')
         .eq('id', data.user.id)
         .maybeSingle()
 
@@ -95,7 +95,7 @@ export default function LoginPage() {
       await new Promise(r => setTimeout(r, 800))
 
       // Use window.location for hard redirect to ensure middleware picks up the session
-      if ((profile as any)?.onboarding_completed) {
+      if ((profile as any)?.onboarding_complete) {
         window.location.href = '/dashboard'
       } else {
         window.location.href = '/onboarding'

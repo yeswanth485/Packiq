@@ -1,8 +1,31 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import Papa from 'papaparse'
-import { runMLOptimization } from '@/lib/optimization/mlOptimizer'
+// runMLOptimization removed. See FastAPI backend POST below.
 import { checkRateLimit, getRateLimitStatus } from '@/lib/utils/rateLimit' // 🔴 BUG #7 FIX
+
+// --- ADDED: Proxy GET for polling async optimize jobs ---
+export async function GET(request: NextRequest) {
+  // Example: /api/optimize?task_id=xxxx-xxxx
+  const { searchParams } = new URL(request.url)
+  const taskId = searchParams.get('task_id')
+  const backendUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://localhost:8000/optimize';
+  if (!taskId) {
+    return NextResponse.json({ error: 'Missing task_id' }, { status: 400 })
+  }
+  const statusUrl = `${backendUrl}/status/${taskId}`
+  try {
+    const resp = await fetch(statusUrl, { method: 'GET' })
+    const data = await resp.json()
+    if (!resp.ok) {
+      return NextResponse.json({ error: data.detail || 'Failed to get job status' }, { status: resp.status })
+    }
+    // data: { status, results }
+    return NextResponse.json(data)
+  } catch (err) {
+    return NextResponse.json({ error: 'Failed to contact optimization engine.' }, { status: 500 })
+  }
+}
 
 export const maxDuration = 60
 
@@ -228,10 +251,32 @@ export async function POST(request: NextRequest) {
     
     const boxCatalog = [...DEFAULT_BOXES, ...customBoxes]
 
-    // ── 3. Run optimization ───────────────────────────────────────
-    const mlResult = await runMLOptimization(products, boxCatalog)
+    // ── 3. Run optimization on FastAPI backend ──────────────────
+    const backendUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://localhost:8000/optimize';
+    const backendResponse = await fetch(backendUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: userId,
+        file_name: fileName,
+        products,
+        box_catalog: boxCatalog
+      })
+    })
+    if (!backendResponse.ok) {
+      const errMsg = await backendResponse.text();
+      return NextResponse.json({ error: 'Backend ML Optimization failed', details: errMsg }, { status: backendResponse.status })
+    }
+    const mlResult = await backendResponse.json();
 
-    // ── 4. Insert session ─────────────────────────────────────────
+    // If backend gives task_id, return it early for polling:
+    if (mlResult.task_id) {
+      return NextResponse.json({ task_id: mlResult.task_id, status: mlResult.status || 'pending' })
+    }
+
+    // Otherwise, treat as synchronous result and proceed as before:
+    // ── 4. Insert session (optional, ideally handled in backend)
+    // [Insert handling below can be refactored/removed if backend writes to DB]
     const { data: session, error: sessionErr } = await supabase
       .from('optimization_sessions')
       .insert({

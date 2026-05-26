@@ -51,7 +51,7 @@ export function useDashboardData() {
 
         // 1. Fetch Profile Preferences
         const { data: profile } = await supabase
-          .from('user_profiles')
+          .from('profiles')
           .select('*')
           .eq('id', user.id)
           .maybeSingle()
