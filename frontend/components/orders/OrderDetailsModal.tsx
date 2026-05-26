@@ -29,6 +29,18 @@ export default function OrderDetailsModal({
       if (data) setLabels(data)
     })
   })
+
+  // Extract dimensions safely
+  const dims = order.dimensions || { l: 0, w: 0, h: 0 }
+  const optDims = order.optimized_dims || { l: 0, w: 0, h: 0 }
+  const originalVolume = dims.l * dims.w * dims.h / 1000
+  const optimizedVolume = optDims.l * optDims.w * optDims.h / 1000
+  const fitScore = order.volume_util || order.fit_score || 0
+  const savings = order.savings || order.savings_per_unit || 0
+  const baselineCost = order.baseline_cost || order.old_box_price || 0
+  const shippingCost = order.shipping_cost || order.new_box_price || 0
+  const fragility = order.fragility || 'LOW'
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <motion.div
@@ -56,8 +68,8 @@ export default function OrderDetailsModal({
         <div className="p-8 lg:p-12 h-[400px] lg:h-auto flex flex-col relative">
           <Box3DViewer
             productName={order.product_name}
-            originalDims={{ l: order.original_length_cm, w: order.original_width_cm, h: order.original_height_cm }}
-            optimizedDims={{ l: order.optimized_length_cm, w: order.optimized_width_cm, h: order.optimized_height_cm }}
+            originalDims={dims}
+            optimizedDims={optDims}
             labelUrl={selectedLabel?.image_url}
           />
           <div className="absolute top-12 right-12 z-10 w-48 pointer-events-auto">
@@ -80,8 +92,8 @@ export default function OrderDetailsModal({
             <Badge variant="blue">Order Optimization Profile</Badge>
             <h2 className="text-4xl font-bold font-space-grotesk text-white">{order.product_name}</h2>
             <div className="flex gap-4">
-               <Badge variant={order.fragility === 'high' ? 'red' : order.fragility === 'medium' ? 'yellow' : 'green'}>
-                  Fragility: {order.fragility}
+               <Badge variant={fragility === 'HIGH' ? 'red' : fragility === 'MEDIUM' ? 'yellow' : 'green'}>
+                  Fragility: {fragility}
                </Badge>
                <Badge variant="outline">SKU: {order.sku || 'N/A'}</Badge>
             </div>
@@ -91,16 +103,16 @@ export default function OrderDetailsModal({
             <div className="bg-white/5 rounded-3xl p-6 space-y-2">
               <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Original Volume</p>
               <p className="text-2xl font-bold text-white">
-                {(order.original_length_cm * order.original_width_cm * order.original_height_cm / 1000).toFixed(2)}L
+                {originalVolume.toFixed(2)}L
               </p>
-              <p className="text-xs text-zinc-600">{order.original_length_cm}x{order.original_width_cm}x{order.original_height_cm} cm</p>
+              <p className="text-xs text-zinc-600">{dims.l}x{dims.w}x{dims.h} cm</p>
             </div>
             <div className="bg-blue-500/5 border border-blue-500/20 rounded-3xl p-6 space-y-2">
               <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">Optimized Volume</p>
               <p className="text-2xl font-bold text-white">
-                {(order.optimized_length_cm * order.optimized_width_cm * order.optimized_height_cm / 1000).toFixed(2)}L
+                {optimizedVolume.toFixed(2)}L
               </p>
-              <p className="text-xs text-blue-400/50">{order.optimized_length_cm}x{order.optimized_width_cm}x{order.optimized_height_cm} cm</p>
+              <p className="text-xs text-blue-400/50">{optDims.l}x{optDims.w}x{optDims.h} cm</p>
             </div>
           </div>
 
@@ -110,19 +122,19 @@ export default function OrderDetailsModal({
                    <div className="p-2 bg-emerald-500/10 rounded-lg">
                       <Zap className="w-4 h-4 text-emerald-500" />
                    </div>
-                   <span className="text-sm font-bold text-zinc-300">Space Utilization</span>
+                   <span className="text-sm font-bold text-zinc-300">Fit Score</span>
                 </div>
-                <span className="text-lg font-black text-white">{Math.round(order.space_utilization_percent)}%</span>
+                <span className="text-lg font-black text-white">{fitScore}%</span>
              </div>
 
              <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
                 <div className="flex items-center gap-3">
                    <div className="p-2 bg-blue-500/10 rounded-lg">
-                      <Leaf className="w-4 h-4 text-blue-400" />
+                      <Box className="w-4 h-4 text-blue-400" />
                    </div>
-                   <span className="text-sm font-bold text-zinc-300">CO2 Reduction</span>
+                   <span className="text-sm font-bold text-zinc-300">Weight</span>
                 </div>
-                <span className="text-lg font-black text-white">{order.co2_saved_kg.toFixed(3)} kg</span>
+                <span className="text-lg font-black text-white">{order.weight} kg</span>
              </div>
 
              <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
@@ -130,19 +142,19 @@ export default function OrderDetailsModal({
                    <div className="p-2 bg-purple-500/10 rounded-lg">
                       <Shield className="w-4 h-4 text-purple-400" />
                    </div>
-                   <span className="text-sm font-bold text-zinc-300">Optimization Score</span>
+                   <span className="text-sm font-bold text-zinc-300">Baseline Box</span>
                 </div>
-                <span className="text-lg font-black text-white">{order.optimization_score}/100</span>
+                <span className="text-lg font-black text-white">{order.baseline_box || 'Original'}</span>
              </div>
           </div>
 
           <div className="p-6 bg-gradient-to-br from-blue-600 to-blue-500 rounded-3xl flex items-center justify-between">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-white/70">Total Savings</p>
-              <p className="text-3xl font-black text-white">₹{(order.savings_inr - (selectedLabel?.price || 0)).toFixed(2)}</p>
+              <p className="text-3xl font-black text-white">₹{(savings - (selectedLabel?.price || 0)).toFixed(2)}</p>
             </div>
             <div className="text-right">
-               <p className="text-lg font-bold text-white">{Math.round(order.savings_percent)}% saved</p>
+               <p className="text-lg font-bold text-white">{order.savings_percent ? order.savings_percent.toFixed(0) : 0}% saved</p>
                <p className="text-xs text-white/50">per shipment</p>
             </div>
           </div>

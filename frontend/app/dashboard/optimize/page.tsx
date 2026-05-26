@@ -276,20 +276,20 @@ export default function OptimizePage() {
                       <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-zinc-500">Fragility</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {parsedData.slice(0, 10).map((row, i) => (
-                      <tr key={i} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="px-6 py-4 text-white font-medium">{row.product_name}</td>
-                        <td className="px-6 py-4 text-zinc-400">{row.original_length_cm}x{row.original_width_cm}x{row.original_height_cm} cm</td>
-                        <td className="px-6 py-4 text-zinc-400">{row.original_weight_kg} kg</td>
-                        <td className="px-6 py-4">
-                          <Badge variant={row.fragility === 'high' ? 'red' : row.fragility === 'medium' ? 'yellow' : 'green'}>
-                            {row.fragility}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+                   <tbody className="divide-y divide-white/5">
+                     {parsedData.slice(0, 10).map((row, i) => (
+                       <tr key={i} className="hover:bg-white/[0.02] transition-colors">
+                         <td className="px-6 py-4 text-white font-medium">{row.product_name}</td>
+                         <td className="px-6 py-4 text-zinc-400">{row.length_cm}x{row.width_cm}x{row.height_cm} cm</td>
+                         <td className="px-6 py-4 text-zinc-400">{row.weight_kg} kg</td>
+                         <td className="px-6 py-4">
+                           <Badge variant="green">
+                             Standard
+                           </Badge>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
                 </table>
               </div>
               {parsedData.length > 10 && (

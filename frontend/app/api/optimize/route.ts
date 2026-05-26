@@ -308,16 +308,19 @@ function parseCSV(text: string): any[] {
   const parsed = Papa.parse(text, {
     header: true,
     skipEmptyLines: true,
-    dynamicTyping: true
+    dynamicTyping: false // Don't force typing - let us handle it
   })
 
-  return (parsed.data as any[]).map(row => ({
-    sku: String(row.sku || ''),
-    product_name: String(row.product_name || ''),
-    weight_kg: Number(row.weight_kg || 0.5),
-    length_cm: Number(row.length_cm || 0),
-    width_cm: Number(row.width_cm || 0),
-    height_cm: Number(row.height_cm || 0),
-    quantity: Number(row.quantity || 1)
-  }))
+  return (parsed.data as any[])
+    .filter(row => row.sku && row.product_name) // Filter out empty rows
+    .map(row => ({
+      sku: String(row.sku || '').trim(),
+      product_name: String(row.product_name || '').trim(),
+      weight_kg: Number(row.weight_kg || 0.5),
+      length_cm: Number(row.length_cm || 0),
+      width_cm: Number(row.width_cm || 0),
+      height_cm: Number(row.height_cm || 0),
+      quantity: Number(row.quantity || 1),
+      fragility: String(row.fragility || 'LOW').toUpperCase() // 🔴 BUG FIX: Parse fragility from CSV
+    }))
 }

@@ -92,15 +92,15 @@ export default function OrdersPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-6">
-                  <div className="flex items-center gap-2">
-                    <Box className="w-4 h-4 text-zinc-500" />
-                    <span className="text-white font-bold">{run.total_items} SKUs</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-emerald-500" />
-                    <span className="text-emerald-400 font-bold">?{run.estimated_savings?.toLocaleString() || 0} Saved</span>
-                  </div>
-                  <Badge variant="blue">{run.optimization_rate || 0}% avg util</Badge>
+                   <div className="flex items-center gap-2">
+                     <Box className="w-4 h-4 text-zinc-500" />
+                     <span className="text-white font-bold">{run.total_processed || 0} SKUs</span>
+                   </div>
+                   <div className="flex items-center gap-2">
+                     <TrendingUp className="w-4 h-4 text-emerald-500" />
+                     <span className="text-emerald-400 font-bold">₹{(run.total_savings || 0).toLocaleString()} Saved</span>
+                   </div>
+                   <Badge variant="blue">{run.success_rate ? run.success_rate.toFixed(0) : 0}% optimized</Badge>
                   
                   <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center ml-4">
                     {expandedRun === run.id ? (

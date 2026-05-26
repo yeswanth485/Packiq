@@ -57,8 +57,8 @@ export default function OrdersTable({ data }: OrdersTableProps = {}) {
   }
 
   const totals = {
-    savings: results.reduce((acc, r) => acc + (r.savings_inr || 0), 0),
-    avgUtilization: results.reduce((acc, r) => acc + (r.space_utilization_percent || 0), 0) / results.length
+    savings: results.reduce((acc, r) => acc + (r.savings || r.savings_per_unit || 0), 0),
+    avgUtilization: results.reduce((acc, r) => acc + (r.volume_util || r.fit_score || 0), 0) / results.length
   }
 
   return (
@@ -114,12 +114,12 @@ export default function OrdersTable({ data }: OrdersTableProps = {}) {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {paginated.map((row: any, i) => {
-                const dimsStr = row.dimensions ? `${row.dimensions.l}x${row.dimensions.w}x${row.dimensions.h}` : '-'
-                const optDimsStr = row.optimized_dims ? `${row.optimized_dims.l}x${row.optimized_dims.w}x${row.optimized_dims.h}` : '-'
-                
-                return (
-                <tr key={row.id || i} className="group hover:bg-white/[0.02] transition-colors">
+             {paginated.map((row: any, i) => {
+                 const dimsStr = row.dimensions ? `${row.dimensions.l}x${row.dimensions.w}x${row.dimensions.h}` : '-'
+                 const optDimsStr = row.optimized_dims ? `${row.optimized_dims.l}x${row.optimized_dims.w}x${row.optimized_dims.h}` : '-'
+                 
+                 return (
+                 <tr key={row.id || i} className="group hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => setSelectedOrder(row)}>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className="text-white font-bold">{row.product_name || row.productName}</span>
