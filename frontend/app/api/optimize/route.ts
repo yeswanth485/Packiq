@@ -333,7 +333,7 @@ for (let i = 0; i < allResultsToInsert.length; i += 50) {
   if (resultError) console.error(`[optimize] results chunk ${i} error:`, resultError.message)
 
   // Map to orders schema, reusing chunk as source
-  const ordersChunk = chunk.map((result: any, idx: number) => {
+  const ordersChunk = chunk.map((result: any, idx: number): any => {
     return {
       user_id: userId,
       optimization_session_id: sessionId,
