@@ -45,6 +45,10 @@ const DEFAULT_BOXES = [
   { name: 'Generic D1',            carrier: 'Generic', L: 60.0, W: 50.0, H: 40.0, maxWeightKg: 50, priceEstimateINR: 545 },
 ]
 
+export const config = {
+  api: { bodyParser: { sizeLimit: '10mb' } }
+}
+
 export async function POST(request: NextRequest) {
   // ── 0. Env guard ──────────────────────────────────────────────
   const missingEnv = []
@@ -278,14 +282,42 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    for (let i = 0; i < allResultsToInsert.length; i += 50) {
-      const chunk = allResultsToInsert.slice(i, i + 50)
-      const { error } = await supabase.from('optimization_results').insert(chunk)
-      if (error) console.error(`[optimize] results chunk ${i} error:`, error.message)
-    }
+for (let i = 0; i < allResultsToInsert.length; i += 50) {
+  const chunk = allResultsToInsert.slice(i, i + 50)
+  const { error: resultError, data: resultInsert } = await supabase.from('optimization_results').insert(chunk).select('id')
+  if (resultError) console.error(`[optimize] results chunk ${i} error:`, resultError.message)
 
-    // ── 6. Return success ─────────────────────────────────────────
-    return NextResponse.json({
+  // Map to orders schema, reusing chunk as source
+  const ordersChunk = chunk.map((result, idx) => {
+    return {
+      user_id: userId,
+      optimization_session_id: sessionId,
+      // product_id: null, // If available, map it
+      // optimization_result_id: resultInsert && resultInsert[idx] ? resultInsert[idx].id : null, // link result
+      sku: result.sku,
+      product_name: result.product_name,
+      length_cm: result.dimensions.l,
+      width_cm: result.dimensions.w,
+      height_cm: result.dimensions.h,
+      weight_kg: result.weight,
+      fragility_level: result.fragility,
+      carrier: result.optimized_box && typeof result.optimized_box === 'string' ? result.optimized_box.split(' ')[0] : null,
+      product_snapshot: { sku: result.sku, product_name: result.product_name, weight_kg: result.weight, dims: result.dimensions },
+      box_snapshot: { name: result.optimized_box, dims: result.optimized_dims, price: result.shipping_cost, fit: result.volume_util },
+      quantity: 1,
+      total_cost: result.shipping_cost ?? 0,
+      currency: 'INR',
+      status: 'pending',
+      created_at: result.created_at || new Date().toISOString(),
+    }
+  })
+
+  const { error: orderError } = await supabase.from('orders').insert(ordersChunk)
+  if (orderError) console.error(`[optimize] orders chunk ${i} error:`, orderError.message)
+}
+
+// ── 6. Return success ─────────────────────────────────────────
+return NextResponse.json({
       success: true,
       ok: true,
       session_id: sessionId,
